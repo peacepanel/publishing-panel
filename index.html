@@ -255,6 +255,11 @@ a{color:var(--accent)}
           <div class="field"><label>شكل المنشور</label>
             <select id="aMode"><option value="group">منشور واحد يجمع عدة منتجات (صورة الغلاف لكل منتج)</option><option value="single">كل منتج منشور مستقل بصوره (مثل تلكرام)</option></select>
             <span class="muted">«منشورات في كل تشغيلة» = عدد المنشورات. في الشكل الأول كل منشور يجمع منتجات بعدد «صور كل منشور» (مثلاً 10 = عشرة منتجات، صورة لكل منتج)، وفي الثاني كل منتج منشور لوحده بصوره حتى «صور كل منشور».</span></div>
+          <div class="row">
+            <div class="field"><label>النشر على</label><select id="aChan"><option value="both">فيسبوك + انستكرام</option><option value="fb">فيسبوك فقط</option><option value="ig">انستكرام فقط</option></select></div>
+            <div class="field"><label>إعادة نشر المنتج على نفس الصفحة بعد (يوم)</label><input id="aRepeat" type="number" min="0" max="365" style="width:90px"><span class="muted">0 = بدون تكرار. المنتجات الجديدة لها الأولوية دائماً، ثم الأقدم نشراً.</span></div>
+          </div>
+          <div id="aRunway" class="muted"></div>
           <span class="muted">لا يُنشر شيء خارج أوقات العمل. النص يُختار بالتناوب من نصوص الصفحة.</span>
           <div class="row"><button id="aSave" class="ghost">حفظ الإعدادات</button><span id="aMsg" class="muted"></span></div>
         </div>
@@ -548,7 +553,7 @@ function renderGrid(){
     return `<div class="card ${st!=='fresh'?'done':''} ${selected.has(i)?'sel':''}" id="c${i}">
       <div class="ph"><img loading="lazy" src="${esc(thumb(it.images[0]))}" alt=""><span class="n">${it.images.length} صور</span><span class="ck">✓</span></div>
       <div class="bd"><div><b>${esc(it.seq)}</b> <span class="muted">${esc(it.sub||it.category)}</span></div>${badge}
-        ${it.elsewhere?`<span class="pill">على ${it.elsewhere} صفحة أخرى</span>`:''}
+        ${it.elsewhere?`<span class="pill">على ${it.elsewhere} صفحة أخرى</span>`:''}${st==='fresh'&&it.last_posted_at?`<span class="pill warn" title="أعادته دورة التكرار">نُشر قبل ${Math.round((Date.now()-new Date(it.last_posted_at))/864e5)} يوم</span>`:''}
         <div class="muted">${esc(it.sizesShort)}</div><div class="muted" dir="ltr" style="text-align:right">${esc(priceShort(it))}</div>
         <div class="acts">${acts}</div></div></div>`;}).join('')||'<div class="empty">لا توجد منتجات بهذا الفلتر.</div>';
 }
@@ -832,7 +837,7 @@ function serverStatusText(a){if(!a.enabled)return'متوقف. شغّله واح�
 async function ensureCandidates(){if(candidates.length&&candidates._page===page.id)return;const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;}
 async function loadAuto(){const a=autoCfg();$('autoPage').textContent='— '+page.name;
   $('aEnabled').checked=!!a.enabled;$('aServerStatus').textContent=serverStatusText(a);
-  $('aMax').value=a.max;$('aGap').value=a.gap;$('aStart').value=a.start;$('aEnd').value=a.end;$('aImgs').value=a.imgs;$('aMode').value=a.mode||'group';$('aPlan').innerHTML='';
+  $('aMax').value=a.max;$('aGap').value=a.gap;$('aStart').value=a.start;$('aEnd').value=a.end;$('aImgs').value=a.imgs;$('aMode').value=a.mode||'group';$('aChan').value=a.channels||'both';$('aRepeat').value=page.settings.repeat_days??14;$('aPlan').innerHTML='';
   $('aCats').innerHTML='<div class="muted">جارٍ قراءة المنتجات...</div>';renderAutoStatus();
   try{await ensureCandidates();}catch(e){$('aCats').innerHTML='خطأ: '+esc(e.message);return;}
   $('aCats').innerHTML=page.categories.map(c=>{const r=a.ranges[c]||{};const its=candidates.filter(it=>it.category===c);const subs=[...new Set(its.map(it=>it.sub).filter(Boolean))];
@@ -849,12 +854,18 @@ function autoPool(ranges){const pool=[];page.categories.forEach(c=>{const r=rang
   its=its.map((it,k)=>({it,pos:k+1})).filter(x=>(!r.from||x.pos>=r.from)&&(!r.to||x.pos<=r.to)&&(!r.val||normModel(Object.keys(x.it.sizeCounts||{}).join(' ')+' '+x.it.sizesShort).includes(normModel(r.val))));
   its.forEach(x=>pool.push(x.it));});return pool;}
 function updAutoCounts(){const R=readRanges();document.querySelectorAll('#aCats [data-cat]').forEach(b=>{const c=b.dataset.cat;const all=autoPool(R).filter(it=>it.category===c);const fresh=all.filter(it=>stOf(it)==='fresh');b.querySelector('.cnt').textContent=R[c].off?'غير مشمولة':`${all.length} منتج في النطاق، منها ${fresh.length} غير منشور`;});
-  const pool=autoPool(R).filter(it=>stOf(it)==='fresh');$('aInfo').textContent=`${pool.length} منتج جاهز للنشر الدوري على ${page.name}`;}
+  const pool=autoPool(R).filter(it=>stOf(it)==='fresh');const nNew=pool.filter(it=>!it.last_posted_at).length,nAgain=pool.length-nNew;
+  $('aInfo').textContent=`${pool.length} منتج جاهز للنشر الدوري على ${page.name}${nAgain?` (${nNew} جديد + ${nAgain} عائد من دورة التكرار)`:''}`;
+  const max=Math.max(1,+$('aMax').value||1),gap=Math.max(30,+$('aGap').value||90),st=+$('aStart').value||0,en=+$('aEnd').value||24,imgs=Math.max(1,+$('aImgs').value||1);
+  const perRun=$('aMode').value==='single'?max:max*imgs,runs=Math.max(1,Math.floor((en-st)*60/gap)),perDay=perRun*runs,days=nNew/perDay,rep=parseInt($('aRepeat').value??14,10)||0;
+  $('aRunway').innerHTML=nNew===0?`<span class="pill ${rep?'warn':'bad'}">انتهت المنتجات الجديدة${rep?` — يعمل الآن من دورة التكرار (${rep} يوم)`:' — التكرار متوقف، فلن يُنشر شيء'}</span>`
+    :`يُنشر تقريباً ${perDay} منتج يومياً، فالمنتجات الجديدة تكفي ${days<1?'أقل من يوم':`نحو ${Math.floor(days)} يوم`}${days<3?` <span class="pill warn">${rep?`بعدها تبدأ دورة التكرار (منتجات نُشرت قبل ${rep} يوم فأكثر)`:'بعدها يتوقف النشر لأن التكرار متوقف'}</span>`:''}.`;}
+['aMax','aGap','aStart','aEnd','aImgs','aRepeat'].forEach(id=>$(id).addEventListener('input',updAutoCounts));$('aMode').addEventListener('change',updAutoCounts);
 $('aServerNow').onclick=async()=>{$('aServerNow').disabled=true;$('aServerStatus').textContent='الخادم يجهز المنشورات...';
   try{const j=await callFn('autopilot',{page_id:page.id});const r=(j.results||[])[0]||{};$('aServerStatus').textContent=r.error?('خطأ: '+r.error):r.skip?('لم يُجهّز شيء: '+r.skip):(r.made&&r.made.length?`جُهّز ${r.made.length} منشور (${r.made.join('، ')}). يُرسم الترميز خلال دقيقة أو دقيقتين ثم يُنشر في وقته.`:'لا توجد منتجات جديدة في النطاق.');await loadPages();renderAutoStatus();}
   catch(e){$('aServerStatus').textContent='خطأ: '+e.message;}$('aServerNow').disabled=false;};
-$('aSave').onclick=async()=>{const prev=page.settings.auto||{};const a={enabled:$('aEnabled').checked,last_run:prev.last_run||null,last_result:prev.last_result||null,max:Math.max(1,+$('aMax').value||1),gap:Math.max(30,+$('aGap').value||90),start:Math.min(23,Math.max(0,+$('aStart').value||0)),end:Math.min(24,Math.max(1,+$('aEnd').value||24)),imgs:Math.max(1,+$('aImgs').value||1),mode:$('aMode').value,ranges:readRanges()};
-  if(a.end<=a.start)return toast('نهاية أوقات العمل يجب أن تكون بعد البداية');page.settings.auto=a;const{error}=await sb.from('pages').update({settings:page.settings}).eq('id',page.id);$('aMsg').textContent=error?'خطأ: '+error.message:(a.enabled?'حُفظت الإعدادات والنشر التلقائي من الخادم يعمل':'حُفظت الإعدادات');$('aServerStatus').textContent=serverStatusText(a);};
+$('aSave').onclick=async()=>{const prev=page.settings.auto||{};const a={enabled:$('aEnabled').checked,last_run:prev.last_run||null,last_result:prev.last_result||null,max:Math.max(1,+$('aMax').value||1),gap:Math.max(30,+$('aGap').value||90),start:Math.min(23,Math.max(0,+$('aStart').value||0)),end:Math.min(24,Math.max(1,+$('aEnd').value||24)),imgs:Math.max(1,+$('aImgs').value||1),mode:$('aMode').value,channels:$('aChan').value,ranges:readRanges()};
+  if(a.end<=a.start)return toast('نهاية أوقات العمل يجب أن تكون بعد البداية');page.settings.auto=a;page.settings.repeat_days=Math.max(0,Math.min(365,parseInt($('aRepeat').value??14,10)||0));const{error}=await sb.from('pages').update({settings:page.settings}).eq('id',page.id);$('aMsg').textContent=error?'خطأ: '+error.message:(a.enabled?'حُفظت الإعدادات والنشر التلقائي من الخادم يعمل':'حُفظت الإعدادات');$('aServerStatus').textContent=serverStatusText(a);};
 function inHours(d,a){const h=d.getHours()+d.getMinutes()/60;return h>=a.start&&h<a.end;}
 function nextWorkTime(d,a){const x=new Date(d);if(inHours(x,a))return x;if(x.getHours()+x.getMinutes()/60>=a.end){x.setDate(x.getDate()+1);}x.setHours(a.start,0,0,0);return x;}
 async function renderAutoStatus(){const{data}=await sb.from('posts').select('scheduled_at').eq('page_id',page.id).eq('status','scheduled').gte('scheduled_at',new Date().toISOString()).order('scheduled_at').limit(500);
