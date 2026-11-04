@@ -217,6 +217,7 @@ a{color:var(--accent)}
           <select id="subF"><option value="">كل الأقسام</option></select>
           <select id="sizeF"><option value="">كل القياسات</option></select>
           <select id="typeF" hidden><option value="">كل الأنواع</option></select>
+          <select id="seasonF"><option value="">كل المواسم</option><option value="شتوي">❄ شتوي فقط</option><option value="صيفي">☀ صيفي فقط</option><option value="كل المواسم">↔ يصلح للموسمين</option><option value="__moved">↩ منقول من الموسم الآخر</option></select>
           <input id="modelQ" placeholder="بحث بقياس أو موديل (مثل 3XL، A54)" style="width:220px">
           <select id="sortF"><option value="new">الأحدث تسلسلاً</option><option value="sizes">الأكثر قياسات</option><option value="imgs">الأكثر صوراً</option></select>
           <div class="seg" id="stF"><button data-v="fresh" class="on">غير منشور</button><button data-v="scheduled">مجدول</button><button data-v="published">منشور</button><button data-v="all">الكل</button></div>
@@ -531,30 +532,30 @@ function fillSizeF(){const c=$('catF').value,sub=$('subF').value;const set=new M
 let TAX={};
 async function loadTypes(){try{
   if(!Object.keys(TAX).length){const{data}=await sb.from('type_taxonomy').select('*');(data||[]).forEach(t=>TAX[t.category]=t);}
-  const cats=[...new Set(candidates.map(it=>it.category))].filter(c=>TAX[c]);if(!cats.length)return;
-  const map=new Map();for(let from=0;;from+=1000){const{data,error}=await sb.from('product_types').select('product_key,type,gender,confidence,source').in('category',cats).range(from,from+999);if(error||!data)break;data.forEach(d=>map.set(d.product_key,d));if(data.length<1000)break;}
-  candidates.forEach(it=>{const d=map.get(it.product_key);it.ptype=d?.type||null;it.pgender=d?.gender||null;it.pconf=d?.confidence;it.psrc=d?.source;});}catch(e){console.warn('types',e);}}
+  const cats=[...new Set(candidates.map(it=>it.src_category||it.category))].filter(c=>TAX[c]);if(!cats.length)return;
+  const map=new Map();for(let from=0;;from+=1000){const{data,error}=await sb.from('product_types').select('product_key,type,gender,season,confidence,source').in('category',cats).range(from,from+999);if(error||!data)break;data.forEach(d=>map.set(d.product_key,d));if(data.length<1000)break;}
+  candidates.forEach(it=>{const d=map.get(it.product_key);it.ptype=d?.type||null;it.pgender=d?.gender||null;it.pconf=d?.confidence;it.psrc=d?.source;it.season=d?.season||it.season||null;});}catch(e){console.warn('types',e);}}
 function fillTypeF(){const c=$('catF').value,sub=$('subF').value;const set=new Map();let none=0;
-  const its=candidates.filter(it=>(!c||it.category===c)&&(!sub||it.sub===sub)&&stOf(it)==='fresh'&&TAX[it.category]);
+  const its=candidates.filter(it=>(!c||it.category===c)&&(!sub||it.sub===sub)&&stOf(it)==='fresh'&&TAX[it.src_category||it.category]);
   its.forEach(it=>{if(!it.ptype){none++;return;}const k=it.pgender?it.ptype+' · '+it.pgender:it.ptype;set.set(it.ptype,(set.get(it.ptype)||0)+1);});
   const cur=$('typeF').value;const keys=[...set.keys()].sort((a,b)=>set.get(b)-set.get(a));
   $('typeF').innerHTML='<option value="">كل الأنواع</option>'+keys.map(k=>`<option value="${esc(k)}">${esc(k)} (${set.get(k)})</option>`).join('')+(none?`<option value="__none">غير مصنّف بعد (${none})</option>`:'');
   if([...$('typeF').options].some(o=>o.value===cur))$('typeF').value=cur;$('typeF').hidden=!its.length;}
-window.editType=async(i,ev)=>{ev&&ev.stopPropagation();const it=candidates[i];const t=TAX[it.category];if(!t)return;
+window.editType=async(i,ev)=>{ev&&ev.stopPropagation();const it=candidates[i];const t=TAX[it.src_category||it.category];if(!t)return;
   const box=document.getElementById('ty'+i);if(!box)return;
-  box.innerHTML=`<select onchange="saveType(${i},this.value,null)" onclick="event.stopPropagation()"><option value="">— اختر النوع —</option>${t.types.map(x=>`<option ${x===it.ptype?'selected':''}>${esc(x)}</option>`).join('')}</select>${t.genders?`<select onchange="saveType(${i},null,this.value)" onclick="event.stopPropagation()"><option value="">لمن؟</option>${t.genders.map(x=>`<option ${x===it.pgender?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}`;};
-window.saveType=async(i,type,gender)=>{const it=candidates[i];const row={product_key:it.product_key,seq:it.seq,category:it.category,sub:it.sub||null,type:type??it.ptype,gender:gender??it.pgender,confidence:1,source:'manual',image_url:it.images[0],error:null,updated_by:me.email,updated_at:new Date().toISOString()};
+  box.innerHTML=`<select onchange="saveType(${i},this.value,null)" onclick="event.stopPropagation()"><option value="">— اختر النوع —</option>${t.types.map(x=>`<option ${x===it.ptype?'selected':''}>${esc(x)}</option>`).join('')}</select>${t.genders?`<select onchange="saveType(${i},null,this.value)" onclick="event.stopPropagation()"><option value="">لمن؟</option>${t.genders.map(x=>`<option ${x===it.pgender?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}${t.seasonal?`<select onchange="saveType(${i},null,null,this.value)" onclick="event.stopPropagation()"><option value="">الموسم</option>${['شتوي','صيفي','كل المواسم'].map(x=>`<option ${x===it.season?'selected':''}>${x}</option>`).join('')}</select>`:''}`;};
+window.saveType=async(i,type,gender,season)=>{const it=candidates[i];const row={product_key:it.product_key,seq:it.seq,category:it.src_category||it.category,sub:it.sub||null,type:type??it.ptype,gender:gender??it.pgender,season:season??it.season,confidence:1,source:'manual',image_url:it.images[0],error:null,updated_by:me.email,updated_at:new Date().toISOString()};
   if(!row.type)return;const{error}=await sb.from('product_types').upsert(row,{onConflict:'product_key'});if(error)return toast('خطأ: '+error.message);
-  it.ptype=row.type;it.pgender=row.gender;it.pconf=1;it.psrc='manual';toast('حُفظ التصنيف');fillTypeF();renderGrid();};
-function typePill(it,i){if(!TAX[it.category])return'';
-  if(!it.ptype)return`<span class="pill" id="ty${i}" style="cursor:pointer" onclick="editType(${i},event)" title="اضغط للتصنيف يدوياً">غير مصنّف</span>`;
+  it.ptype=row.type;it.pgender=row.gender;it.season=row.season;it.pconf=1;it.psrc='manual';toast(season?'حُفظ الموسم — يُطبَّق التوزيع عند جلب المنتجات التالي':'حُفظ التصنيف');fillTypeF();renderGrid();};
+function typePill(it,i){const tc=it.src_category||it.category;if(!TAX[tc])return'';const sp=it.season?` <span class="pill" title="${it.moved?'ظهر هنا لأن موسمه '+esc(it.season)+' (من شيت '+esc(it.src_category)+')':'الموسم الحقيقي'}">${it.season==='شتوي'?'❄ شتوي':it.season==='صيفي'?'☀ صيفي':'↔ كل المواسم'}${it.moved?' ↩':''}</span>`:'';
+  if(!it.ptype)return`<span class="pill" id="ty${i}" style="cursor:pointer" onclick="editType(${i},event)" title="اضغط للتصنيف يدوياً">غير مصنّف</span>${sp}`;
   const low=it.psrc!=='manual'&&(it.pconf??1)<0.6;
-  return`<span id="ty${i}" class="pill ${low?'warn':'ok'}" style="cursor:pointer" onclick="editType(${i},event)" title="${it.psrc==='manual'?'مصحح يدوياً':'تصنيف تلقائي'} — اضغط للتعديل">${low?'؟ ':''}${esc(it.ptype)}${it.pgender?' · '+esc(it.pgender):''}${it.psrc==='manual'?' ✓':''}</span>`;}
+  return`<span id="ty${i}" class="pill ${low?'warn':'ok'}" style="cursor:pointer" onclick="editType(${i},event)" title="${it.psrc==='manual'?'مصحح يدوياً':'تصنيف تلقائي'} — اضغط للتعديل">${low?'؟ ':''}${esc(it.ptype)}${it.pgender?' · '+esc(it.pgender):''}${it.psrc==='manual'?' ✓':''}</span>${sp}`;}
 function fillSubF(){const c=$('catF').value;const subs=[...new Set(candidates.filter(it=>it.sub&&(!c||it.category===c)).map(it=>it.sub))];
   $('subF').innerHTML='<option value="">كل الأقسام</option>'+subs.map(s=>`<option>${esc(s)}</option>`).join('');$('subF').hidden=!subs.length;fillSizeF();fillTypeF();}
 $('catF').addEventListener('input',()=>{fillSubF();renderGrid();});
 ['q','sortF','sizeF','modelQ'].forEach(id=>$(id).addEventListener('input',renderGrid));
-$('subF').addEventListener('input',()=>{fillSizeF();fillTypeF();renderGrid();});$('typeF').addEventListener('input',renderGrid);
+$('subF').addEventListener('input',()=>{fillSizeF();fillTypeF();renderGrid();});$('typeF').addEventListener('input',renderGrid);$('seasonF').addEventListener('input',renderGrid);
 $('stF').addEventListener('change',renderGrid);
 function stOf(it){const s=it.post?.status;if(!s)return'fresh';if(s==='published')return'published';return'scheduled';}
 function renderCounts(){const c={fresh:0,scheduled:0,published:0};candidates.forEach(it=>c[stOf(it)]++);
@@ -563,9 +564,9 @@ const toHttps=u=>String(u||'').replace(/^http:\/\//,'https://');
 function fixHttps(items){items.forEach(it=>{if(Array.isArray(it.images))it.images=it.images.map(toHttps);});return items;}
 function thumb(u){u=String(u||'').replace(/^http:\/\//,'https://');if(u.includes('/zoom/'))return u.replace('/zoom/','/thumbnail/');if(u.includes('_thumbnail_'))return u.replace(/_thumbnail_(\d+)x(\d+)\.webp/,(m,w,h)=>(+w<1000||+h<1300)?'_thumbnail_220x293.webp':m);if(u.includes('lh3.googleusercontent.com'))return u+'=w300';return u;}
 function visibleItems(){
-  const q=$('q').value.trim(),c=$('catF').value,sub=$('subF').value,so=$('sortF').value,sf=segVal('stF')||'fresh',sz=$('sizeF').value,mq=normModel($('modelQ').value),ty=$('typeF').value;
+  const q=$('q').value.trim(),c=$('catF').value,sub=$('subF').value,so=$('sortF').value,sf=segVal('stF')||'fresh',sz=$('sizeF').value,mq=normModel($('modelQ').value),ty=$('typeF').value,se=$('seasonF').value;
   let list=candidates.map((it,i)=>({it,i})).filter(({it})=>(!c||it.category===c)&&(!sub||it.sub===sub)&&(!q||it.seqs.some(s=>String(s).includes(q)))&&(sf==='all'||stOf(it)===sf)
-    &&(!sz||Object.keys(it.sizeCounts||{}).includes(sz))&&(!ty||(ty==='__none'?!it.ptype:it.ptype===ty))&&(!mq||normModel(Object.keys(it.sizeCounts||{}).join(' ')+' '+(it.sizesShort||'')).includes(mq)));
+    &&(!sz||Object.keys(it.sizeCounts||{}).includes(sz))&&(!ty||(ty==='__none'?!it.ptype:it.ptype===ty))&&(!se||(se==='__moved'?it.moved:it.season===se))&&(!mq||normModel(Object.keys(it.sizeCounts||{}).join(' ')+' '+(it.sizesShort||'')).includes(mq)));
   const nS=it=>Object.keys(it.sizeCounts||{}).length,rank={fresh:0,scheduled:1,published:2};
   const cmp=so==='sizes'?(a,b)=>nS(b.it)-nS(a.it):so==='imgs'?(a,b)=>b.it.images.length-a.it.images.length:(a,b)=>(+b.it.seq||0)-(+a.it.seq||0);
   list.sort((a,b)=>(rank[stOf(a.it)]-rank[stOf(b.it)])||cmp(a,b)); return list;
