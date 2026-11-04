@@ -914,14 +914,14 @@ async function doSave(later){
       const pp=await sb.from('post_products').insert(comp.items.map((it,pi)=>({post_id:ins.data.id,page_id:pg.id,product_key:it.product_key,seq:it.seq,seqs:it.seqs,category:it.category,image_urls:perProd[pi].fb,ig_image_urls:perProd[pi].ig})).filter(r=>r.image_urls.length));
       if(pp.error){await sb.from('posts').delete().eq('id',ins.data.id);throw new Error(pp.error.code==='23505'?`${pg.name}: أحد المنتجات منشور أو مجدول مسبقاً على هذه الصفحة`:pp.error.message);}
       if(t.capId){const c=captions.find(x=>x.id===t.capId);if(c)await sb.from('caption_templates').update({use_count:(c.use_count||0)+1,last_used_at:new Date().toISOString()}).eq('id',c.id);}
-      if(!later){$('saveMsg').textContent=`${pg.name}: جارٍ النشر على فيسبوك...`;const res=await callFn('publish',{post_id:ins.data.id});results.push({pg,res});}
+      if(!later){$('saveMsg').textContent=`${pg.name}: جارٍ النشر على فيسبوك${pg.ig_user_id&&pg.settings.ig_publish?' ثم انستكرام (قد يأخذ دقيقة)':''}...`;const res=await callFn('publish',{post_id:ins.data.id});results.push({pg,res});}
       else results.push({pg,when:t.when});
       if(pg.id===page.id){comp.items.forEach(it=>{it.post=later?{id:ins.data.id,status:'scheduled',scheduled_at:t.when.toISOString()}:{id:ins.data.id,status:results[results.length-1].res?.ok?'published':'failed',published_at:new Date().toISOString(),fb_post_id:results[results.length-1].res?.fb_post_id};});}
     }
     // تذكّر آخر عدد صور للصفحة (منشور منتج واحد)
     if(comp.items.length===1){const n=comp.sel.length;for(const t of comp.targets){t.page.settings.last_images=n;await sb.from('pages').update({settings:t.page.settings}).eq('id',t.page.id);}}
     if(later){toast(`أُضيف للجدول على ${results.length} صفحة`,4000);$('modal').hidden=true;}
-    else{$('confirmBox').hidden=true;$('saveMsg').innerHTML=results.map(r=>r.res.ok?`<div><span class="pill ok">نُشر</span> ${esc(r.pg.name)} — <a target="_blank" href="https://www.facebook.com/${esc(r.res.fb_post_id)}">فتح</a></div>`:`<div><span class="pill bad">لم يُنشر</span> ${esc(r.pg.name)}: ${esc(r.res.error)}</div>`).join('');}
+    else{$('confirmBox').hidden=true;$('saveMsg').innerHTML=results.map(r=>r.res.ok?`<div><span class="pill ok">فيسبوك ✓</span> ${esc(r.pg.name)} — <a target="_blank" href="${esc(fbLink({fb_post_id:r.res.fb_post_id}))}">فتح</a> ${igResult(r)}</div>`:`<div><span class="pill bad">لم يُنشر</span> ${esc(r.pg.name)}: ${esc(r.res.error)}</div>`).join('');}
     comp.items.forEach(it=>{const i=candidates.indexOf(it);selected.delete(i);});
     renderCounts();renderGrid();renderSelBar();loadBusy();loadCaptions();
   }catch(e){$('saveMsg').innerHTML='<span class="pill bad">توقف</span> '+esc(e.message)+(results.length?`<div class="muted">تم حفظ ${results.length} صفحة قبل التوقف.</div>`:'');$('confirmBox').hidden=true;}
@@ -937,6 +937,10 @@ const pname=id=>pages.find(p=>p.id===id)?.name||'';
 const IGST={published:['ok','انستكرام ✓'],failed:['bad','انستكرام فشل'],pending:['warn','انستكرام بالانتظار'],publishing:['warn','انستكرام قيد النشر'],skipped:['','انستكرام بلا صور']};
 function igPill(p){if(!p.ig_status)return'';const s=IGST[p.ig_status]||['',p.ig_status];
   return` <span class="pill ${s[0]}" title="${esc(p.ig_error||'')}">${s[1]}</span>${p.ig_status==='failed'&&p.status==='published'?` <button class="sm line" onclick="igRetry('${p.id}',this)">أعد على انستكرام</button>`:''}${p.ig_status==='failed'&&p.ig_error?`<div class="muted">${esc(p.ig_error)}</div>`:''}`;}
+function igResult(r){const i=r.res.instagram;if(!r.pg.ig_user_id)return'<span class="pill">بلا حساب انستكرام</span>';
+  if(!i)return r.pg.settings.ig_publish?'':'<span class="pill">انستكرام غير مفعّل لهذه الصفحة</span>';
+  if(i.ok)return`<span class="pill ok">انستكرام ✓</span> ${i.link?`<a target="_blank" href="${esc(i.link)}">فتح</a>`:`<a target="_blank" href="https://www.instagram.com/${esc(r.pg.ig_username||'')}/">الحساب</a>`}`;
+  return`<span class="pill bad">انستكرام فشل</span> <span class="muted">${esc(i.error||'')}</span>`;}
 function fbLink(p){if(p.fb_permalink)return p.fb_permalink;const [pg,id]=String(p.fb_post_id||'').split('_');return id?`https://www.facebook.com/permalink.php?story_fbid=${id}&id=${pg}`:`https://www.facebook.com/${p.fb_post_id}`;}
 function openLinks(p){let h='';if(p.fb_post_id){const u=fbLink(p);h+=`<a target="_blank" href="${esc(u)}">فتح فيسبوك</a> <button class="sm line" onclick="copyLink('${esc(u)}')">نسخ</button>`;}
   if(p.ig_permalink)h+=` <a target="_blank" href="${esc(p.ig_permalink)}">فتح انستكرام</a> <button class="sm line" onclick="copyLink('${esc(p.ig_permalink)}')">نسخ</button>`;return h;}
