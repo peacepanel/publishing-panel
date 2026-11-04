@@ -116,6 +116,9 @@ button:disabled{opacity:.45;cursor:default}
 .chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--fg);cursor:pointer;border:0;font-weight:500}
 .chip.on{background:var(--accent);color:var(--accent-ink)}
 .targets{display:flex;flex-direction:column;gap:6px}
+.chips .gchip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:3px 10px;font-size:13px;cursor:pointer;font-weight:500}
+.chips .gchip.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}.chips .gchip.part{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.chips .gchip small{opacity:.75;margin-inline-start:4px}
 .tg{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:7px 9px;cursor:pointer}
 .tg.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .tg .sw{width:16px;height:16px;border-radius:4px}
@@ -310,7 +313,7 @@ a{color:var(--accent)}
         <div class="field">
           <label>انستكرام</label>
           <div class="row"><span id="sIgAcc" class="pill">—</span>
-            <label class="row" style="gap:4px"><input type="checkbox" id="sIgOn"> انشر نفس المنشور على انستكرام أيضاً</label>
+            <label class="row" style="gap:4px"><input type="checkbox" id="sIgOn"> انشر على انستكرام أيضاً (افتراضي)</label>
             <button id="sIgSync" class="line sm">تحديث حسابات انستكرام</button></div>
           <span class="muted" id="sIgNote">صورة واحدة تُنشر كمنشور عادي، وأكثر من صورة تُنشر ألبوماً (حتى 10 صور، بمقاس 4:5 مثل الكتالوج).</span>
         </div>
@@ -328,9 +331,14 @@ a{color:var(--accent)}
 
     <div id="tab-map" class="stack" hidden>
       <div class="tip">حدّدت فئات كل صفحة من محتوى منشوراتها الفعلي. الصفحات المعلّمة بـ«راجع» غير واضحة، فراجعها وصحّح. الصفحة الموقوفة لا تظهر في قائمة الصفحات.<button class="tx">✕</button></div>
+      <div class="box stack" id="igCard" style="gap:8px"></div>
       <div class="box toolbar">
         <div class="row"><input id="mapQ" placeholder="بحث باسم الصفحة"><select id="mapCat"><option value="">كل الفئات</option></select>
+          <select id="mapGrp"><option value="">كل المجموعات</option></select>
           <label class="row muted"><input type="checkbox" id="mapFlag"> المعلّمة للمراجعة فقط</label></div>
+        <div class="row"><span class="muted">مجموعة للصفحات الظاهرة:</span><input id="grpName" list="grpList" placeholder="مثلاً: صفحات شمس" style="width:170px"><datalist id="grpList"></datalist>
+          <button id="grpAdd" class="ghost sm">أضفها للظاهر</button><button id="grpDel" class="line sm">أزلها من الظاهر</button>
+          <span class="muted">«محفظة …» تُحدَّث تلقائياً من ميتا.</span></div>
         <div class="row"><span id="mapInfo" class="muted"></span><button id="mapSave" disabled>حفظ التغييرات</button></div>
       </div>
       <div class="box tblwrap"><table id="mapTbl"></table></div>
@@ -379,7 +387,14 @@ a{color:var(--accent)}
     <section>
       <h3>الصفحات</h3>
       <div class="tip">اختر أكثر من صفحة لنشر نفس المنشور عليها. كل صفحة يكون لها وقتها ونصها وألوانها، و«توزيع تلقائي» يوزع الأوقات بفاصل تختاره.<button class="tx">✕</button></div>
-      <input id="tgSearch" placeholder="بحث صفحة">
+      <div class="pgtools stack" style="gap:6px">
+        <div class="row" style="gap:6px"><span class="muted">المجموعات</span><div class="chips" id="grpChips"></div></div>
+        <div class="row" style="gap:6px"><span class="muted">الفئة</span><div class="chips" id="catChips"></div></div>
+        <div class="row" style="gap:6px"><input id="tgSearch" placeholder="بحث صفحة" style="flex:1;min-width:120px">
+          <label class="row muted" style="gap:4px"><input type="checkbox" id="tgIg"> لها انستكرام</label>
+          <button id="selShown" class="ghost sm">اختر الظاهر</button><button id="clrSel" class="line sm">مسح</button></div>
+        <div class="muted" id="pgCount"></div>
+      </div>
       <div id="pgList" class="pglist"></div>
       <div id="targets" class="targets"></div>
       <div class="box stack" style="padding:12px">
@@ -392,8 +407,8 @@ a{color:var(--accent)}
             <div class="seg" id="mins"><button data-v="0" class="on">00</button><button data-v="15">15</button><button data-v="30">30</button><button data-v="45">45</button></div>
             <button id="nextFree" class="line sm">أول وقت فارغ</button></div>
           <div class="row"><span class="muted">توزيع تلقائي على الصفحات:</span>
-            <select id="gapSel"><option value="30">كل 30 دقيقة</option><option value="60">كل ساعة</option><option value="120" selected>كل ساعتين</option><option value="180">كل 3 ساعات</option><option value="1440">صفحة يومياً</option></select>
-            <button id="spreadBtn" class="ghost sm">وزّع</button></div>
+            <select id="gapSel"><option value="10">كل 10 دقائق</option><option value="15">كل 15 دقيقة</option><option value="20">كل 20 دقيقة</option><option value="30">كل 30 دقيقة</option><option value="60">كل ساعة</option><option value="120" selected>كل ساعتين</option><option value="180">كل 3 ساعات</option><option value="1440">صفحة يومياً</option></select>
+            <label class="row muted" style="gap:4px"><input type="checkbox" id="jitter" checked> تفاوت عشوائي</label><button id="spreadBtn" class="ghost sm">وزّع</button></div>
           <div id="whenText" class="pill warn" style="align-self:flex-start"></div>
         </div>
       </div>
@@ -403,6 +418,9 @@ a{color:var(--accent)}
       <div class="chips" id="varChips"></div>
       <textarea id="cCaption" style="min-height:140px"></textarea>
       <div class="row"><button id="saveCapFromComposer" class="line sm">حفظ هذا النص لهذه الصفحة</button><button id="capAllBtn" class="line sm">استخدمه لكل الصفحات</button></div>
+      <div class="row" style="justify-content:space-between"><b>النشر على</b>
+        <div class="seg" id="chanSeg"><button data-v="both" class="on">فيسبوك + انستكرام</button><button data-v="fb">فيسبوك فقط</button><button data-v="ig">انستكرام فقط</button></div></div>
+      <div id="chanNote" class="muted"></div>
       <button id="publishBtn" class="ok">إضافة إلى جدول النشر</button>
       <div id="confirmBox" class="confirm" hidden>
         <div id="confirmText"></div>
@@ -596,7 +614,7 @@ function openComposer(idxs){
   addTarget(page);
   $('cTitle').textContent=items.length===1?`منشور: ${items[0].seq}`:`منشور مشترك: ${items.length} منتجات`;
   $('saveMsg').textContent='';$('pvMsg').textContent='';$('confirmBox').hidden=true;$('publishBtn').disabled=false;$('tgSearch').value='';
-  seg('when','later');seg('pvMode','fb');syncWhen();
+  seg('when','later');seg('pvMode','fb');seg('chanSeg','both');syncWhen();renderChanNote();
   renderPick();renderOrder();renderPgList();renderTargets();selectTarget(0);
   if(!comp.targets[0].when) $('nextFree').click();
   $('modal').hidden=false; renderPreview();
@@ -643,15 +661,44 @@ async function renderPreview(){
 $('fbGrid').addEventListener('click',e=>{const c=e.target.closest('.c');if(!c)return;const k=+c.dataset.k;if(!k)return;const [m]=comp.sel.splice(k,1);comp.sel.unshift(m);renderOrder();renderPreview();toast('أصبحت الصورة الكبيرة في المنشور');});
 
 // ───────── الصفحات المستهدفة ─────────
+const igOn=pg=>!!pg.ig_user_id&&pg.settings.ig_publish!==false;
+function chanOf(){return segVal('chanSeg')||'both';}
+function chanLabel(pg,ch){ch=ch||chanOf();if(ch==='fb')return'فيسبوك';if(ch==='ig')return pg.ig_user_id?'انستكرام':'⚠ بلا انستكرام';return igOn(pg)?'فيسبوك + انستكرام':'فيسبوك';}
+function renderChanNote(){if(!comp)return;const ch=chanOf();const no=comp.targets.filter(t=>!t.page.ig_user_id);
+  $('chanNote').innerHTML=ch==='ig'&&no.length?`<span class="pill bad">${no.length} صفحة بلا انستكرام ستُستبعد: ${no.map(t=>esc(t.page.name)).join('، ')}</span>`:ch==='both'&&no.length?`${no.length} صفحة بلا انستكرام تُنشر على فيسبوك فقط.`:'';}
 function fits(pg){return comp.items.every(it=>pg.categories.includes(it.category));}
-function renderPgList(){const q=$('tgSearch').value.trim();
-  const list=pages.filter(p=>(!q||p.name.includes(q)));
+let tgCat='__fit';
+const allGroups=()=>[...new Set(pages.flatMap(p=>p.groups||[]))].sort((a,b)=>a.startsWith('محفظة ')===b.startsWith('محفظة ')?a.localeCompare(b,'ar'):a.startsWith('محفظة ')?-1:1);
+function shownPages(){const q=$('tgSearch').value.trim(),ig=$('tgIg').checked;
+  return pages.filter(p=>(!q||p.name.includes(q))&&(!ig||p.ig_user_id)&&(tgCat==='__all'||(tgCat==='__fit'?fits(p):p.categories.includes(tgCat))));}
+function renderPgTools(){const sel=new Set(comp.targets.map(t=>t.page.id));
+  $('grpChips').innerHTML=allGroups().map(g=>{const ps=pages.filter(p=>(p.groups||[]).includes(g));const n=ps.filter(p=>sel.has(p.id)).length;
+    return`<button type="button" class="gchip ${n&&n===ps.length?'on':n?'part':''}" data-g="${esc(g)}"><bdi>${esc(g)}</bdi><small>${n?n+'/':''}${ps.length}</small></button>`;}).join('')||'<span class="muted">لا توجد مجموعات — أضفها من تبويب «الصفحات والفئات»</span>';
+  const cats=[...new Set(pages.flatMap(p=>p.categories))];
+  $('catChips').innerHTML=[['__fit','المناسبة للمنتج'],['__all','الكل'],...cats.map(c=>[c,c])].map(([v,l])=>`<button type="button" class="gchip ${tgCat===v?'on':''}" data-c="${esc(v)}">${esc(l)}</button>`).join('');
+  const later=segVal('when')!=='now';
+  $('pgCount').textContent=`مختارة: ${comp.targets.length} صفحة${comp.targets.some(t=>t.page.ig_user_id&&t.page.settings.ig_publish)?` • منها ${comp.targets.filter(t=>t.page.ig_user_id&&t.page.settings.ig_publish).length} تنشر على انستكرام أيضاً`:''}`;}
+function renderPgList(){const list=shownPages();renderChanNote();
   $('pgList').innerHTML=list.map(p=>{const on=comp.targets.some(t=>t.page.id===p.id);const f=fits(p);
-    return`<label><input type="checkbox" data-p="${p.id}" ${on?'checked':''}> <span style="width:12px;height:12px;border-radius:3px;background:${p.settings.label_bg}"></span> ${esc(p.name)} ${f?'':'<span class="pill">فئة مختلفة</span>'}</label>`;}).join('')||'<div class="muted">لا توجد صفحات.</div>';}
-$('tgSearch').addEventListener('input',renderPgList);
+    return`<label><input type="checkbox" data-p="${p.id}" ${on?'checked':''}> <span style="width:12px;height:12px;border-radius:3px;background:${p.settings.label_bg}"></span> ${esc(p.name)}${p.ig_user_id?' <span class="muted" title="@'+esc(p.ig_username||'')+'">IG</span>':''} ${f?'':'<span class="pill">فئة مختلفة</span>'}</label>`;}).join('')||'<div class="muted">لا توجد صفحات بهذا الفلتر.</div>';
+  renderPgTools();}
+function bulkSet(list,on){const later=segVal('when')!=='now';
+  if(on){list.forEach(p=>addTarget(p));}
+  else{const ids=new Set(list.map(p=>p.id));const keep=comp.targets.filter(t=>!ids.has(t.page.id));if(!keep.length){toast('يجب أن تبقى صفحة واحدة على الأقل');comp.targets=comp.targets.slice(0,1);}else comp.targets=keep;comp.active=0;}
+  if(later&&comp.targets.length>1)spreadTimes(true);
+  renderPgList();renderTargets();selectTarget(Math.min(comp.active,comp.targets.length-1));}
+$('tgSearch').addEventListener('input',renderPgList);$('tgIg').addEventListener('change',renderPgList);
+$('catChips').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;tgCat=b.dataset.c;renderPgList();});
+$('grpChips').addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(!b)return;const g=b.dataset.g;
+  const ps=pages.filter(p=>(p.groups||[]).includes(g)&&(tgCat==='__all'||(tgCat==='__fit'?fits(p):p.categories.includes(tgCat))));
+  if(!ps.length)return toast('لا توجد صفحات في هذه المجموعة تناسب فلتر الفئة الحالي');
+  const sel=new Set(comp.targets.map(t=>t.page.id));bulkSet(ps,!ps.every(p=>sel.has(p.id)));
+  toast(`${g}: ${ps.length} صفحة${tgCat!=='__all'?' (حسب فلتر الفئة)':''}`);});
+$('selShown').onclick=()=>{const l=shownPages();if(!l.length)return;bulkSet(l,true);toast(`اختيرت ${l.length} صفحة`);};
+$('clrSel').onclick=()=>{const first=comp.targets[0];comp.targets=[first];comp.active=0;renderPgList();renderTargets();selectTarget(0);};
 $('pgList').addEventListener('change',e=>{const cb=e.target.closest('[data-p]');if(!cb)return;const p=pages.find(x=>x.id===cb.dataset.p);
   if(cb.checked) addTarget(p); else{if(comp.targets.length===1){cb.checked=true;return toast('يجب اختيار صفحة واحدة على الأقل');}comp.targets=comp.targets.filter(t=>t.page.id!==p.id);comp.active=0;}
-  renderTargets();selectTarget(comp.targets.length-1);});
+  renderTargets();selectTarget(comp.targets.length-1);renderPgTools();});
 function pickCaptionFor(pg,offset){const own=captions.filter(c=>c.page_id===pg.id),gen=captions.filter(c=>!c.page_id);const pool=own.length?own:gen;
   const def=captions.find(c=>c.id===pg.settings.default_caption_id);if(def&&!offset)return def;return pool.length?pool[(offset||0)%pool.length]:null;}
 function addTarget(pg){if(comp.targets.some(t=>t.page.id===pg.id))return;const cap=pickCaptionFor(pg,comp.targets.length);
@@ -660,7 +707,7 @@ function addTarget(pg){if(comp.targets.some(t=>t.page.id===pg.id))return;const c
 function fmtT(d){return d?`${AR_DAYS[d.getDay()]} ${d.getDate()}/${d.getMonth()+1} ${h12(d.getHours())}:${String(d.getMinutes()).padStart(2,'0')} ${ampm(d.getHours())}`:'بدون وقت';}
 function conflicts(){const out=new Set();const ts=comp.targets.filter(t=>t.when);for(let i=0;i<ts.length;i++)for(let j=i+1;j<ts.length;j++)if(Math.abs(ts[i].when-ts[j].when)<SAFE_GAP_MIN*60000){out.add(ts[i].page.id);out.add(ts[j].page.id);}return out;}
 function renderTargets(){const bad=conflicts();const later=segVal('when')!=='now';
-  $('targets').innerHTML=comp.targets.map((t,k)=>`<div class="tg ${k===comp.active?'on':''}" data-k="${k}"><span class="sw" style="background:${t.page.settings.label_bg}"></span><span>${esc(t.page.name)}${fits(t.page)?'':' <span class="pill">فئة مختلفة</span>'}</span><span class="tm">${later?fmtT(t.when):'الآن'}</span>${bad.has(t.page.id)&&later?`<span class="warnx">أقل من ${SAFE_GAP_MIN} د</span>`:'<span></span>'}</div>`).join('');}
+  $('targets').innerHTML=comp.targets.map((t,k)=>`<div class="tg ${k===comp.active?'on':''}" data-k="${k}"><span class="sw" style="background:${t.page.settings.label_bg}"></span><span>${esc(t.page.name)}${fits(t.page)?'':' <span class="pill">فئة مختلفة</span>'} <span class="muted" style="font-size:12px">${chanLabel(t.page)}</span></span><span class="tm">${later?fmtT(t.when):'الآن'}</span>${bad.has(t.page.id)&&later?`<span class="warnx">أقل من ${SAFE_GAP_MIN} د</span>`:'<span></span>'}</div>`).join('');}
 $('targets').addEventListener('click',e=>{const r=e.target.closest('.tg');if(!r)return;selectTarget(+r.dataset.k);});
 function selectTarget(k){comp.active=Math.max(0,Math.min(k,comp.targets.length-1));const t=comp.targets[comp.active];
   if(t.when){const today=new Date();today.setHours(0,0,0,0);let h=t.when.getHours();const d=new Date(t.when);if(h<6)d.setDate(d.getDate()-1);d.setHours(0,0,0,0);slot={day:Math.round((d-today)/864e5),hour:h};setMin(t.when.getMinutes());}
@@ -694,9 +741,13 @@ $('mins').addEventListener('change',()=>{const v=segVal('mins');if(v!=null){$('m
 $('minIn').addEventListener('input',()=>{seg('mins',[0,15,30,45].includes(curMin())?String(curMin()):'');applySlot();});
 function firstFree(pg,after){const m=curMin();for(let o=0;o<7;o++)for(const h of[...DAY_HOURS,...NIGHT_HOURS]){const d=slotDate(o,h,m);if(d>after&&!busyFor(pg,d))return d;}return null;}
 $('nextFree').onclick=()=>{const t=comp.targets[comp.active];const d=firstFree(t.page,new Date());if(!d)return toast('لا يوجد وقت فارغ خلال أسبوع');t.when=d;selectTarget(comp.active);};
-$('spreadBtn').onclick=()=>{const gap=+$('gapSel').value;let base=comp.targets[0].when||firstFree(comp.targets[0].page,new Date());if(!base)return;
-  comp.targets.forEach((t,k)=>{let d=new Date(base.getTime()+gap*60000*k);let guard=0;while(busyFor(t.page,d)&&guard++<48)d=new Date(d.getTime()+3600000);t.when=d;});
-  selectTarget(comp.active);toast('وُزّعت الأوقات على الصفحات');};
+function spreadTimes(quiet){const gap=+$('gapSel').value;let base=comp.targets[0].when||firstFree(comp.targets[0].page,new Date());if(!base)return;
+  const jit=$('jitter').checked?Math.min(10,Math.floor(gap/4)):0;
+  comp.targets.forEach((t,k)=>{let d=new Date(base.getTime()+gap*60000*k);if(k&&jit)d=new Date(d.getTime()+Math.round((Math.random()*2-1)*jit)*60000);
+    if(d<=new Date())d=new Date(Date.now()+5*60000);let guard=0;while(busyFor(t.page,d)&&guard++<48)d=new Date(d.getTime()+3600000);t.when=d;});
+  if(!quiet)toast('وُزّعت الأوقات على الصفحات');}
+$('spreadBtn').onclick=()=>{spreadTimes(false);selectTarget(comp.active);};
+$('chanSeg').addEventListener('change',()=>{renderTargets();renderChanNote();});
 function syncWhen(){const later=segVal('when')!=='now';$('slotPicker').hidden=!later;$('publishBtn').textContent=later?'إضافة إلى جدول النشر':'مراجعة ونشر الآن';$('confirmBox').hidden=true;$('publishBtn').disabled=false;if(comp)renderTargets();}
 $('when').addEventListener('change',syncWhen);
 
@@ -754,7 +805,7 @@ async function fillSettings(){if(!page)return;await loadCats();draft=JSON.parse(
   $('sCats').innerHTML=ALL_CATS.map(c=>`<label class="row" style="gap:4px"><input type="checkbox" value="${esc(c)}" ${page.categories.includes(c)?'checked':''}>${esc(c)}</label>`).join('');
   fillCapSelect();updLabelPrev();fillIg();}
 function fillIg(){const has=!!page.ig_user_id;$('sIgAcc').textContent=has?'@'+page.ig_username:'لا يوجد حساب مربوط';$('sIgAcc').className='pill '+(has?'ok':'');
-  $('sIgOn').checked=!!draft.ig_publish&&has;$('sIgOn').disabled=!has;}
+  $('sIgOn').checked=draft.ig_publish!==false&&has;$('sIgOn').disabled=!has;}
 $('sIgOn').addEventListener('change',e=>{draft.ig_publish=e.target.checked;});
 $('sIgSync').onclick=async()=>{$('sIgSync').disabled=true;$('sIgNote').textContent='جارٍ قراءة الحسابات من ميتا...';
   try{const j=await callFn('ig-sync',{});if(j.missing&&j.missing.length){$('sIgNote').textContent='المفتاح الحالي ينقصه: '+j.missing.join('، ')+' — ولّد مفتاحاً جديداً بهذه الصلاحيات.';}
@@ -859,20 +910,33 @@ $('aNow').onclick=async()=>{$('aNow').disabled=true;try{await ensureCandidates()
 
 // ───────── الصفحات والفئات ─────────
 let mapRows=[],mapDirty=new Map();
-async function loadMap(){await loadCats();const{data,error}=await sb.from('pages').select('id,name,categories,active,review_note').order('name');if(error)return toast(error.message);
-  mapRows=data||[];mapDirty.clear();$('mapCat').innerHTML='<option value="">كل الفئات</option>'+ALL_CATS.map(c=>`<option>${esc(c)}</option>`).join('');renderMap();}
-function renderMap(){const q=$('mapQ').value.trim(),c=$('mapCat').value,f=$('mapFlag').checked;
-  const rows=mapRows.filter(r=>(!q||r.name.includes(q))&&(!c||r.categories.includes(c))&&(!f||r.review_note));
-  $('mapTbl').innerHTML=`<thead><tr><th>الصفحة</th><th>فعّالة</th>${ALL_CATS.map(c=>`<th style="font-size:12px;white-space:nowrap">${esc(c)}</th>`).join('')}</tr></thead><tbody>`+
-    rows.map(r=>`<tr data-id="${r.id}" style="${mapDirty.has(r.id)?'background:var(--warn-soft)':''}"><td style="min-width:150px"><b>${esc(r.name)}</b>${r.review_note?`<div class="muted"><span class="pill warn">راجع</span> ${esc(r.review_note)}</div>`:''}</td>
-      <td><input type="checkbox" data-a="1" ${r.active?'checked':''}></td>${ALL_CATS.map(c=>`<td style="text-align:center"><input type="checkbox" data-c="${esc(c)}" ${r.categories.includes(c)?'checked':''}></td>`).join('')}</tr>`).join('')+'</tbody>';
+async function loadMap(){await loadCats();const{data,error}=await sb.from('pages').select('id,name,categories,active,review_note,groups,ig_user_id,ig_username,settings').order('name');if(error)return toast(error.message);
+  mapRows=data||[];mapDirty.clear();$('mapCat').innerHTML='<option value="">كل الفئات</option>'+ALL_CATS.map(c=>`<option>${esc(c)}</option>`).join('');fillGrpOpts();renderIgCard();renderMap();}
+function renderIgCard(){const act=mapRows.filter(r=>r.active);const yes=act.filter(r=>r.ig_user_id),no=act.filter(r=>!r.ig_user_id);const off=yes.filter(r=>(r.settings||{}).ig_publish===false);
+  $('igCard').innerHTML=`<div class="row" style="justify-content:space-between"><h3 style="margin:0">انستكرام</h3><div class="row"><span class="pill ok">${yes.length} مربوطة</span><span class="pill">${no.length} بلا حساب</span>${off.length?`<span class="pill warn">${off.length} موقوف النشر عليها</span>`:''}<button id="igSyncMap" class="line sm">تحديث من ميتا</button></div></div>
+  <details><summary>الصفحات المربوطة بانستكرام (${yes.length})</summary><div class="chips" style="margin-top:6px">${yes.map(r=>`<span class="pill ${(r.settings||{}).ig_publish===false?'warn':'ok'}"><bdi>${esc(r.name)}</bdi> · <bdi dir="ltr">@${esc(r.ig_username||'')}</bdi></span>`).join('')}</div></details>
+  <details><summary>الصفحات بدون انستكرام (${no.length})</summary><div class="chips" style="margin-top:6px">${no.map(r=>`<span class="pill"><bdi>${esc(r.name)}</bdi></span>`).join('')}</div><div class="muted" style="margin-top:6px">لربط حساب: من إعدادات الصفحة في فيسبوك ← الحسابات المرتبطة ← انستكرام، ثم «تحديث من ميتا».</div></details>`;
+  $('igSyncMap').onclick=async()=>{$('igSyncMap').disabled=true;try{const j=await callFn('ig-sync',{});toast(`${j.linked} صفحة مربوطة بانستكرام`);await loadMap();await loadPages();}catch(e){toast('خطأ: '+e.message);}};}
+function mapGroups(){return[...new Set(mapRows.flatMap(r=>r.groups||[]))].sort((a,b)=>a.localeCompare(b,'ar'));}
+function fillGrpOpts(){const v=$('mapGrp').value;const gs=mapGroups();$('mapGrp').innerHTML='<option value="">كل المجموعات</option><option value="__none">بدون مجموعة</option>'+gs.map(g=>`<option>${esc(g)}</option>`).join('');$('mapGrp').value=v;
+  $('grpList').innerHTML=gs.filter(g=>!g.startsWith('محفظة ')).map(g=>`<option value="${esc(g)}">`).join('');}
+function mapShown(){const q=$('mapQ').value.trim(),c=$('mapCat').value,f=$('mapFlag').checked,g=$('mapGrp').value;
+  return mapRows.filter(r=>(!q||r.name.includes(q))&&(!c||r.categories.includes(c))&&(!f||r.review_note)&&(!g||(g==='__none'?!(r.groups||[]).some(x=>!x.startsWith('محفظة ')):(r.groups||[]).includes(g))));}
+function grpBulk(add){const g=$('grpName').value.trim();if(!g)return toast('اكتب اسم المجموعة');if(g.startsWith('محفظة '))return toast('«محفظة …» تُدار تلقائياً من ميتا');
+  const rows=mapShown();rows.forEach(r=>{const has=(r.groups||[]).includes(g);if(add&&!has)r.groups=[...(r.groups||[]),g];else if(!add&&has)r.groups=r.groups.filter(x=>x!==g);else return;mapDirty.set(r.id,r);});
+  fillGrpOpts();renderMap();toast(`${add?'أُضيفت':'أُزيلت'} «${g}» ${add?'إلى':'من'} ${rows.length} صفحة — اضغط حفظ التغييرات`);}
+$('grpAdd').onclick=()=>grpBulk(true);$('grpDel').onclick=()=>grpBulk(false);
+function renderMap(){const rows=mapShown();
+  $('mapTbl').innerHTML=`<thead><tr><th>الصفحة</th><th>فعّالة</th><th>انستكرام</th>${ALL_CATS.map(c=>`<th style="font-size:12px;white-space:nowrap">${esc(c)}</th>`).join('')}</tr></thead><tbody>`+
+    rows.map(r=>`<tr data-id="${r.id}" style="${mapDirty.has(r.id)?'background:var(--warn-soft)':''}"><td style="min-width:150px"><b>${esc(r.name)}</b><div>${(r.groups||[]).map(g=>`<span class="pill${g.startsWith('محفظة ')?'':' ok'}" style="font-size:11px">${esc(g)}</span>`).join(' ')}</div>${r.review_note?`<div class="muted"><span class="pill warn">راجع</span> ${esc(r.review_note)}</div>`:''}</td>
+      <td><input type="checkbox" data-a="1" ${r.active?'checked':''}></td><td style="white-space:nowrap">${r.ig_user_id?`<label class="row" style="gap:4px"><input type="checkbox" data-ig="1" ${(r.settings||{}).ig_publish!==false?'checked':''}><bdi dir="ltr" class="muted" style="font-size:12px">@${esc(r.ig_username||'')}</bdi></label>`:'<span class="muted">—</span>'}</td>${ALL_CATS.map(c=>`<td style="text-align:center"><input type="checkbox" data-c="${esc(c)}" ${r.categories.includes(c)?'checked':''}></td>`).join('')}</tr>`).join('')+'</tbody>';
   $('mapInfo').textContent=`${rows.length} صفحة${mapDirty.size?` • ${mapDirty.size} معدّلة`:''}`;$('mapSave').disabled=!mapDirty.size;}
-['mapQ','mapCat','mapFlag'].forEach(id=>$(id).addEventListener('input',renderMap));
+['mapQ','mapCat','mapFlag','mapGrp'].forEach(id=>$(id).addEventListener('input',renderMap));
 $('mapTbl').addEventListener('change',e=>{const tr=e.target.closest('tr[data-id]');if(!tr)return;const r=mapRows.find(x=>x.id===tr.dataset.id);
-  if(e.target.dataset.a)r.active=e.target.checked;else{const c=e.target.dataset.c;r.categories=e.target.checked?[...new Set([...r.categories,c])]:r.categories.filter(x=>x!==c);}
+  if(e.target.dataset.a)r.active=e.target.checked;else if(e.target.dataset.ig){r.settings=Object.assign({},r.settings||{},{ig_publish:e.target.checked});}else{const c=e.target.dataset.c;r.categories=e.target.checked?[...new Set([...r.categories,c])]:r.categories.filter(x=>x!==c);}
   mapDirty.set(r.id,r);tr.style.background='var(--warn-soft)';$('mapInfo').textContent=`${mapDirty.size} معدّلة`;$('mapSave').disabled=false;});
-$('mapSave').onclick=async()=>{$('mapSave').disabled=true;let bad=0;for(const r of mapDirty.values()){const{error}=await sb.from('pages').update({categories:r.categories,active:r.active,review_note:null}).eq('id',r.id);if(error)bad++;else r.review_note=null;}
-  toast(bad?`لم يُحفظ ${bad}`:'حُفظت التغييرات');mapDirty.clear();renderMap();await loadPages();};
+$('mapSave').onclick=async()=>{$('mapSave').disabled=true;let bad=0;for(const r of mapDirty.values()){const{error}=await sb.from('pages').update({categories:r.categories,active:r.active,groups:r.groups||[],settings:r.settings||{},review_note:null}).eq('id',r.id);if(error)bad++;else r.review_note=null;}
+  toast(bad?`لم يُحفظ ${bad}`:'حُفظت التغييرات');mapDirty.clear();renderIgCard();renderMap();await loadPages();};
 
 // ───────── اقتراحات الإرشاد ─────────
 function refreshSmartTips(){const box=$('smartTips');if(!document.body.classList.contains('guide')||!comp){box.innerHTML='';return;}const tips=[];
@@ -890,8 +954,10 @@ $('publishBtn').onclick=()=>{const later=segVal('when')!=='now';
   if(comp.targets.some(t=>!t.caption.trim()))return toast('في صفحة بدون نص منشور. اختر نصاً لكل صفحة');
   if(later&&comp.targets.some(t=>!t.when))return toast('حدّد وقت النشر لكل صفحة');
   if(later&&comp.targets.some(t=>t.when<=new Date()))return toast('أحد الأوقات مضى، اختر وقتاً جديداً');
+  if(chanOf()==='ig'){const no=comp.targets.filter(t=>!t.page.ig_user_id);if(no.length===comp.targets.length)return toast('لا توجد صفحة مختارة لها حساب انستكرام');
+    if(no.length){comp.targets=comp.targets.filter(t=>t.page.ig_user_id);comp.active=0;renderPgList();renderTargets();renderChanNote();toast(`استُبعدت ${no.length} صفحة بلا انستكرام`);}}
   if(later){doSave(true);return;}
-  $('confirmText').innerHTML=`سيُنشر منشور فيه <b>${comp.sel.length}</b> صورة الآن على: <b>${comp.targets.map(t=>esc(t.page.name)).join('، ')}</b>.`;$('confirmBox').hidden=false;$('publishBtn').disabled=true;};
+  $('confirmText').innerHTML=`سيُنشر منشور فيه <b>${comp.sel.length}</b> صورة الآن على: <b>${comp.targets.map(t=>esc(t.page.name)+' ('+chanLabel(t.page)+')').join('، ')}</b>.`;$('confirmBox').hidden=false;$('publishBtn').disabled=true;};
 $('confirmNo').onclick=()=>{$('confirmBox').hidden=true;$('publishBtn').disabled=false;};
 $('confirmYes').onclick=()=>doSave(false);
 async function upload(canvas,path){const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.92));const up=await sb.storage.from('post-images').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw new Error('رفع الصورة: '+up.error.message);return sb.storage.from('post-images').getPublicUrl(path).data.publicUrl;}
@@ -908,20 +974,20 @@ async function doSave(later){
       const first=comp.items[0];
       const ins=await sb.from('posts').insert({page_id:pg.id,product_key:comp.items.length===1?first.product_key:null,seq:comp.items.map(x=>x.seq).join(' + '),seqs:comp.items.flatMap(x=>x.seqs),
         category:[...new Set(comp.items.map(x=>x.category))].join('، '),sizes:fillVars('{القياسات}',pg),price_text:first.text,caption:t.caption,
-        image_path:fbP[0],image_url:fb[0],image_paths:fbP,image_urls:fb,ig_image_paths:igP,ig_image_urls:ig,caption_template_id:t.capId,batch_id:batch,
+        image_path:fbP[0],image_url:fb[0],image_paths:fbP,image_urls:fb,ig_image_paths:igP,ig_image_urls:ig,caption_template_id:t.capId,batch_id:batch,channels:chanOf(),
         status:later?'scheduled':'approved',scheduled_at:later?t.when.toISOString():null,approved_by:me.email,approved_at:new Date().toISOString(),created_by_email:me.email,created_by_name:me.name}).select('id').single();
       if(ins.error)throw new Error(pg.name+': '+ins.error.message);
       const pp=await sb.from('post_products').insert(comp.items.map((it,pi)=>({post_id:ins.data.id,page_id:pg.id,product_key:it.product_key,seq:it.seq,seqs:it.seqs,category:it.category,image_urls:perProd[pi].fb,ig_image_urls:perProd[pi].ig})).filter(r=>r.image_urls.length));
       if(pp.error){await sb.from('posts').delete().eq('id',ins.data.id);throw new Error(pp.error.code==='23505'?`${pg.name}: أحد المنتجات منشور أو مجدول مسبقاً على هذه الصفحة`:pp.error.message);}
       if(t.capId){const c=captions.find(x=>x.id===t.capId);if(c)await sb.from('caption_templates').update({use_count:(c.use_count||0)+1,last_used_at:new Date().toISOString()}).eq('id',c.id);}
-      if(!later){$('saveMsg').textContent=`${pg.name}: جارٍ النشر على فيسبوك${pg.ig_user_id&&pg.settings.ig_publish?' ثم انستكرام (قد يأخذ دقيقة)':''}...`;const res=await callFn('publish',{post_id:ins.data.id});results.push({pg,res});}
+      if(!later){$('saveMsg').textContent=`${pg.name}: جارٍ النشر على ${chanLabel(pg)}${chanLabel(pg).includes('انستكرام')?' (انستكرام قد يأخذ دقيقة)':''}...`;const res=await callFn('publish',{post_id:ins.data.id});results.push({pg,res});}
       else results.push({pg,when:t.when});
       if(pg.id===page.id){comp.items.forEach(it=>{it.post=later?{id:ins.data.id,status:'scheduled',scheduled_at:t.when.toISOString()}:{id:ins.data.id,status:results[results.length-1].res?.ok?'published':'failed',published_at:new Date().toISOString(),fb_post_id:results[results.length-1].res?.fb_post_id};});}
     }
     // تذكّر آخر عدد صور للصفحة (منشور منتج واحد)
     if(comp.items.length===1){const n=comp.sel.length;for(const t of comp.targets){t.page.settings.last_images=n;await sb.from('pages').update({settings:t.page.settings}).eq('id',t.page.id);}}
     if(later){toast(`أُضيف للجدول على ${results.length} صفحة`,4000);$('modal').hidden=true;}
-    else{$('confirmBox').hidden=true;$('saveMsg').innerHTML=results.map(r=>r.res.ok?`<div><span class="pill ok">فيسبوك ✓</span> ${esc(r.pg.name)} — <a target="_blank" href="${esc(fbLink({fb_post_id:r.res.fb_post_id}))}">فتح</a> ${igResult(r)}</div>`:`<div><span class="pill bad">لم يُنشر</span> ${esc(r.pg.name)}: ${esc(r.res.error)}</div>`).join('');}
+    else{$('confirmBox').hidden=true;$('saveMsg').innerHTML=results.map(r=>r.res.ok?`<div>${r.res.fb_post_id?`<span class="pill ok">فيسبوك ✓</span>`:''} ${esc(r.pg.name)}${r.res.fb_post_id?` — <a target="_blank" href="${esc(fbLink({fb_post_id:r.res.fb_post_id}))}">فتح</a>`:''} ${igResult(r)}</div>`:`<div><span class="pill bad">لم يُنشر</span> ${esc(r.pg.name)}: ${esc(r.res.error)}</div>`).join('');}
     comp.items.forEach(it=>{const i=candidates.indexOf(it);selected.delete(i);});
     renderCounts();renderGrid();renderSelBar();loadBusy();loadCaptions();
   }catch(e){$('saveMsg').innerHTML='<span class="pill bad">توقف</span> '+esc(e.message)+(results.length?`<div class="muted">تم حفظ ${results.length} صفحة قبل التوقف.</div>`:'');$('confirmBox').hidden=true;}
@@ -938,7 +1004,7 @@ const IGST={published:['ok','انستكرام ✓'],failed:['bad','انستكر�
 function igPill(p){if(!p.ig_status)return'';const s=IGST[p.ig_status]||['',p.ig_status];
   return` <span class="pill ${s[0]}" title="${esc(p.ig_error||'')}">${s[1]}</span>${p.ig_status==='failed'&&p.status==='published'?` <button class="sm line" onclick="igRetry('${p.id}',this)">أعد على انستكرام</button>`:''}${p.ig_status==='failed'&&p.ig_error?`<div class="muted">${esc(p.ig_error)}</div>`:''}`;}
 function igResult(r){const i=r.res.instagram;if(!r.pg.ig_user_id)return'<span class="pill">بلا حساب انستكرام</span>';
-  if(!i)return r.pg.settings.ig_publish?'':'<span class="pill">انستكرام غير مفعّل لهذه الصفحة</span>';
+  if(!i)return chanOf()==='fb'?'<span class="pill">فيسبوك فقط</span>':igOn(r.pg)?'':'<span class="pill">انستكرام موقوف لهذه الصفحة</span>';
   if(i.ok)return`<span class="pill ok">انستكرام ✓</span> ${i.link?`<a target="_blank" href="${esc(i.link)}">فتح</a>`:`<a target="_blank" href="https://www.instagram.com/${esc(r.pg.ig_username||'')}/">الحساب</a>`}`;
   return`<span class="pill bad">انستكرام فشل</span> <span class="muted">${esc(i.error||'')}</span>`;}
 function fbLink(p){if(p.fb_permalink)return p.fb_permalink;const [pg,id]=String(p.fb_post_id||'').split('_');return id?`https://www.facebook.com/permalink.php?story_fbid=${id}&id=${pg}`:`https://www.facebook.com/${p.fb_post_id}`;}
@@ -955,7 +1021,7 @@ async function loadSchedule(){const since=new Date(Date.now()-24*3600e3).toISOSt
     ${g.items.map(p=>{const s=ST[p.status]||['',p.status];const d=new Date(p.scheduled_at);const n=(p.image_urls||[]).length||1;
       return`<div class="slot"><div class="tm">${h12(d.getHours())}:${String(d.getMinutes()).padStart(2,'0')}<div class="muted">${d.getHours()<12?'صباحاً':'مساءً'}</div></div><img src="${esc(p.image_url)}" alt="">
       <div style="min-width:0"><b>${esc(p.seq)}</b> <span class="muted">${$('schedAll').checked?esc(pname(p.page_id))+' • ':''}${n} صور${p.created_by_name?' • '+esc(p.created_by_name):''}</span>
-        <div><span class="pill ${s[0]}">${s[1]}</span>${igPill(p)} ${p.cancel_reason?`<span class="muted">${esc(p.cancel_reason)}</span>`:''}${p.error?`<span class="muted">${esc(p.error)}</span>`:''}</div>
+        <div><span class="pill ${s[0]}">${s[1]}</span>${p.channels&&p.channels!=='both'?` <span class="pill">${p.channels==='fb'?'فيسبوك فقط':'انستكرام فقط'}</span>`:''}${igPill(p)} ${p.cancel_reason?`<span class="muted">${esc(p.cancel_reason)}</span>`:''}${p.error?`<span class="muted">${esc(p.error)}</span>`:''}</div>
         <div class="muted" style="white-space:pre-wrap;overflow:hidden;max-height:3.2em">${esc(p.caption||'')}</div></div>
       <div class="acts row">${p.status==='scheduled'?`<button class="sm ghost" onclick="publishNow('${p.id}')">نشر الآن</button><button class="sm line" onclick="cancelPost('${p.id}')">إلغاء</button>`:''}${openLinks(p)}</div></div>`;}).join('')}</div>`).join('')||'<div class="box empty">لا توجد منشورات مجدولة.</div>';}
 $('schedBtn').onclick=loadSchedule;$('schedAll').onchange=loadSchedule;
