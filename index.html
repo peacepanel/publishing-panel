@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>لوحة النشر المركزية</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300796b'/%3E%3Cpath d='M18 44V20h16a10 10 0 0 1 0 20H26v4z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Noto+Kufi+Arabic:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -488,7 +489,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dat
 // ───────── المنتجات ─────────
 $('loadBtn').onclick=async()=>{
   $('loadBtn').disabled=true;$('candInfo').textContent='جارٍ القراءة من الشيتات...';
-  try{const j=await callFn('candidates',{page_id:page.id});candidates=j.items||[];candidates._page=page.id;lastSkipped=j.skippedStatus;selected.clear();fillSubF();renderCounts();renderGrid();renderSelBar();loadBusy();}
+  try{const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;selected.clear();fillSubF();renderCounts();renderGrid();renderSelBar();loadBusy();}
   catch(e){$('candInfo').textContent='خطأ: '+e.message;}
   $('loadBtn').disabled=false;
 };
@@ -508,7 +509,9 @@ $('stF').addEventListener('change',renderGrid);
 function stOf(it){const s=it.post?.status;if(!s)return'fresh';if(s==='published')return'published';return'scheduled';}
 function renderCounts(){const c={fresh:0,scheduled:0,published:0};candidates.forEach(it=>c[stOf(it)]++);
   $('candInfo').innerHTML=`<span class="pill ok">غير منشور ${c.fresh}</span> <span class="pill warn">مجدول ${c.scheduled}</span> <span class="pill">منشور ${c.published}</span> <span class="pill">مستبعد بحالة المخزن ${lastSkipped}</span>`;}
-function thumb(u){if(u.includes('/zoom/'))return u.replace('/zoom/','/thumbnail/');if(u.includes('_thumbnail_'))return u.replace(/_thumbnail_(\d+)x(\d+)\.webp/,(m,w,h)=>(+w<1000||+h<1300)?'_thumbnail_220x293.webp':m);if(u.includes('lh3.googleusercontent.com'))return u+'=w300';return u;}
+const toHttps=u=>String(u||'').replace(/^http:\/\//,'https://');
+function fixHttps(items){items.forEach(it=>{if(Array.isArray(it.images))it.images=it.images.map(toHttps);});return items;}
+function thumb(u){u=String(u||'').replace(/^http:\/\//,'https://');if(u.includes('/zoom/'))return u.replace('/zoom/','/thumbnail/');if(u.includes('_thumbnail_'))return u.replace(/_thumbnail_(\d+)x(\d+)\.webp/,(m,w,h)=>(+w<1000||+h<1300)?'_thumbnail_220x293.webp':m);if(u.includes('lh3.googleusercontent.com'))return u+'=w300';return u;}
 function visibleItems(){
   const q=$('q').value.trim(),c=$('catF').value,sub=$('subF').value,so=$('sortF').value,sf=segVal('stF')||'fresh',sz=$('sizeF').value,mq=normModel($('modelQ').value);
   let list=candidates.map((it,i)=>({it,i})).filter(({it})=>(!c||it.category===c)&&(!sub||it.sub===sub)&&(!q||it.seqs.some(s=>String(s).includes(q)))&&(sf==='all'||stOf(it)===sf)
@@ -578,7 +581,7 @@ function buildInstagramCanvas(src){const w=src.width,h=src.height;if(!w||!h)retu
   const out=document.createElement('canvas');out.width=outW;out.height=outH;const ctx=out.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,outW,outH);
   try{const cs=Math.max(outW/w,outH/h);const cw=w*cs,ch=h*cs;ctx.save();ctx.filter='blur(40px) brightness(0.9)';ctx.drawImage(src,(outW-cw)/2,(outH-ch)/2,cw,ch);ctx.restore();ctx.filter='none';}catch(e){ctx.filter='none';}
   const fs=Math.min(outW/w,outH/h);const dw=w*fs,dh=h*fs;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(src,(outW-dw)/2,(outH-dh)/2,dw,dh);return out;}
-function zoomUrl(u){if(u.includes('/thumbnail/'))return u.replace('/thumbnail/','/zoom/');if(u.includes('_thumbnail_'))return u.replace(/_thumbnail_(\d+)x(\d+)\.webp/,(m,w,h)=>(+w<1000||+h<1300)?'_thumbnail_1000x1300.webp':m);if(u.includes('lh3.googleusercontent.com'))return u+'=w1000-h1300';return u;}
+function zoomUrl(u){u=String(u||'').replace(/^http:\/\//,'https://');if(u.includes('/thumbnail/'))return u.replace('/thumbnail/','/zoom/');if(u.includes('_thumbnail_'))return u.replace(/_thumbnail_(\d+)x(\d+)\.webp/,(m,w,h)=>(+w<1000||+h<1300)?'_thumbnail_1000x1300.webp':m);if(u.includes('lh3.googleusercontent.com'))return u+'=w1000-h1300';return u;}
 const imgCache=new Map();
 function loadImg(u){if(imgCache.has(u))return imgCache.get(u);const p=(async()=>{const blob=await(await fetch(zoomUrl(u))).blob();return await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(blob);});})();imgCache.set(u,p);p.catch(()=>imgCache.delete(u));return p;}
 async function renderEncoded(url,product,pg){const img=await loadImg(url);const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);renderTextOnCanvas(ctx,img,product,colorsOf(pg));return c;}
@@ -775,7 +778,7 @@ $('saveSetBtn').onclick=async()=>{const cats=[...document.querySelectorAll('#sCa
 const AUTO_DEF={max:1,gap:90,start:10,end:24,imgs:10,mode:'group',ranges:{}};
 function autoCfg(){return Object.assign({},AUTO_DEF,page.settings.auto||{},{ranges:Object.assign({},(page.settings.auto||{}).ranges||{})});}
 function serverStatusText(a){if(!a.enabled)return'متوقف. شغّله واحفظ الإعدادات ليعمل من الخادم.';return`يعمل • آخر تشغيلة: ${a.last_run?fmtT(new Date(a.last_run)):'لم يعمل بعد'}${a.last_result?' • '+a.last_result:''}${a.last_run?` • التشغيلة القادمة تقريباً: ${fmtT(new Date(new Date(a.last_run).getTime()+Math.max(30,a.gap)*60000))}`:''}`;}
-async function ensureCandidates(){if(candidates.length&&candidates._page===page.id)return;const j=await callFn('candidates',{page_id:page.id});candidates=j.items||[];candidates._page=page.id;lastSkipped=j.skippedStatus;}
+async function ensureCandidates(){if(candidates.length&&candidates._page===page.id)return;const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;}
 async function loadAuto(){const a=autoCfg();$('autoPage').textContent='— '+page.name;
   $('aEnabled').checked=!!a.enabled;$('aServerStatus').textContent=serverStatusText(a);
   $('aMax').value=a.max;$('aGap').value=a.gap;$('aStart').value=a.start;$('aEnd').value=a.end;$('aImgs').value=a.imgs;$('aMode').value=a.mode||'group';$('aPlan').innerHTML='';
