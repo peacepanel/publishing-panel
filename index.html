@@ -1028,7 +1028,7 @@ $('schedBtn').onclick=loadSchedule;$('schedAll').onchange=loadSchedule;
 async function loadHistory(){const{data,error}=await sb.from('posts').select('*').eq('page_id',page.id).order('created_at',{ascending:false}).limit(100);
   if(error){$('histBody').innerHTML=`<tr><td colspan="7">${esc(error.message)}</td></tr>`;return;}
   $('histBody').innerHTML=(data||[]).map(p=>{const s=ST[p.status]||['',p.status];const imgs=(p.image_urls&&p.image_urls.length?p.image_urls:[p.image_url]).filter(Boolean);
-    return`<tr><td><div class="row" style="gap:4px;flex-wrap:nowrap">${imgs.slice(0,3).map(u=>`<img src="${esc(u)}" style="width:44px;border-radius:6px">`).join('')}${imgs.length>3?`<span class="muted">+${imgs.length-3}</span>`:''}</div></td>
+    return`<tr><td><div class="row" style="gap:4px;flex-wrap:nowrap">${imgs.slice(0,3).map(u=>`<img src="${esc(u)}" style="width:44px;border-radius:6px" onerror="this.remove()">`).join('')}${imgs.length>3?`<span class="muted">+${imgs.length-3}</span>`:''}</div></td>
     <td><b>${esc(p.seq)}</b><div class="muted">${esc(p.category)}</div></td><td class="muted" style="white-space:pre-wrap;max-width:260px">${esc((p.caption||'').slice(0,140))}</td>
     <td><span class="pill ${s[0]}">${s[1]}</span>${igPill(p)}${p.error?`<div class="muted">${esc(p.error)}</div>`:''}${p.cancel_reason?`<div class="muted">${esc(p.cancel_reason)}</div>`:''}</td>
     <td class="muted">${new Date(p.published_at||p.scheduled_at||p.created_at).toLocaleString('ar-IQ')}</td><td class="muted">${esc(p.created_by_name||p.approved_by||'')}</td>
