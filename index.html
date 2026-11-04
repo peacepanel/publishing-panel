@@ -807,7 +807,11 @@ async function buildPlan(days,now){const a=autoCfg();a.ranges=readRanges();a.max
   while(k<groups.length&&t<endAt){t=nextWorkTime(t,a);if(t>=endAt)break;for(let j=0;j<a.max&&k<groups.length;j++){plan.push({g:groups[k++],when:new Date(t.getTime()+j*5*60000)});}t=new Date(t.getTime()+a.gap*60000);}
   return{a,plan};}
 let autoCapIdx=0;
-async function runPlan(plan,a,later){const own=captions.filter(c=>c.page_id===page.id),pool=own.length?own:captions.filter(c=>!c.page_id);
+async function runPlan(plan,a,later){
+  const lk=await sb.rpc('claim_page_run',{p_page:page.id});
+  if(!lk.data){toast('هناك تشغيلة أخرى تعمل الآن على هذه الصفحة (من الخادم أو من نافذة أخرى). انتظر دقيقتين ثم أعد المحاولة.',6000);return{ok:0,bad:0};}
+  try{return await runPlanLocked(plan,a,later);}finally{await sb.rpc('release_page_run',{p_page:page.id});}}
+async function runPlanLocked(plan,a,later){const own=captions.filter(c=>c.page_id===page.id),pool=own.length?own:captions.filter(c=>!c.page_id);
   let ok=0,bad=0;const batch=crypto.randomUUID();
   for(let i=0;i<plan.length;i++){const {g,when}=plan[i];const its=g.map(x=>x.it);$('aInfo').textContent=`تجهيز المنشور ${i+1} من ${plan.length} (${its.length} منتج)...`;
     try{const fb=[],ig=[],fbP=[],igP=[],per=g.map(()=>({fb:[],ig:[]}));let k=0;
@@ -820,7 +824,7 @@ async function runPlan(plan,a,later){const own=captions.filter(c=>c.page_id===pa
         status:later?'scheduled':'approved',scheduled_at:later?when.toISOString():null,approved_by:me.email,approved_at:new Date().toISOString(),created_by_email:me.email,created_by_name:me.name+' (دوري)'}).select('id').single();
       if(ins.error)throw new Error(ins.error.message);
       const pp=await sb.from('post_products').insert(g.map((x,gi)=>({post_id:ins.data.id,page_id:page.id,product_key:x.it.product_key,seq:x.it.seq,seqs:x.it.seqs,category:x.it.category,image_urls:per[gi].fb,ig_image_urls:per[gi].ig})));
-      if(pp.error){await sb.from('posts').update({status:'cancelled',cancel_reason:'منتج منشور مسبقاً'}).eq('id',ins.data.id);throw new Error('منشور مسبقاً');}
+      if(pp.error){await sb.from('posts').delete().eq('id',ins.data.id);its.forEach(it=>it.post={status:'scheduled'});throw new Error('منشور مسبقاً — تُرك دون تكرار');}
       if(cap)await sb.from('caption_templates').update({use_count:(cap.use_count||0)+1,last_used_at:new Date().toISOString()}).eq('id',cap.id);
       let st;if(!later){const res=await callFn('publish',{post_id:ins.data.id});if(!res.ok)throw new Error(res.error);st={id:ins.data.id,status:'published',published_at:new Date().toISOString(),fb_post_id:res.fb_post_id};}
       else st={id:ins.data.id,status:'scheduled',scheduled_at:when.toISOString()};
@@ -891,7 +895,7 @@ async function doSave(later){
         status:later?'scheduled':'approved',scheduled_at:later?t.when.toISOString():null,approved_by:me.email,approved_at:new Date().toISOString(),created_by_email:me.email,created_by_name:me.name}).select('id').single();
       if(ins.error)throw new Error(pg.name+': '+ins.error.message);
       const pp=await sb.from('post_products').insert(comp.items.map((it,pi)=>({post_id:ins.data.id,page_id:pg.id,product_key:it.product_key,seq:it.seq,seqs:it.seqs,category:it.category,image_urls:perProd[pi].fb,ig_image_urls:perProd[pi].ig})).filter(r=>r.image_urls.length));
-      if(pp.error){await sb.from('posts').update({status:'cancelled',cancel_reason:'منتج منشور مسبقاً على الصفحة'}).eq('id',ins.data.id);throw new Error(pp.error.code==='23505'?`${pg.name}: أحد المنتجات منشور أو مجدول مسبقاً على هذه الصفحة`:pp.error.message);}
+      if(pp.error){await sb.from('posts').delete().eq('id',ins.data.id);throw new Error(pp.error.code==='23505'?`${pg.name}: أحد المنتجات منشور أو مجدول مسبقاً على هذه الصفحة`:pp.error.message);}
       if(t.capId){const c=captions.find(x=>x.id===t.capId);if(c)await sb.from('caption_templates').update({use_count:(c.use_count||0)+1,last_used_at:new Date().toISOString()}).eq('id',c.id);}
       if(!later){$('saveMsg').textContent=`${pg.name}: جارٍ النشر على فيسبوك...`;const res=await callFn('publish',{post_id:ins.data.id});results.push({pg,res});}
       else results.push({pg,when:t.when});
