@@ -934,6 +934,10 @@ const pname=id=>pages.find(p=>p.id===id)?.name||'';
 const IGST={published:['ok','انستكرام ✓'],failed:['bad','انستكرام فشل'],pending:['warn','انستكرام بالانتظار'],publishing:['warn','انستكرام قيد النشر'],skipped:['','انستكرام بلا صور']};
 function igPill(p){if(!p.ig_status)return'';const s=IGST[p.ig_status]||['',p.ig_status];
   return` <span class="pill ${s[0]}" title="${esc(p.ig_error||'')}">${s[1]}</span>${p.ig_status==='failed'&&p.status==='published'?` <button class="sm line" onclick="igRetry('${p.id}',this)">أعد على انستكرام</button>`:''}${p.ig_status==='failed'&&p.ig_error?`<div class="muted">${esc(p.ig_error)}</div>`:''}`;}
+function fbLink(p){if(p.fb_permalink)return p.fb_permalink;const [pg,id]=String(p.fb_post_id||'').split('_');return id?`https://www.facebook.com/permalink.php?story_fbid=${id}&id=${pg}`:`https://www.facebook.com/${p.fb_post_id}`;}
+function openLinks(p){let h='';if(p.fb_post_id){const u=fbLink(p);h+=`<a target="_blank" href="${esc(u)}">فتح فيسبوك</a> <button class="sm line" onclick="copyLink('${esc(u)}')">نسخ</button>`;}
+  if(p.ig_permalink)h+=` <a target="_blank" href="${esc(p.ig_permalink)}">فتح انستكرام</a> <button class="sm line" onclick="copyLink('${esc(p.ig_permalink)}')">نسخ</button>`;return h;}
+window.copyLink=async u=>{try{await navigator.clipboard.writeText(u);toast('نُسخ الرابط');}catch(e){prompt('انسخ الرابط',u);}};
 window.igRetry=async(id,b)=>{b.disabled=true;try{const r=await callFn('publish',{post_id:id,ig_retry:true});toast(r.ok?'نُشر على انستكرام':'تعذر: '+(r.error||''),5000);}catch(e){toast('خطأ: '+e.message,5000);}loadSchedule();if(typeof loadHistory==='function')loadHistory();};
 async function loadSchedule(){const since=new Date(Date.now()-24*3600e3).toISOString();
   let q=sb.from('posts').select('*').or(`status.eq.scheduled,status.eq.rendering,status.eq.publishing,and(status.in.(published,failed,cancelled),created_at.gte.${since})`).not('scheduled_at','is',null).order('scheduled_at',{ascending:true}).limit(300);
@@ -946,7 +950,7 @@ async function loadSchedule(){const since=new Date(Date.now()-24*3600e3).toISOSt
       <div style="min-width:0"><b>${esc(p.seq)}</b> <span class="muted">${$('schedAll').checked?esc(pname(p.page_id))+' • ':''}${n} صور${p.created_by_name?' • '+esc(p.created_by_name):''}</span>
         <div><span class="pill ${s[0]}">${s[1]}</span>${igPill(p)} ${p.cancel_reason?`<span class="muted">${esc(p.cancel_reason)}</span>`:''}${p.error?`<span class="muted">${esc(p.error)}</span>`:''}</div>
         <div class="muted" style="white-space:pre-wrap;overflow:hidden;max-height:3.2em">${esc(p.caption||'')}</div></div>
-      <div class="acts row">${p.status==='scheduled'?`<button class="sm ghost" onclick="publishNow('${p.id}')">نشر الآن</button><button class="sm line" onclick="cancelPost('${p.id}')">إلغاء</button>`:''}${p.fb_post_id?`<a target="_blank" href="https://www.facebook.com/${esc(p.fb_post_id)}">فتح</a>`:''}</div></div>`;}).join('')}</div>`).join('')||'<div class="box empty">لا توجد منشورات مجدولة.</div>';}
+      <div class="acts row">${p.status==='scheduled'?`<button class="sm ghost" onclick="publishNow('${p.id}')">نشر الآن</button><button class="sm line" onclick="cancelPost('${p.id}')">إلغاء</button>`:''}${openLinks(p)}</div></div>`;}).join('')}</div>`).join('')||'<div class="box empty">لا توجد منشورات مجدولة.</div>';}
 $('schedBtn').onclick=loadSchedule;$('schedAll').onchange=loadSchedule;
 async function loadHistory(){const{data,error}=await sb.from('posts').select('*').eq('page_id',page.id).order('created_at',{ascending:false}).limit(100);
   if(error){$('histBody').innerHTML=`<tr><td colspan="7">${esc(error.message)}</td></tr>`;return;}
@@ -955,7 +959,7 @@ async function loadHistory(){const{data,error}=await sb.from('posts').select('*'
     <td><b>${esc(p.seq)}</b><div class="muted">${esc(p.category)}</div></td><td class="muted" style="white-space:pre-wrap;max-width:260px">${esc((p.caption||'').slice(0,140))}</td>
     <td><span class="pill ${s[0]}">${s[1]}</span>${igPill(p)}${p.error?`<div class="muted">${esc(p.error)}</div>`:''}${p.cancel_reason?`<div class="muted">${esc(p.cancel_reason)}</div>`:''}</td>
     <td class="muted">${new Date(p.published_at||p.scheduled_at||p.created_at).toLocaleString('ar-IQ')}</td><td class="muted">${esc(p.created_by_name||p.approved_by||'')}</td>
-    <td>${p.fb_post_id?`<a target="_blank" href="https://www.facebook.com/${esc(p.fb_post_id)}">فتح</a>`:''}</td></tr>`;}).join('')||'<tr><td colspan="7" class="muted">لا توجد منشورات بعد.</td></tr>';}
+    <td><div class="row" style="gap:6px">${openLinks(p)}</div></td></tr>`;}).join('')||'<tr><td colspan="7" class="muted">لا توجد منشورات بعد.</td></tr>';}
 $('histBtn').onclick=loadHistory;
 
 setGuide(lsGet('guide','1')==='1');
