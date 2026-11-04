@@ -261,7 +261,10 @@ a{color:var(--accent)}
             <div class="field"><label>النشر على</label><select id="aChan"><option value="both">فيسبوك + انستكرام</option><option value="fb">فيسبوك فقط</option><option value="ig">انستكرام فقط</option></select></div>
             <div class="field"><label>إعادة نشر المنتج على نفس الصفحة بعد (يوم)</label><input id="aRepeat" type="number" min="0" max="365" style="width:90px"><span class="muted">0 = بدون تكرار. المنتجات الجديدة لها الأولوية دائماً، ثم الأقدم نشراً.</span></div>
           </div>
+          <div class="row"><div class="field"><label>حد يومي للمنشورات (0 = بلا حد)</label><input id="aDaily" type="number" min="0" style="width:90px"></div></div>
           <div id="aRunway" class="muted"></div>
+          <div class="box stack" style="padding:10px"><div class="row" style="justify-content:space-between"><b>المنشورات القادمة (معاينة)</b><button id="aPreview" class="line sm">عرض المعاينة</button></div>
+            <div class="muted">كل منشور من نوع واحد (3–10 منتجات)، والأنواع تتناوب. النص يُختار من نصوص النوع المعتمدة.</div><div id="aPrevOut" class="stack"></div></div>
           <span class="muted">لا يُنشر شيء خارج أوقات العمل. النص يُختار بالتناوب من نصوص الصفحة.</span>
           <div class="row"><button id="aSave" class="ghost">حفظ الإعدادات</button><span id="aMsg" class="muted"></span></div>
         </div>
@@ -287,6 +290,11 @@ a{color:var(--accent)}
           <div class="muted">المتغيرات: <span class="pill">{القياسات}</span> <span class="pill">{السعر}</span> <span class="pill">{قبل}</span> <span class="pill">{بعد}</span> <span class="pill">{التصنيف}</span> <span class="pill">{الصفحة}</span></div>
           <textarea id="newCap" placeholder="اكتب نصاً جديداً..."></textarea>
           <div class="row"><select id="newCapPage"></select><button id="addCapBtn">حفظ النص</button></div>
+          <div id="draftBox" class="box stack" style="padding:10px;background:var(--surface2)" hidden>
+            <div class="row" style="justify-content:space-between"><b>نصوص الأنواع من الذكاء الاصطناعي — بانتظار مراجعتك <span id="draftN" class="pill warn"></span></b>
+              <div class="row"><select id="draftCat"></select><button id="draftAll" class="sm">اعتماد كل الظاهر</button></div></div>
+            <div class="muted">«{النوع}» يُستبدل باسم النوع بالإنكليزي عند النشر (مثل Dresses). عدّل أي نص ثم اعتمده، أو احذفه.</div>
+            <div id="draftList" class="lib"></div></div>
           <div id="myCaps" class="lib"></div>
         </div>
         <div class="box stack">
@@ -448,7 +456,7 @@ a{color:var(--accent)}
 const SB_URL='https://lxikqgjfjnfkhvuckihx.supabase.co';
 const SB_KEY='sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT';
 const sb=supabase.createClient(SB_URL,SB_KEY);
-const VARS=['{القياسات}','{السعر}','{قبل}','{بعد}','{التصنيف}','{الصفحة}'];
+const VARS=['{النوع}','{القياسات}','{السعر}','{قبل}','{بعد}','{التصنيف}','{الصفحة}'];
 const CATALOG_TEXT='#e0aaff';
 const PRESETS={ teal:['تركوازي','#00796b'], orange:['برتقالي','#e65100'], rose:['وردي','#c2185b'], navy:['كحلي','#153b7a'], black:['أسود','#141414'], green:['أخضر','#2e7d32'] };
 const AR_DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -732,7 +740,7 @@ $('clrSel').onclick=()=>{const first=comp.targets[0];comp.targets=[first];comp.a
 $('pgList').addEventListener('change',e=>{const cb=e.target.closest('[data-p]');if(!cb)return;const p=pages.find(x=>x.id===cb.dataset.p);
   if(cb.checked) addTarget(p); else{if(comp.targets.length===1){cb.checked=true;return toast('يجب اختيار صفحة واحدة على الأقل');}comp.targets=comp.targets.filter(t=>t.page.id!==p.id);comp.active=0;}
   renderTargets();selectTarget(comp.targets.length-1);renderPgTools();});
-function pickCaptionFor(pg,offset){const own=captions.filter(c=>c.page_id===pg.id),gen=captions.filter(c=>!c.page_id);const pool=own.length?own:gen;
+function pickCaptionFor(pg,offset){const ok=captions.filter(c=>c.status!=='draft');const ty=comp&&comp.items[0]?.ptype;const tyCaps=ty?ok.filter(c=>c.ptype===ty&&c.category===(comp.items[0].src_category||comp.items[0].category)):[];if(tyCaps.length&&!offset)return tyCaps.sort((a,b)=>a.use_count-b.use_count)[0];const own=ok.filter(c=>c.page_id===pg.id),gen=ok.filter(c=>!c.page_id&&!c.ptype);const pool=own.length?own:gen;
   const def=captions.find(c=>c.id===pg.settings.default_caption_id);if(def&&!offset)return def;return pool.length?pool[(offset||0)%pool.length]:null;}
 function addTarget(pg){if(comp.targets.some(t=>t.page.id===pg.id))return;const cap=pickCaptionFor(pg,comp.targets.length);
   const prev=comp.targets[comp.targets.length-1];let when=null;if(prev&&prev.when){when=new Date(prev.when.getTime()+(+$('gapSel').value)*60000);}
@@ -788,11 +796,12 @@ $('when').addEventListener('change',syncWhen);
 function fillVars(t,pg){const its=comp?comp.items:[];const it=its[0]||{};
   const price=its.map(x=>x.noDiscount?(x.label||''):(x.after||x.before||'')).filter(Boolean).join(' / ');
   const sizes=[...new Set(its.flatMap(x=>String(x.sizesShort||'').split(' - ')).filter(Boolean))].join(' - ');
-  return String(t||'').replaceAll('{تسلسل}','').replaceAll('{القياسات}',sizes).replaceAll('{السعر}',price).replaceAll('{قبل}',it.before||'').replaceAll('{بعد}',it.after||'')
+  const tax=TAX[it.src_category||it.category];const tyEn=it.ptype?((it.pgender&&tax?.genders_en?.[it.pgender]?tax.genders_en[it.pgender]+' ':'')+(tax?.types_en?.[it.ptype]||it.ptype)):'';
+  return String(t||'').replaceAll('{النوع}',tyEn).replaceAll('{تسلسل}','').replaceAll('{القياسات}',sizes).replaceAll('{السعر}',price).replaceAll('{قبل}',it.before||'').replaceAll('{بعد}',it.after||'')
     .replaceAll('{التصنيف}',[...new Set(its.map(x=>x.category))].join('، ')).replaceAll('{الصفحة}',(pg||page)?.name||'').replace(/\n{3,}/g,'\n\n').trim();}
 function renderCaps(){if(!comp)return;const t=comp.targets[comp.active];const q=$('capSearch').value.trim();
-  const list=captions.filter(c=>(!q||c.text.includes(q))&&(!c.page_id||c.page_id===t.page.id)).sort((a,b)=>((b.page_id===t.page.id)-(a.page_id===t.page.id))||(b.use_count-a.use_count));
-  $('capList').innerHTML=list.map(c=>`<button type="button" class="cap ${t.capId===c.id?'on':''}" data-id="${c.id}">${esc(fillVars(c.text,t.page))}<span class="src">${c.page_id?'نص الصفحة':'عام'} • ${esc(c.source)} • ${c.use_count} مرة</span></button>`).join('')||'<div class="muted">لا توجد نصوص. أضف نصوصاً من «مكتبة النصوص».</div>';}
+  const ty0=comp.items[0]?.ptype;const list=captions.filter(c=>c.status!=='draft'&&(!q||c.text.includes(q))&&(!c.page_id||c.page_id===t.page.id)&&(!c.ptype||c.ptype===ty0)).sort((a,b)=>((b.page_id===t.page.id)-(a.page_id===t.page.id))||(b.use_count-a.use_count));
+  $('capList').innerHTML=list.map(c=>`<button type="button" class="cap ${t.capId===c.id?'on':''}" data-id="${c.id}">${esc(fillVars(c.text,t.page))}<span class="src">${c.ptype?'نص '+esc(c.ptype):c.page_id?'نص الصفحة':'عام'} • ${esc(c.source)} • ${c.use_count} مرة</span></button>`).join('')||'<div class="muted">لا توجد نصوص. أضف نصوصاً من «مكتبة النصوص».</div>';}
 $('capSearch').addEventListener('input',renderCaps);
 $('capList').addEventListener('click',e=>{const b=e.target.closest('.cap');if(!b)return;const c=captions.find(x=>x.id===b.dataset.id);const t=comp.targets[comp.active];t.capId=c.id;t.caption=fillVars(c.text,t.page);$('cCaption').value=t.caption;renderCaps();$('fbCap').textContent=t.caption;});
 $('cCaption').addEventListener('input',()=>{const t=comp.targets[comp.active];t.caption=$('cCaption').value;$('fbCap').textContent=t.caption;});
@@ -807,11 +816,23 @@ async function saveCaption(text,source,pageId){const{error}=await sb.from('capti
   if(error){toast(error.code==='23505'?'هذا النص محفوظ مسبقاً':'خطأ: '+error.message);return false;}toast('حُفظ النص');await loadCaptions();return true;}
 function fillCapPageSelect(){$('newCapPage').innerHTML='<option value="">نص عام لكل الصفحات</option>'+pages.map(p=>`<option value="${p.id}" ${p.id===page?.id?'selected':''}>${esc(p.name)}</option>`).join('');
   $('libScope').innerHTML='<option value="">كل النصوص</option><option value="general">العامة فقط</option>'+pages.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');}
-function renderMyCaps(){const sc=$('libScope').value,q=$('libSearch').value.trim();const pn=id=>pages.find(p=>p.id===id)?.name||'صفحة';
-  const list=captions.filter(c=>(!q||c.text.includes(q))&&(!sc||(sc==='general'?!c.page_id:c.page_id===sc)));
+function renderDrafts(){const d=captions.filter(c=>c.status==='draft');$('draftBox').hidden=!d.length;if(!d.length)return;$('draftN').textContent=d.length;
+  const cats=[...new Set(d.map(c=>c.category))];const cur=$('draftCat').value;$('draftCat').innerHTML='<option value="">كل الفئات</option>'+cats.map(c=>`<option ${c===cur?'selected':''}>${esc(c)}</option>`).join('');
+  const list=d.filter(c=>!$('draftCat').value||c.category===$('draftCat').value);
+  $('draftList').innerHTML=list.map(c=>`<div class="it" data-id="${c.id}"><div class="row" style="gap:6px"><span class="pill">${esc(c.category)}</span><span class="pill ok">${esc(c.ptype)}</span></div><textarea>${esc(c.text)}</textarea>
+    <div class="row"><button class="sm" data-dact="ok">اعتماد</button><button class="sm line" data-dact="del">حذف</button></div></div>`).join('');}
+$('draftCat').addEventListener('input',renderDrafts);
+$('draftList').addEventListener('click',async e=>{const b=e.target.closest('[data-dact]');if(!b)return;const box=b.closest('.it');const id=box.dataset.id;
+  if(b.dataset.dact==='del'){await sb.from('caption_templates').delete().eq('id',id);}else{const{error}=await sb.from('caption_templates').update({status:'approved',text:box.querySelector('textarea').value.trim()}).eq('id',id);if(error)return toast('خطأ: '+error.message);}
+  const c=captions.find(x=>x.id===id);if(c){if(b.dataset.dact==='del')captions=captions.filter(x=>x.id!==id);else{c.status='approved';c.text=box.querySelector('textarea').value.trim();}}renderDrafts();renderMyCaps();});
+$('draftAll').onclick=async()=>{const ids=[...document.querySelectorAll('#draftList .it')].map(x=>x.dataset.id);if(!ids.length)return;
+  for(const box of document.querySelectorAll('#draftList .it'))await sb.from('caption_templates').update({status:'approved',text:box.querySelector('textarea').value.trim()}).eq('id',box.dataset.id);
+  toast(`اعتُمد ${ids.length} نص`);await loadCaptions();};
+function renderMyCaps(){renderDrafts();const sc=$('libScope').value,q=$('libSearch').value.trim();const pn=id=>pages.find(p=>p.id===id)?.name||'صفحة';
+  const list=captions.filter(c=>c.status!=='draft'&&(!q||c.text.includes(q))&&(!sc||(sc==='general'?!c.page_id:c.page_id===sc)));
   $('myCaps').innerHTML=list.map(c=>`<div class="it" data-id="${c.id}"><textarea>${esc(c.text)}</textarea>
     <div class="row" style="justify-content:space-between"><select class="cp">${['<option value="">عام</option>',...pages.map(p=>`<option value="${p.id}" ${c.page_id===p.id?'selected':''}>${esc(p.name)}</option>`)].join('')}</select>
-    <span class="muted">${c.use_count} مرة</span></div>
+    <span class="muted">${c.ptype?`<span class="pill ok">${esc(c.ptype)}</span> `:''}${c.use_count} مرة</span></div>
     <div class="row"><button class="sm" data-act="save">حفظ التعديل</button><button class="sm line" data-act="del">حذف</button></div></div>`).join('')||'<div class="muted">لا توجد نصوص.</div>';}
 ['libScope','libSearch'].forEach(id=>$(id).addEventListener('input',renderMyCaps));
 $('myCaps').addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b)return;const box=b.closest('.it');const id=box.dataset.id;
@@ -865,7 +886,7 @@ function serverStatusText(a){if(!a.enabled)return'متوقف. شغّله واح�
 async function ensureCandidates(){if(candidates.length&&candidates._page===page.id)return;const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;await loadTypes();}
 async function loadAuto(){const a=autoCfg();$('autoPage').textContent='— '+page.name;
   $('aEnabled').checked=!!a.enabled;$('aServerStatus').textContent=serverStatusText(a);
-  $('aMax').value=a.max;$('aGap').value=a.gap;$('aStart').value=a.start;$('aEnd').value=a.end;$('aImgs').value=a.imgs;$('aMode').value=a.mode||'group';$('aChan').value=a.channels||'both';$('aRepeat').value=page.settings.repeat_days??14;$('aPlan').innerHTML='';
+  $('aMax').value=a.max;$('aGap').value=a.gap;$('aStart').value=a.start;$('aEnd').value=a.end;$('aImgs').value=a.imgs;$('aMode').value=a.mode||'group';$('aChan').value=a.channels||'both';$('aDaily').value=a.daily_max||0;$('aPrevOut').innerHTML='';$('aRepeat').value=page.settings.repeat_days??14;$('aPlan').innerHTML='';
   $('aCats').innerHTML='<div class="muted">جارٍ قراءة المنتجات...</div>';renderAutoStatus();
   try{await ensureCandidates();}catch(e){$('aCats').innerHTML='خطأ: '+esc(e.message);return;}
   $('aCats').innerHTML=page.categories.map(c=>{const r=a.ranges[c]||{};const its=candidates.filter(it=>it.category===c);const subs=[...new Set(its.map(it=>it.sub).filter(Boolean))];
@@ -892,8 +913,14 @@ function updAutoCounts(){const R=readRanges();document.querySelectorAll('#aCats 
 $('aServerNow').onclick=async()=>{$('aServerNow').disabled=true;$('aServerStatus').textContent='الخادم يجهز المنشورات...';
   try{const j=await callFn('autopilot',{page_id:page.id});const r=(j.results||[])[0]||{};$('aServerStatus').textContent=r.error?('خطأ: '+r.error):r.skip?('لم يُجهّز شيء: '+r.skip):(r.made&&r.made.length?`جُهّز ${r.made.length} منشور (${r.made.join('، ')}). يُرسم الترميز خلال دقيقة أو دقيقتين ثم يُنشر في وقته.`:'لا توجد منتجات جديدة في النطاق.');await loadPages();renderAutoStatus();}
   catch(e){$('aServerStatus').textContent='خطأ: '+e.message;}$('aServerNow').disabled=false;};
-$('aSave').onclick=async()=>{const prev=page.settings.auto||{};const a={enabled:$('aEnabled').checked,last_run:prev.last_run||null,last_result:prev.last_result||null,max:Math.max(1,+$('aMax').value||1),gap:Math.max(30,+$('aGap').value||90),start:Math.min(23,Math.max(0,+$('aStart').value||0)),end:Math.min(24,Math.max(1,+$('aEnd').value||24)),imgs:Math.max(1,+$('aImgs').value||1),mode:$('aMode').value,channels:$('aChan').value,ranges:readRanges()};
+$('aSave').onclick=async()=>{const prev=page.settings.auto||{};const a={enabled:$('aEnabled').checked,last_run:prev.last_run||null,last_result:prev.last_result||null,max:Math.max(1,+$('aMax').value||1),gap:Math.max(30,+$('aGap').value||90),start:Math.min(23,Math.max(0,+$('aStart').value||0)),end:Math.min(24,Math.max(1,+$('aEnd').value||24)),imgs:Math.max(1,+$('aImgs').value||1),mode:$('aMode').value,channels:$('aChan').value,daily_max:Math.max(0,+$('aDaily').value||0),recent_types:prev.recent_types||[],type_used:prev.type_used||{},ranges:readRanges()};
   if(a.end<=a.start)return toast('نهاية أوقات العمل يجب أن تكون بعد البداية');page.settings.auto=a;page.settings.repeat_days=Math.max(0,Math.min(365,parseInt($('aRepeat').value??14,10)||0));const{error}=await sb.from('pages').update({settings:page.settings}).eq('id',page.id);$('aMsg').textContent=error?'خطأ: '+error.message:(a.enabled?'حُفظت الإعدادات والنشر التلقائي من الخادم يعمل':'حُفظت الإعدادات');$('aServerStatus').textContent=serverStatusText(a);};
+$('aPreview').onclick=async()=>{$('aPreview').disabled=true;$('aPrevOut').innerHTML='<span class="muted">جارٍ تخطيط المنشورات...</span>';
+  try{const j=await callFn('autopilot',{mode:'preview',page_id:page.id,n:5});
+    $('aPrevOut').innerHTML=(j.preview||[]).map((p,k)=>`<div class="box stack" style="padding:8px;gap:6px"><div class="row" style="gap:6px"><b>${k+1}.</b>${p.ptype?`<span class="pill ok">${esc(p.ptype)}${p.gender?' · '+esc(p.gender):''}</span><span class="pill" dir="ltr">${esc(p.typeEn)}</span>${p.merged.length?`<span class="pill warn">مع ${esc(p.merged.join('، '))}</span>`:''}`:'<span class="pill warn">منتجات غير مصنّفة بعد (مختلطة)</span>'}<span class="muted">${p.count} منتج</span></div>
+      <div class="row" style="gap:4px;flex-wrap:nowrap;overflow:auto">${p.thumbs.map(u=>`<img src="${esc(thumb(u))}" style="width:46px;height:60px;object-fit:cover;border-radius:6px">`).join('')}</div>
+      <div class="muted" style="white-space:pre-wrap">${p.caption?esc(p.caption):'<span class="pill">لا يوجد نص معتمد لهذا النوع بعد — سيُستخدم نص الصفحة</span>'}</div></div>`).join('')||'<div class="muted">لا يوجد ما يكفي لمنشور (3 منتجات من نوع واحد على الأقل).</div>';}
+  catch(e){$('aPrevOut').textContent='خطأ: '+e.message;}$('aPreview').disabled=false;};
 function inHours(d,a){const h=d.getHours()+d.getMinutes()/60;return h>=a.start&&h<a.end;}
 function nextWorkTime(d,a){const x=new Date(d);if(inHours(x,a))return x;if(x.getHours()+x.getMinutes()/60>=a.end){x.setDate(x.getDate()+1);}x.setHours(a.start,0,0,0);return x;}
 async function renderAutoStatus(){const{data}=await sb.from('posts').select('scheduled_at').eq('page_id',page.id).eq('status','scheduled').gte('scheduled_at',new Date().toISOString()).order('scheduled_at').limit(500);
@@ -918,7 +945,7 @@ async function runPlan(plan,a,later){
   const lk=await sb.rpc('claim_page_run',{p_page:page.id});
   if(!lk.data){toast('هناك تشغيلة أخرى تعمل الآن على هذه الصفحة (من الخادم أو من نافذة أخرى). انتظر دقيقتين ثم أعد المحاولة.',6000);return{ok:0,bad:0};}
   try{return await runPlanLocked(plan,a,later);}finally{await sb.rpc('release_page_run',{p_page:page.id});}}
-async function runPlanLocked(plan,a,later){const own=captions.filter(c=>c.page_id===page.id),pool=own.length?own:captions.filter(c=>!c.page_id);
+async function runPlanLocked(plan,a,later){const okc=captions.filter(c=>c.status!=='draft'),own=okc.filter(c=>c.page_id===page.id),pool=own.length?own:okc.filter(c=>!c.page_id&&!c.ptype);
   let ok=0,bad=0;const batch=crypto.randomUUID();
   for(let i=0;i<plan.length;i++){const {g,when}=plan[i];const its=g.map(x=>x.it);$('aInfo').textContent=`تجهيز المنشور ${i+1} من ${plan.length} (${its.length} منتج)...`;
     try{const fb=[],ig=[],fbP=[],igP=[],per=g.map(()=>({fb:[],ig:[]}));let k=0;
