@@ -216,6 +216,7 @@ a{color:var(--accent)}
           <select id="catF"><option value="">كل الفئات</option></select>
           <select id="subF"><option value="">كل الأقسام</option></select>
           <select id="sizeF"><option value="">كل القياسات</option></select>
+          <select id="typeF" hidden><option value="">كل الأنواع</option></select>
           <input id="modelQ" placeholder="بحث بقياس أو موديل (مثل 3XL، A54)" style="width:220px">
           <select id="sortF"><option value="new">الأحدث تسلسلاً</option><option value="sizes">الأكثر قياسات</option><option value="imgs">الأكثر صوراً</option></select>
           <div class="seg" id="stF"><button data-v="fresh" class="on">غير منشور</button><button data-v="scheduled">مجدول</button><button data-v="published">منشور</button><button data-v="all">الكل</button></div>
@@ -337,6 +338,10 @@ a{color:var(--accent)}
     <div id="tab-map" class="stack" hidden>
       <div class="tip">حدّدت فئات كل صفحة من محتوى منشوراتها الفعلي. الصفحات المعلّمة بـ«راجع» غير واضحة، فراجعها وصحّح. الصفحة الموقوفة لا تظهر في قائمة الصفحات.<button class="tx">✕</button></div>
       <div class="box stack" id="igCard" style="gap:8px"></div>
+      <div class="box stack" style="gap:8px"><div class="row" style="justify-content:space-between"><h3 style="margin:0">تصنيف المنتجات (الأنواع)</h3>
+        <div class="row"><button id="clsStatus" class="line sm">عرض التقدّم</button><button id="taxEdit" class="line sm">تعديل قوائم الأنواع</button></div></div>
+        <div class="muted">كل منتج ملابس أو «منزلية» يُصنّف مرة واحدة تلقائياً من صورته. التصحيح من بطاقة المنتج نفسها بالضغط على نوعه، والتصحيح اليدوي لا يُغيَّر أبداً.</div>
+        <div id="clsOut"></div><div id="taxBox" hidden></div></div>
       <div class="box toolbar">
         <div class="row"><input id="mapQ" placeholder="بحث باسم الصفحة"><select id="mapCat"><option value="">كل الفئات</option></select>
           <select id="mapGrp"><option value="">كل المجموعات</option></select>
@@ -512,7 +517,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dat
 // ───────── المنتجات ─────────
 $('loadBtn').onclick=async()=>{
   $('loadBtn').disabled=true;$('candInfo').textContent='جارٍ القراءة من الشيتات...';
-  try{const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;selected.clear();fillSubF();renderCounts();renderGrid();renderSelBar();loadBusy();}
+  try{const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;selected.clear();await loadTypes();fillSubF();renderCounts();renderGrid();renderSelBar();loadBusy();}
   catch(e){$('candInfo').textContent='خطأ: '+e.message;}
   $('loadBtn').disabled=false;
 };
@@ -523,11 +528,33 @@ function fillSizeF(){const c=$('catF').value,sub=$('subF').value;const set=new M
   const keys=[...set.keys()].sort((a,b)=>{const ia=SIZE_ORDER.indexOf(a),ib=SIZE_ORDER.indexOf(b);return(ia<0?999:ia)-(ib<0?999:ib)||a.localeCompare(b,'ar');});
   const cur=$('sizeF').value;$('sizeF').innerHTML='<option value="">كل القياسات</option>'+keys.slice(0,300).map(z=>`<option value="${esc(z)}">${esc(z)} (${set.get(z)})</option>`).join('');
   if(keys.includes(cur))$('sizeF').value=cur;$('sizeF').hidden=!keys.length;}
+let TAX={};
+async function loadTypes(){try{
+  if(!Object.keys(TAX).length){const{data}=await sb.from('type_taxonomy').select('*');(data||[]).forEach(t=>TAX[t.category]=t);}
+  const cats=[...new Set(candidates.map(it=>it.category))].filter(c=>TAX[c]);if(!cats.length)return;
+  const map=new Map();for(let from=0;;from+=1000){const{data,error}=await sb.from('product_types').select('product_key,type,gender,confidence,source').in('category',cats).range(from,from+999);if(error||!data)break;data.forEach(d=>map.set(d.product_key,d));if(data.length<1000)break;}
+  candidates.forEach(it=>{const d=map.get(it.product_key);it.ptype=d?.type||null;it.pgender=d?.gender||null;it.pconf=d?.confidence;it.psrc=d?.source;});}catch(e){console.warn('types',e);}}
+function fillTypeF(){const c=$('catF').value,sub=$('subF').value;const set=new Map();let none=0;
+  const its=candidates.filter(it=>(!c||it.category===c)&&(!sub||it.sub===sub)&&stOf(it)==='fresh'&&TAX[it.category]);
+  its.forEach(it=>{if(!it.ptype){none++;return;}const k=it.pgender?it.ptype+' · '+it.pgender:it.ptype;set.set(it.ptype,(set.get(it.ptype)||0)+1);});
+  const cur=$('typeF').value;const keys=[...set.keys()].sort((a,b)=>set.get(b)-set.get(a));
+  $('typeF').innerHTML='<option value="">كل الأنواع</option>'+keys.map(k=>`<option value="${esc(k)}">${esc(k)} (${set.get(k)})</option>`).join('')+(none?`<option value="__none">غير مصنّف بعد (${none})</option>`:'');
+  if([...$('typeF').options].some(o=>o.value===cur))$('typeF').value=cur;$('typeF').hidden=!its.length;}
+window.editType=async(i,ev)=>{ev&&ev.stopPropagation();const it=candidates[i];const t=TAX[it.category];if(!t)return;
+  const box=document.getElementById('ty'+i);if(!box)return;
+  box.innerHTML=`<select onchange="saveType(${i},this.value,null)" onclick="event.stopPropagation()"><option value="">— اختر النوع —</option>${t.types.map(x=>`<option ${x===it.ptype?'selected':''}>${esc(x)}</option>`).join('')}</select>${t.genders?`<select onchange="saveType(${i},null,this.value)" onclick="event.stopPropagation()"><option value="">لمن؟</option>${t.genders.map(x=>`<option ${x===it.pgender?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}`;};
+window.saveType=async(i,type,gender)=>{const it=candidates[i];const row={product_key:it.product_key,seq:it.seq,category:it.category,sub:it.sub||null,type:type??it.ptype,gender:gender??it.pgender,confidence:1,source:'manual',image_url:it.images[0],error:null,updated_by:me.email,updated_at:new Date().toISOString()};
+  if(!row.type)return;const{error}=await sb.from('product_types').upsert(row,{onConflict:'product_key'});if(error)return toast('خطأ: '+error.message);
+  it.ptype=row.type;it.pgender=row.gender;it.pconf=1;it.psrc='manual';toast('حُفظ التصنيف');fillTypeF();renderGrid();};
+function typePill(it,i){if(!TAX[it.category])return'';
+  if(!it.ptype)return`<span class="pill" id="ty${i}" style="cursor:pointer" onclick="editType(${i},event)" title="اضغط للتصنيف يدوياً">غير مصنّف</span>`;
+  const low=it.psrc!=='manual'&&(it.pconf??1)<0.6;
+  return`<span id="ty${i}" class="pill ${low?'warn':'ok'}" style="cursor:pointer" onclick="editType(${i},event)" title="${it.psrc==='manual'?'مصحح يدوياً':'تصنيف تلقائي'} — اضغط للتعديل">${low?'؟ ':''}${esc(it.ptype)}${it.pgender?' · '+esc(it.pgender):''}${it.psrc==='manual'?' ✓':''}</span>`;}
 function fillSubF(){const c=$('catF').value;const subs=[...new Set(candidates.filter(it=>it.sub&&(!c||it.category===c)).map(it=>it.sub))];
-  $('subF').innerHTML='<option value="">كل الأقسام</option>'+subs.map(s=>`<option>${esc(s)}</option>`).join('');$('subF').hidden=!subs.length;fillSizeF();}
+  $('subF').innerHTML='<option value="">كل الأقسام</option>'+subs.map(s=>`<option>${esc(s)}</option>`).join('');$('subF').hidden=!subs.length;fillSizeF();fillTypeF();}
 $('catF').addEventListener('input',()=>{fillSubF();renderGrid();});
 ['q','sortF','sizeF','modelQ'].forEach(id=>$(id).addEventListener('input',renderGrid));
-$('subF').addEventListener('input',()=>{fillSizeF();renderGrid();});
+$('subF').addEventListener('input',()=>{fillSizeF();fillTypeF();renderGrid();});$('typeF').addEventListener('input',renderGrid);
 $('stF').addEventListener('change',renderGrid);
 function stOf(it){const s=it.post?.status;if(!s)return'fresh';if(s==='published')return'published';return'scheduled';}
 function renderCounts(){const c={fresh:0,scheduled:0,published:0};candidates.forEach(it=>c[stOf(it)]++);
@@ -536,9 +563,9 @@ const toHttps=u=>String(u||'').replace(/^http:\/\//,'https://');
 function fixHttps(items){items.forEach(it=>{if(Array.isArray(it.images))it.images=it.images.map(toHttps);});return items;}
 function thumb(u){u=String(u||'').replace(/^http:\/\//,'https://');if(u.includes('/zoom/'))return u.replace('/zoom/','/thumbnail/');if(u.includes('_thumbnail_'))return u.replace(/_thumbnail_(\d+)x(\d+)\.webp/,(m,w,h)=>(+w<1000||+h<1300)?'_thumbnail_220x293.webp':m);if(u.includes('lh3.googleusercontent.com'))return u+'=w300';return u;}
 function visibleItems(){
-  const q=$('q').value.trim(),c=$('catF').value,sub=$('subF').value,so=$('sortF').value,sf=segVal('stF')||'fresh',sz=$('sizeF').value,mq=normModel($('modelQ').value);
+  const q=$('q').value.trim(),c=$('catF').value,sub=$('subF').value,so=$('sortF').value,sf=segVal('stF')||'fresh',sz=$('sizeF').value,mq=normModel($('modelQ').value),ty=$('typeF').value;
   let list=candidates.map((it,i)=>({it,i})).filter(({it})=>(!c||it.category===c)&&(!sub||it.sub===sub)&&(!q||it.seqs.some(s=>String(s).includes(q)))&&(sf==='all'||stOf(it)===sf)
-    &&(!sz||Object.keys(it.sizeCounts||{}).includes(sz))&&(!mq||normModel(Object.keys(it.sizeCounts||{}).join(' ')+' '+(it.sizesShort||'')).includes(mq)));
+    &&(!sz||Object.keys(it.sizeCounts||{}).includes(sz))&&(!ty||(ty==='__none'?!it.ptype:it.ptype===ty))&&(!mq||normModel(Object.keys(it.sizeCounts||{}).join(' ')+' '+(it.sizesShort||'')).includes(mq)));
   const nS=it=>Object.keys(it.sizeCounts||{}).length,rank={fresh:0,scheduled:1,published:2};
   const cmp=so==='sizes'?(a,b)=>nS(b.it)-nS(a.it):so==='imgs'?(a,b)=>b.it.images.length-a.it.images.length:(a,b)=>(+b.it.seq||0)-(+a.it.seq||0);
   list.sort((a,b)=>(rank[stOf(a.it)]-rank[stOf(b.it)])||cmp(a,b)); return list;
@@ -552,7 +579,7 @@ function renderGrid(){
       :st==='published'&&it.post.fb_post_id?`<a class="muted" target="_blank" href="https://www.facebook.com/${esc(it.post.fb_post_id)}">عرض على فيسبوك</a>`:`<button class="sm line" onclick="cancelPost('${it.post.id}')">إلغاء الجدولة</button>`;
     return `<div class="card ${st!=='fresh'?'done':''} ${selected.has(i)?'sel':''}" id="c${i}">
       <div class="ph"><img loading="lazy" src="${esc(thumb(it.images[0]))}" alt=""><span class="n">${it.images.length} صور</span><span class="ck">✓</span></div>
-      <div class="bd"><div><b>${esc(it.seq)}</b> <span class="muted">${esc(it.sub||it.category)}</span></div>${badge}
+      <div class="bd"><div><b>${esc(it.seq)}</b> <span class="muted">${esc(it.sub||it.category)}</span></div>${typePill(it,i)}${badge}
         ${it.elsewhere?`<span class="pill">على ${it.elsewhere} صفحة أخرى</span>`:''}${st==='fresh'&&it.last_posted_at?`<span class="pill warn" title="أعادته دورة التكرار">نُشر قبل ${Math.round((Date.now()-new Date(it.last_posted_at))/864e5)} يوم</span>`:''}
         <div class="muted">${esc(it.sizesShort)}</div><div class="muted" dir="ltr" style="text-align:right">${esc(priceShort(it))}</div>
         <div class="acts">${acts}</div></div></div>`;}).join('')||'<div class="empty">لا توجد منتجات بهذا الفلتر.</div>';
@@ -834,7 +861,7 @@ $('saveSetBtn').onclick=async()=>{const cats=[...document.querySelectorAll('#sCa
 const AUTO_DEF={max:1,gap:90,start:10,end:24,imgs:10,mode:'group',ranges:{}};
 function autoCfg(){return Object.assign({},AUTO_DEF,page.settings.auto||{},{ranges:Object.assign({},(page.settings.auto||{}).ranges||{})});}
 function serverStatusText(a){if(!a.enabled)return'متوقف. شغّله واحفظ الإعدادات ليعمل من الخادم.';return`يعمل • آخر تشغيلة: ${a.last_run?fmtT(new Date(a.last_run)):'لم يعمل بعد'}${a.last_result?' • '+a.last_result:''}${a.last_run?` • التشغيلة القادمة تقريباً: ${fmtT(new Date(new Date(a.last_run).getTime()+Math.max(30,a.gap)*60000))}`:''}`;}
-async function ensureCandidates(){if(candidates.length&&candidates._page===page.id)return;const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;}
+async function ensureCandidates(){if(candidates.length&&candidates._page===page.id)return;const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;await loadTypes();}
 async function loadAuto(){const a=autoCfg();$('autoPage').textContent='— '+page.name;
   $('aEnabled').checked=!!a.enabled;$('aServerStatus').textContent=serverStatusText(a);
   $('aMax').value=a.max;$('aGap').value=a.gap;$('aStart').value=a.start;$('aEnd').value=a.end;$('aImgs').value=a.imgs;$('aMode').value=a.mode||'group';$('aChan').value=a.channels||'both';$('aRepeat').value=page.settings.repeat_days??14;$('aPlan').innerHTML='';
@@ -928,6 +955,13 @@ function renderIgCard(){const act=mapRows.filter(r=>r.active);const yes=act.filt
   <details><summary>الصفحات المربوطة بانستكرام (${yes.length})</summary><div class="chips" style="margin-top:6px">${yes.map(r=>`<span class="pill ${(r.settings||{}).ig_publish===false?'warn':'ok'}"><bdi>${esc(r.name)}</bdi> · <bdi dir="ltr">@${esc(r.ig_username||'')}</bdi></span>`).join('')}</div></details>
   <details><summary>الصفحات بدون انستكرام (${no.length})</summary><div class="chips" style="margin-top:6px">${no.map(r=>`<span class="pill"><bdi>${esc(r.name)}</bdi></span>`).join('')}</div><div class="muted" style="margin-top:6px">لربط حساب: من إعدادات الصفحة في فيسبوك ← الحسابات المرتبطة ← انستكرام، ثم «تحديث من ميتا».</div></details>`;
   $('igSyncMap').onclick=async()=>{$('igSyncMap').disabled=true;try{const j=await callFn('ig-sync',{});toast(`${j.linked} صفحة مربوطة بانستكرام`);await loadMap();await loadPages();}catch(e){toast('خطأ: '+e.message);}};}
+$('clsStatus').onclick=async()=>{$('clsStatus').disabled=true;$('clsOut').innerHTML='<span class="muted">جارٍ الحساب...</span>';
+  try{const j=await callFn('classify',{mode:'status'});$('clsOut').innerHTML=`<table><thead><tr><th>الفئة</th><th>المنتجات</th><th>مصنّفة</th><th>متبقية</th></tr></thead><tbody>${j.status.map(r=>`<tr><td>${esc(r.category)}</td><td>${r.products}</td><td>${r.classified}</td><td>${r.remaining?`<span class="pill warn">${r.remaining}</span>`:'<span class="pill ok">اكتملت</span>'}</td></tr>`).join('')}</tbody></table>`;}
+  catch(e){$('clsOut').textContent='خطأ: '+e.message;}$('clsStatus').disabled=false;};
+$('taxEdit').onclick=async()=>{const b=$('taxBox');if(!b.hidden){b.hidden=true;return;}const{data}=await sb.from('type_taxonomy').select('*').order('category');
+  b.innerHTML=(data||[]).map(t=>`<div class="field" data-tc="${esc(t.category)}"><label>${esc(t.category)}</label><textarea style="min-height:52px">${esc(t.types.join('، '))}</textarea>${t.genders?`<span class="muted">لمن: ${esc(t.genders.join('، '))}</span>`:''}</div>`).join('')+'<div class="row"><button id="taxSave">حفظ القوائم</button><span class="muted">افصل بين الأنواع بفاصلة. إضافة نوع جديد لا تعيد تصنيف القديم تلقائياً.</span></div>';b.hidden=false;
+  $('taxSave').onclick=async()=>{let bad=0;for(const d of b.querySelectorAll('[data-tc]')){const types=[...new Set(d.querySelector('textarea').value.split(/[،,\n]/).map(x=>x.trim()).filter(Boolean))];if(!types.includes('أخرى'))types.push('أخرى');
+    const{error}=await sb.from('type_taxonomy').update({types,updated_at:new Date().toISOString()}).eq('category',d.dataset.tc);if(error)bad++;}TAX={};toast(bad?'تعذر حفظ بعض القوائم':'حُفظت قوائم الأنواع');};};
 function mapGroups(){return[...new Set(mapRows.flatMap(r=>r.groups||[]))].sort((a,b)=>a.localeCompare(b,'ar'));}
 function fillGrpOpts(){const v=$('mapGrp').value;const gs=mapGroups();$('mapGrp').innerHTML='<option value="">كل المجموعات</option><option value="__none">بدون مجموعة</option>'+gs.map(g=>`<option>${esc(g)}</option>`).join('');$('mapGrp').value=v;
   $('grpList').innerHTML=gs.filter(g=>!g.startsWith('محفظة ')).map(g=>`<option value="${esc(g)}">`).join('');}
