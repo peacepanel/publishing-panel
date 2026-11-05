@@ -182,6 +182,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
 #zoomBox{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:16px}#zoomBox[hidden]{display:none}#zoomBox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5)}.order .o{cursor:zoom-in}
 .orig{font-size:13px;font-weight:700;margin:3px 0;padding:3px 8px;background:#f3e5f5;color:#4a148c;border-radius:6px;display:inline-block}.orig a{color:inherit}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .orig{background:#3a1f4d;color:#e1bee7}}
+.pgname{font-weight:700;color:var(--accent,#5e35b1)}
 </style>
 </head>
 <body>
@@ -246,7 +247,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
     </div>
 
     <div id="tab-sched" class="stack" hidden>
-      <div class="tip">المنشورات تُنشر من الخادم في وقتها حتى لو كان جهازك مغلقاً. «مخطط» = محجوز بمنتجاته ووقته، وصوره تُجهّز قبل موعده بساعتين ثم يصير «مجدول». غيّر وقت أي منشور بـ«تغيير الوقت» أو ألغه. قبل النشر يُفحص المخزن: المنتج الذي نفد يُحذف، وإذا نفد كله يُلغى المنشور. بعد النشر «فتح فيسبوك/انستكرام» و«نسخ» الرابط، و«أعد على انستكرام» إذا فشل.<button class="tx">✕</button></div>
+      <div class="tip">المنشورات تُنشر من الخادم في وقتها حتى لو كان جهازك مغلقاً. كل منشور يبين عليه اسم صفحته. انستكرام ينشر كخطوة مستقلة بعد فيسبوك بدقيقة إلى ثلاث («بالدور» ثم «قيد النشر» ثم ✓)، وإذا فشل يكتب السبب بوضوح ويعيد تلقائياً لحد 3 مرات، ويتأكد من حساب انستكرام قبل الإعادة حتى ما يتكرر المنشور. «مخطط» = محجوز بمنتجاته ووقته، وصوره تُجهّز قبل موعده بساعتين ثم يصير «مجدول». غيّر وقت أي منشور بـ«تغيير الوقت» أو ألغه. قبل النشر يُفحص المخزن: المنتج الذي نفد يُحذف، وإذا نفد كله يُلغى المنشور. بعد النشر «فتح فيسبوك/انستكرام» و«نسخ» الرابط، و«أعد على انستكرام» إذا فشل.<button class="tx">✕</button></div>
       <div class="box row"><button id="schedBtn" class="ghost">تحديث الجدول</button><label class="row muted"><input type="checkbox" id="schedAll"> كل الصفحات</label></div>
       <div id="schedList" class="stack"></div>
     </div>
@@ -1277,9 +1278,9 @@ window.publishNow=async id=>{try{const res=await callFn('publish',{post_id:id,bg
 // ───────── جدول النشر والسجل ─────────
 const ST={planned:['','مخطط — تُجهّز صوره قبل موعده بساعتين'],rendering:['warn','قيد التجهيز'],published:['ok','نُشر'],failed:['bad','فشل'],publishing:['warn','قيد النشر'],approved:['warn','معتمد'],scheduled:['warn','مجدول'],rejected:['','مرفوض'],cancelled:['','ملغى'],pending_review:['','بانتظار المراجعة']};
 const pname=id=>pages.find(p=>p.id===id)?.name||'';
-const IGST={published:['ok','انستكرام ✓'],failed:['bad','انستكرام فشل'],pending:['warn','انستكرام بالانتظار'],publishing:['warn','انستكرام قيد النشر'],skipped:['','انستكرام بلا صور']};
+const IGST={published:['ok','انستكرام ✓'],failed:['bad','انستكرام فشل'],pending:['warn','انستكرام بالدور (خلال دقائق)'],publishing:['warn','انستكرام قيد النشر'],skipped:['','انستكرام بلا صور']};
 function igPill(p){if(!p.ig_status)return'';const s=IGST[p.ig_status]||['',p.ig_status];
-  return` <span class="pill ${s[0]}" title="${esc(p.ig_error||'')}">${s[1]}</span>${p.ig_status==='failed'&&p.status==='published'?` <button class="sm line" onclick="igRetry('${p.id}',this)">أعد على انستكرام</button>`:''}${p.ig_status==='failed'&&p.ig_error?`<div class="muted">${esc(p.ig_error)}</div>`:''}`;}
+  return` <span class="pill ${s[0]}" title="${esc(p.ig_error||'')}">${s[1]}</span>${p.ig_status==='failed'&&p.status==='published'?` <button class="sm line" onclick="igRetry('${p.id}',this)">أعد على انستكرام</button>`:''}${(p.ig_status==='failed'||p.ig_status==='pending')&&p.ig_error?`<div class="muted" style="color:${p.ig_status==='failed'?'#c62828':'inherit'}">⚠ ${esc(p.ig_error)}</div>`:''}`;}
 function igResult(r){const i=r.res.instagram;if(!r.pg.ig_user_id)return'<span class="pill">بلا حساب انستكرام</span>';
   if(!i)return chanOf()==='fb'?'<span class="pill">فيسبوك فقط</span>':igOn(r.pg)?'':'<span class="pill">انستكرام موقوف لهذه الصفحة</span>';
   if(i.ok)return`<span class="pill ok">انستكرام ✓</span> ${i.link?`<a target="_blank" href="${esc(i.link)}">فتح</a>`:`<a target="_blank" href="https://www.instagram.com/${esc(r.pg.ig_username||'')}/">الحساب</a>`}`;
@@ -1288,7 +1289,7 @@ function fbLink(p){if(p.fb_permalink)return p.fb_permalink;const [pg,id]=String(
 function openLinks(p){let h='';if(p.fb_post_id){const u=fbLink(p);h+=`<a target="_blank" href="${esc(u)}">فتح فيسبوك</a> <button class="sm line" onclick="copyLink('${esc(u)}')">نسخ</button>`;}
   if(p.ig_permalink)h+=` <a target="_blank" href="${esc(p.ig_permalink)}">فتح انستكرام</a> <button class="sm line" onclick="copyLink('${esc(p.ig_permalink)}')">نسخ</button>`;return h;}
 window.copyLink=async u=>{try{await navigator.clipboard.writeText(u);toast('نُسخ الرابط');}catch(e){prompt('انسخ الرابط',u);}};
-window.igRetry=async(id,b)=>{b.disabled=true;try{const r=await callFn('publish',{post_id:id,ig_retry:true});toast(r.ok?'نُشر على انستكرام':'تعذر: '+(r.error||''),5000);}catch(e){toast('خطأ: '+e.message,5000);}loadSchedule();if(typeof loadHistory==='function')loadHistory();};
+window.igRetry=async(id,b)=>{b.disabled=true;try{const r=await callFn('publish',{post_id:id,ig_retry:true});toast(r.ok?(r.queued?'أُرسل لانستكرام — ينشر خلال دقيقة أو دقيقتين':'منشور على انستكرام'):'تعذر: '+(r.error||''),5000);}catch(e){toast('خطأ: '+e.message,5000);}loadSchedule();if(typeof loadHistory==='function')loadHistory();};
 async function loadSchedule(){const since=new Date(Date.now()-24*3600e3).toISOString();
   let q=sb.from('posts').select('*').or(`status.eq.planned,status.eq.scheduled,status.eq.rendering,status.eq.publishing,and(status.in.(published,failed,cancelled),created_at.gte.${since})`).not('scheduled_at','is',null).order('scheduled_at',{ascending:true}).limit(300);
   if(!$('schedAll').checked)q=q.eq('page_id',page.id);
@@ -1297,7 +1298,7 @@ async function loadSchedule(){const since=new Date(Date.now()-24*3600e3).toISOSt
   $('schedList').innerHTML=[...groups.values()].map(g=>`<div class="box day"><h2>${AR_DAYS[g.d.getDay()]} ${g.d.getDate()}/${g.d.getMonth()+1} <span class="pill">${g.items.length} منشور</span></h2>
     ${g.items.map(p=>{const s=ST[p.status]||['',p.status];const d=new Date(p.scheduled_at);const n=(p.image_urls||[]).length||1;
       return`<div class="slot"><div class="tm">${h12(d.getHours())}:${String(d.getMinutes()).padStart(2,'0')}<div class="muted">${d.getHours()<12?'صباحاً':'مساءً'}</div></div><img src="${esc(p.image_url)}" alt="">
-      <div style="min-width:0"><b>${esc(p.seq)}</b> <span class="muted">${$('schedAll').checked?esc(pname(p.page_id))+' • ':''}${n} صور${p.created_by_name?' • '+esc(p.created_by_name):''}${p.source==='ship'?' <span class="pill" style="background:#e65100;color:#fff">✈️ شحن</span>':p.source==='posts'?' <span class="pill" style="background:#6a1b9a;color:#fff">🔁 إعادة نشر</span>':''}</span>
+      <div style="min-width:0"><b>${esc(p.seq)}</b> <span class="pgname">${esc(pname(p.page_id))}</span> <span class="muted">${n} صور${p.created_by_name?' • '+esc(p.created_by_name):''}${p.source==='ship'?' <span class="pill" style="background:#e65100;color:#fff">✈️ شحن</span>':p.source==='posts'?' <span class="pill" style="background:#6a1b9a;color:#fff">🔁 إعادة نشر</span>':''}</span>
         <div><span class="pill ${s[0]}">${s[1]}</span>${p.channels&&p.channels!=='both'?` <span class="pill">${p.channels==='fb'?'فيسبوك فقط':'انستكرام فقط'}</span>`:''}${igPill(p)} ${p.cancel_reason?`<span class="muted">${esc(p.cancel_reason)}</span>`:''}${p.error?`<span class="muted">${esc(p.error)}</span>`:''}</div>
         <div class="muted" style="white-space:pre-wrap;overflow:hidden;max-height:3.2em">${esc(p.caption||'')}</div></div>
       <div class="acts row">${p.status==='scheduled'?`<button class="sm ghost" onclick="publishNow('${p.id}')">نشر الآن</button>`:''}${['scheduled','planned'].includes(p.status)?`<button class="sm line" onclick="editWhen('${p.id}',this)">تغيير الوقت</button><button class="sm line" onclick="cancelPost('${p.id}')">إلغاء</button>`:''}${openLinks(p)}</div></div>`;}).join('')}</div>`).join('')||'<div class="box empty">لا توجد منشورات مجدولة.</div>';}
