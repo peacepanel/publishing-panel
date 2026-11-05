@@ -717,7 +717,7 @@ async function renderEncoded(url,product,pg){const img=await loadImg(url);const 
 // ───────── المحرر ─────────
 let comp=null; // {items:[product], sel:[{u,pi}], targets:[{page, when, capId, caption}], active:0}
 function openComposer(idxs){
-  const items=idxs.map(i=>candidates[i]).filter(it=>it&&stOf(it)==='fresh'); if(!items.length) return;
+  const seenK=new Set();const items=idxs.map(i=>candidates[i]).filter(it=>it&&stOf(it)==='fresh'&&!seenK.has(it.product_key)&&seenK.add(it.product_key)); if(!items.length) return;
   const n=items.length===1?Math.max(1,Math.min(page.settings.last_images||1,items[0].images.length)):1;
   const sel=[]; items.forEach((it,pi)=>it.images.slice(0,n).forEach(u=>sel.push({u,pi})));
   comp={items,idxs,sel,targets:[],active:0};
@@ -1197,30 +1197,36 @@ $('confirmYes').onclick=()=>doSave(false);
 async function upload(canvas,path){const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.92));const up=await sb.storage.from('post-images').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw new Error('رفع الصورة: '+up.error.message);return sb.storage.from('post-images').getPublicUrl(path).data.publicUrl;}
 async function doSave(later){
   ['confirmYes','confirmNo','publishBtn'].forEach(id=>$(id).disabled=true);
-  const batch=crypto.randomUUID();const results=[];
+  const batch=crypto.randomUUID();const results=[];const partialP=[];
   try{
     for(let ti=0;ti<comp.targets.length;ti++){const t=comp.targets[ti];const pg=t.page;
+      // منتج منشور أو مجدول مسبقاً على هذه الصفحة: يُترك من منشور هذه الصفحة فقط (الباقي ينشر)، وإذا كلها مكررة تُترك الصفحة
+      const{data:busyRows}=await sb.from('post_products').select('product_key').eq('page_id',pg.id).eq('live',true).in('product_key',comp.items.map(x=>x.product_key));
+      const busy=new Set((busyRows||[]).map(r=>r.product_key));const its=comp.items.filter(it=>!busy.has(it.product_key));
+      if(!its.length){results.push({pg,res:{ok:false,skipped:true,error:'كل منتجات المنشور منشورة أو مجدولة مسبقاً على هذه الصفحة — تُركت'}});continue;}
+      if(busy.size)partialP.push(`${pg.name} (بدون ${busy.size})`);
       const fb=[],ig=[],fbP=[],igP=[],perProd=comp.items.map(()=>({fb:[],ig:[]}));
-      for(let k=0;k<comp.sel.length;k++){const s=comp.sel[k];$('saveMsg').textContent=`${pg.name}: تجهيز الصورة ${k+1} من ${comp.sel.length}...`;
+      for(let k=0;k<comp.sel.length;k++){const s=comp.sel[k];if(busy.has(comp.items[s.pi].product_key))continue;$('saveMsg').textContent=`${pg.name}: تجهيز الصورة ${k+1} من ${comp.sel.length}...`;
         const c=await renderEncoded(s.u,comp.items[s.pi],pg);const base=`${pg.id}/${batch}_${k+1}`;
         const fu=await upload(c,base+'.jpg');const iu=await upload(buildInstagramCanvas(c),base+'_ig.jpg');
         fb.push(fu);ig.push(iu);fbP.push(base+'.jpg');igP.push(base+'_ig.jpg');perProd[s.pi].fb.push(fu);perProd[s.pi].ig.push(iu);}
-      const first=comp.items[0];
-      const ins=await sb.from('posts').insert({page_id:pg.id,product_key:comp.items.length===1?first.product_key:null,seq:comp.items.map(x=>x.seq).join(' + '),seqs:comp.items.flatMap(x=>x.seqs),
-        category:[...new Set(comp.items.map(x=>x.category))].join('، '),sizes:fillVars('{القياسات}',pg),price_text:first.text,caption:t.caption,
+      const first=its[0];
+      const ins=await sb.from('posts').insert({page_id:pg.id,product_key:its.length===1?first.product_key:null,seq:its.map(x=>x.seq).join(' + '),seqs:its.flatMap(x=>x.seqs),
+        category:[...new Set(its.map(x=>x.category))].join('، '),sizes:fillVars('{القياسات}',pg),price_text:first.text,caption:t.caption,
         image_path:fbP[0],image_url:fb[0],image_paths:fbP,image_urls:fb,ig_image_paths:igP,ig_image_urls:ig,caption_template_id:t.capId,batch_id:batch,channels:chanOf(),
         status:later?'scheduled':'approved',scheduled_at:later?t.when.toISOString():null,approved_by:me.email,approved_at:new Date().toISOString(),created_by_email:me.email,created_by_name:me.name,source:SRC}).select('id').single();
       if(ins.error)throw new Error(pg.name+': '+ins.error.message);
       const pp=await sb.from('post_products').insert(comp.items.map((it,pi)=>({post_id:ins.data.id,page_id:pg.id,product_key:it.product_key,seq:it.seq,seqs:it.seqs,category:it.category,image_urls:perProd[pi].fb,ig_image_urls:perProd[pi].ig})).filter(r=>r.image_urls.length));
       if(pp.error){await sb.from('posts').delete().eq('id',ins.data.id);throw new Error(pp.error.code==='23505'?`${pg.name}: أحد المنتجات منشور أو مجدول مسبقاً على هذه الصفحة`:pp.error.message);}
       if(t.capId){const c=captions.find(x=>x.id===t.capId);if(c)await sb.from('caption_templates').update({use_count:(c.use_count||0)+1,last_used_at:new Date().toISOString()}).eq('id',c.id);}
-      if(!later){$('saveMsg').textContent=`${pg.name}: جارٍ النشر على ${chanLabel(pg)}${chanLabel(pg).includes('انستكرام')?' (انستكرام قد يأخذ دقيقة)':''}...`;const res=await callFn('publish',{post_id:ins.data.id});results.push({pg,res});}
+      if(!later){$('saveMsg').textContent=`${pg.name}: جارٍ النشر على ${chanLabel(pg)}${chanLabel(pg).includes('انستكرام')?' (انستكرام قد يأخذ دقيقة)':''}...`;const res=await callFn('publish',{post_id:ins.data.id});results.push({pg,res,dropped:busy.size});}
       else results.push({pg,when:t.when});
       if(pg.id===page.id){comp.items.forEach(it=>{it.post=later?{id:ins.data.id,status:'scheduled',scheduled_at:t.when.toISOString()}:{id:ins.data.id,status:results[results.length-1].res?.ok?'published':'failed',published_at:new Date().toISOString(),fb_post_id:results[results.length-1].res?.fb_post_id};});}
     }
     // تذكّر آخر عدد صور للصفحة (منشور منتج واحد)
     if(comp.items.length===1){const n=comp.sel.length;for(const t of comp.targets){t.page.settings.last_images=n;await sb.from('pages').update({settings:t.page.settings}).eq('id',t.page.id);}}
-    if(later){toast(`أُضيف للجدول على ${results.length} صفحة`,4000);$('modal').hidden=true;}
+    const skippedP=results.filter(r=>r.res&&r.res.skipped);const okN=results.length-skippedP.length;
+    if(later){toast(`أُضيف للجدول على ${okN} صفحة${skippedP.length?` • تُركت ${skippedP.length} صفحة لأن منتجاتها منشورة مسبقاً عليها (${skippedP.map(r=>r.pg.name).join('، ')})`:''}${partialP.length?` • تُرك المنتج المكرر فقط في: ${partialP.join('، ')}`:''}`,8000);$('modal').hidden=true;}
     else{$('confirmBox').hidden=true;$('saveMsg').innerHTML=results.map(r=>r.res.ok?`<div>${r.res.fb_post_id?`<span class="pill ok">فيسبوك ✓</span>`:''} ${esc(r.pg.name)}${r.res.fb_post_id?` — <a target="_blank" href="${esc(fbLink({fb_post_id:r.res.fb_post_id}))}">فتح</a>`:''} ${igResult(r)}</div>`:`<div><span class="pill bad">لم يُنشر</span> ${esc(r.pg.name)}: ${esc(r.res.error)}</div>`).join('');}
     comp.items.forEach(it=>{const i=candidates.indexOf(it);selected.delete(i);});
     renderCounts();renderGrid();renderSelBar();loadBusy();loadCaptions();
