@@ -276,7 +276,7 @@ function auditInit(){
 function renderPicker(){
   const groups=[...new Set(pages.map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
   $('aGrp').innerHTML=[['__all','كل الصفحات'],...groups.map(g=>[g,g]),['__clear','✕ إلغاء الاختيار']].map(([v,l])=>`<button class="chip" data-ag="${esc(v)}">${esc(l)}</button>`).join('');
-  $('aPages').innerHTML=pages.map(p=>`<button class="chip ${aSel.has(p.id)?'on':''}" data-ap="${p.id}">${esc(p.name)}</button>`).join('');
+  $('aPages').innerHTML=pages.map(p=>{const c=covered(p.id),l=c[c.length-1];return`<button class="chip ${aSel.has(p.id)?'on':''}" data-ap="${p.id}" ${l?`title="مفحوصة: ${c.map(([a,b])=>a+' ← '+b).join('، ')}"`:''}>${esc(p.name)}${l?` <small style="opacity:.75">✔️ لغاية ${dS(l[1])}</small>`:''}</button>`;}).join('');
   const n=[...aSel].filter(id=>pages.some(p=>p.id===id)).length;
   $('aStart').textContent=`▶ ابدأ الفحص (${n} صفحة)`;$('aStart').disabled=!n;
   const days=Math.round((new Date($('aTo').value)-new Date($('aFrom').value))/864e5)+1;
@@ -284,9 +284,9 @@ function renderPicker(){
 }
 async function loadRuns(){
   const k=tab==='brand'?'brand':'dup';
-  const{data,error}=await sb.from('audit_runs').select('id,page_id,since,until,gap_days,status,error,created_at,updated_at,result,done:progress->done,total:progress->total,failed:progress->failed').eq('kind',k).order('created_at',{ascending:false}).limit(60);
+  const{data,error}=await sb.from('audit_runs').select('id,page_id,since,until,gap_days,status,error,created_at,updated_at,result,done:progress->done,total:progress->total,failed:progress->failed').eq('kind',k).order('created_at',{ascending:false}).limit(300);
   if(error){$('aRuns').innerHTML=`<div class="box">خطأ: ${esc(error.message)}</div>`;return;}
-  runs=data||[];renderRuns();
+  runs=data||[];renderRuns();renderPicker();
   clearTimeout(aTimer);if(tab!=='reply'&&runs.some(r=>r.status==='queued'||r.status==='working')){pump();aTimer=setTimeout(loadRuns,6000);}
 }
 // while this page is open it pushes the work along (one small step at a time); closed, the server does a step a minute
@@ -297,37 +297,54 @@ const ORD=['الأول','الثاني','الثالث','الرابع','الخام
 // one card per post: the picture that repeats, its number, date and time, page, who published it, and a link to open it
 function pcards(list){return`<div class="pcards">${list.map((p,i)=>{const im=p.thumb||p.img;return`<div class="pcard">${im?`<a href="${esc(im)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(im)}" alt="" onerror="this.style.visibility='hidden'"></a>`:''}<span class="n">المنشور ${ORD[i]||(i+1)}</span><span>📅 ${dAr(p.at)}</span>${p.page?`<span>📄 ${esc(p.page)}</span>`:''}<span class="by">👤 ${p.by?esc(p.by):'الناشر غير معروف'}</span><a class="open" href="${esc(p.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a></div>`;}).join('')}</div>`;}
 const thumbs=pcards;
-function renderRuns(){
-  // latest run per page first
-  const seen=new Set();const latest=runs.filter(r=>{if(seen.has(r.page_id))return false;seen.add(r.page_id);return true;});
-  $('aRuns').innerHTML=latest.length?latest.map(r=>{
+function runBody(r){
     const res=r.result||{};const pct=r.total?Math.round((r.done||0)/r.total*100):0;
     let body='';
     if(r.status==='working'||r.status==='queued')body=`<div class="bar"><i style="width:${pct}%"></i></div><div class="muted" style="font-size:13px">${r.total?`${r.done||0} / ${r.total} صورة`:'يجيب المنشورات...'}</div><div class="row"><button class="sm line" data-acancel="${r.id}">⏹ إلغاء</button></div>`;
     else if(r.status==='failed')body=`<div style="color:var(--red)">${esc(r.error||'')}</div>`;
+    else if(r.status==='cancelled')body='';
     else if(r.status==='done'&&tab==='dup'){
       const g=res.groups||[],t=res.texts||[];
       body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span>${res.violations?`<span class="pill red">${res.violations} تكرار مخالف</span>`:'<span class="pill grn">ماكو تكرار مخالف</span>'}${g.length-res.violations>0?`<span class="pill yel">${g.length-res.violations} إعادة بعد ${r.gap_days} يوم أو أكثر</span>`:''}${t.length?`<span class="pill">${t.length} كليشة متكررة</span>`:''}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
-        ${g.length?`<details ${res.violations?'open':''}><summary>🔁 نفس الصور (${g.length})</summary>${g.map(x=>`<div class="grp ${x.violation?'bad':''}"><div style="font-size:13px">${x.n} مرات • أقصر فرق ${x.min_gap} يوم ${x.violation?'<b style="color:var(--red)">— مخالف</b>':''}</div>${thumbs(x.posts)}</div>`).join('')}</details>`:''}
+        ${g.length?`<details ${res.violations?'open':''}><summary>🔁 نفس الصور (${g.length})</summary>${g.map(x=>`<div class="grp ${x.violation?'bad':''}"><div style="font-size:13px">${x.n} مرات • أقصر فرق ${x.min_gap} يوم ${x.violation?'<b style="color:var(--red)">— مخالف</b>':''}</div>${pcards(x.posts)}</div>`).join('')}</details>`:''}
         ${t.length?`<details><summary>📝 كليشات متكررة (${t.length})</summary>${t.map(x=>`<div class="grp"><div style="font-size:13px"><b>${x.n} مرات</b> — ${esc(x.sample)}</div>${pcards(x.posts.map(p=>({...p,page:pname(r.page_id)})))}</div>`).join('')}</details>`:''}`;
     } else if(r.status==='done'){
       const f=res.flags||[];
       body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span><span class="pill">${res.checked} فحص جديد</span>${res.reused?`<span class="pill grn">${res.reused} مفحوصة من قبل (مجاناً)</span>`:''}${f.length?`<span class="pill red">${f.length} صورة بيها براند</span>`:'<span class="pill grn">ماكو براندات</span>'}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
         ${f.length?`<div class="thumbs" style="margin-top:6px">${f.map(x=>`<a href="${esc(x.link)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(x.img)}" alt="" onerror="this.style.visibility='hidden'"><span><b style="color:var(--red)">${esc(x.brand||'براند')}</b> • ${x.conf==='high'?'ثقة عالية':x.conf==='medium'?'ثقة متوسطة':'ثقة قليلة'}</span><span>${dAr(x.at)} • صورة ${x.n}</span>${x.by?`<span>👤 ${esc(x.by)}</span>`:''}</a>`).join('')}</div>`:''}`;
     }
-    return`<div class="box stack" style="gap:6px"><div class="row" style="justify-content:space-between"><b>${esc(pname(r.page_id))}</b><span class="muted" style="font-size:13px">${ST[r.status]||r.status} • ${r.since} ← ${r.until}</span></div>${body}</div>`;
+    return body;
+}
+// the periods of a page already checked, merged ("1 تشرين الأول ← 5 تشرين الثاني")
+const dS=d=>new Date(d+'T12:00:00').toLocaleDateString('ar-IQ',{day:'numeric',month:'short'});
+function covered(pid){
+  const iv=runs.filter(r=>r.page_id===pid&&r.status==='done').map(r=>[r.since,r.until]).sort((a,b)=>a[0].localeCompare(b[0]));const out=[];
+  for(const [a,b] of iv){const l=out[out.length-1];const nx=l&&new Date(new Date(l[1]).getTime()+864e5).toISOString().slice(0,10);if(l&&a<=nx){if(b>l[1])l[1]=b;}else out.push([a,b]);}
+  return out;
+}
+function renderRuns(){
+  // one card per page: its latest check, the periods checked so far, and the earlier reports folded below
+  const order=[],by=new Map();for(const r of runs){if(!by.has(r.page_id)){by.set(r.page_id,[]);order.push(r.page_id);}by.get(r.page_id).push(r);}
+  const latest=order.map(id=>by.get(id)[0]);
+  $('aRuns').innerHTML=order.length?order.map(id=>{
+    const list=by.get(id),r=list[0],older=list.slice(1).filter(x=>x.status==='done');
+    const cov=covered(id);
+    return`<div class="box stack" style="gap:6px"><div class="row" style="justify-content:space-between"><b>${esc(pname(id))}</b><span class="muted" style="font-size:13px">${ST[r.status]||r.status} • ${r.since} ← ${r.until}</span></div>
+      ${cov.length?`<div class="muted" style="font-size:12px">✔️ الفترات المفحوصة: ${cov.map(([a,b])=>`${dS(a)} ← ${dS(b)}`).join(' • ')}</div>`:''}
+      ${runBody(r)}
+      ${older.length?`<details><summary>📚 تقارير سابقة (${older.length})</summary>${older.map(o=>`<div class="grp"><div class="muted" style="font-size:13px">${o.since} ← ${o.until}</div>${runBody(o)}</div>`).join('')}</details>`:''}</div>`;
   }).join(''):'<div class="box muted">ما سويت فحص بعد. اختار صفحات وفترة واضغط «ابدأ الفحص».</div>';
   // the same pictures on several pages (from the latest finished check of each page)
   if(tab==='dup'){
-    const done=latest.filter(r=>r.status==='done'&&r.result?.sigs?.length);
-    const items=done.flatMap(r=>r.result.sigs.map(s=>({...s,page:pname(r.page_id),pid:r.page_id})));
+    const done=runs.filter(r=>r.status==='done'&&r.result?.sigs?.length);
+    const seenX=new Set();const items=done.flatMap(r=>r.result.sigs.map(s=>({...s,page:pname(r.page_id),pid:r.page_id}))).filter(x=>!seenX.has(x.link)&&seenX.add(x.link));
     const ham=(a,b)=>{let x=BigInt('0x'+a)^BigInt('0x'+b),n=0;while(x){n+=Number(x&1n);x>>=1n;}return n;};
     const same=(a,b)=>{const sm=a.length<=b.length?a:b,bg=sm===a?b:a;return sm.filter(x=>bg.some(y=>ham(x,y)<=6)).length>=Math.max(1,Math.ceil(sm.length*.6));};
     const par=items.map((_,i)=>i),f=x=>par[x]===x?x:(par[x]=f(par[x]));
     for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++)if(items[i].pid!==items[j].pid&&same(items[i].h,items[j].h))par[f(i)]=f(j);
     const gm=new Map();items.forEach((it,i)=>{const r=f(i);gm.set(r,[...(gm.get(r)||[]),it]);});
     const cross=[...gm.values()].filter(g=>new Set(g.map(x=>x.pid)).size>1).sort((a,b)=>b.length-a.length);
-    $('aCross').innerHTML=done.length>1?`<div class="box"><details ${cross.length?'open':''}><summary>🧩 نفس الصور بأكثر من صفحة (${cross.length}) — بين ${done.length} صفحة مفحوصة</summary>${cross.length?cross.slice(0,40).map(g=>`<div class="grp"><div style="font-size:13px">${new Set(g.map(x=>x.pid)).size} صفحات: ${[...new Set(g.map(x=>x.page))].map(esc).join('، ')}</div>${pcards(g.sort((a,b)=>a.at.localeCompare(b.at)).map(p=>({...p,thumb:(p.imgs||[]).find(im=>g.some(q=>q!==p&&q.h.some(h=>ham(h,im.h)<=6)))?.src||p.thumb})))}</div>`).join(''):'<div class="muted">ماكو صور مشتركة بين الصفحات المفحوصة.</div>'}</details></div>`:'';
+    $('aCross').innerHTML=new Set(done.map(r=>r.page_id)).size>1?`<div class="box"><details ${cross.length?'open':''}><summary>🧩 نفس الصور بأكثر من صفحة (${cross.length}) — بين ${new Set(done.map(r=>r.page_id)).size} صفحة مفحوصة</summary>${cross.length?cross.slice(0,40).map(g=>`<div class="grp"><div style="font-size:13px">${new Set(g.map(x=>x.pid)).size} صفحات: ${[...new Set(g.map(x=>x.page))].map(esc).join('، ')}</div>${pcards(g.sort((a,b)=>a.at.localeCompare(b.at)).map(p=>({...p,thumb:(p.imgs||[]).find(im=>g.some(q=>q!==p&&q.h.some(h=>ham(h,im.h)<=6)))?.src||p.thumb})))}</div>`).join(''):'<div class="muted">ماكو صور مشتركة بين الصفحات المفحوصة.</div>'}</details></div>`:'';
   } else $('aCross').innerHTML='';
 }
 document.addEventListener('click',async e=>{
@@ -345,7 +362,8 @@ $('aStart').onclick=async()=>{
   if(brand&&!confirmBrand(ids.length))return;
   $('aStart').disabled=true;
   try{const j=await callAudit({action:'start',kind:brand?'brand':'dup',page_ids:ids,since:$('aFrom').value,until:$('aTo').value,gap_days:+$('aGap').value||10});
-    toast(`بدأ فحص ${j.started} صفحة. يشتغل بالخادم، تكدر تسكّر الصفحة وترجع.`);loadRuns();}
+    const sk=(j.skipped||[]).map(pname),tr=(j.trimmed||[]).map(t=>`${pname(t.page_id)} (${dS(t.since)} ← ${dS(t.until)})`);
+    toast([j.started?`بدأ فحص ${j.started} صفحة. يشتغل بالخادم، تكدر تسكّر الصفحة وترجع.`:'ماكو شي جديد ينفحص.',sk.length?`مفحوصة سابقاً وما انعادت: ${sk.join('، ')}.`:'',tr.length?`انفحصت بس الأيام الجديدة: ${tr.join('، ')}.`:''].filter(Boolean).join(' '),j.started?6000:9000);loadRuns();}
   catch(er){toast('خطأ: '+(er.message==='max_92_days'?'أقصى فترة 92 يوم':er.message==='bad_dates'?'التواريخ غلط':er.message),6000);}
   renderPicker();
 };
