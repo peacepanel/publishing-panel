@@ -177,15 +177,21 @@ function render(){
       <div class="row" style="margin-top:8px"><button class="sm line" data-chk="${r.p.id}">🔄 فحص الآن</button>${r.its.length?`<button class="sm" data-wa="${r.p.id}" style="background:#25D366;color:#fff">📱 تنبيه واتساب</button>`:''}</div>
     </div>`;}).join('')||'<div class="box muted">ماكو صفحات بهذا الفلتر.</div>';
 }
+// the WhatsApp message mirrors the card: page + group, oldest wait, counts by type, then every item with who / what / when / link
 function waText(rows){
-  const lines=['⚠️ تنبيه رسائل وتعليقات بدون رد',''];
-  for(const r of rows){if(!r.its.length)continue;const icon=r.color==='red'?'🔴':r.color==='yel'?'🟡':'🟢';
-    const nc=r.its.filter(x=>x.kind.endsWith('comment')).length,nd=r.its.length-nc;
-    lines.push(`${icon} *${r.p.name}*: ${nd?`${nd} رسالة`:''}${nd&&nc?' و':''}${nc?`${nc} تعليق`:''} — أقدمها من ${ago(r.oldest)}`);
-    r.its.slice(0,4).forEach(x=>lines.push(`   • ${KIND[x.kind][1]} (${ago(mins(x.at))}): «${String(x.body||'').slice(0,60)}»${x.link?`\n     ${x.link}`:''}`));
-    if(r.its.length>4)lines.push(`   … و${r.its.length-4} غيرها`);
-    lines.push('');}
-  return lines.join('\n').trim();
+  const out=[];const lvl=c=>c==='red'?'🔴':c==='yel'?'🟡':'🟢';
+  const shown=rows.filter(r=>r.its.length);
+  out.push(`⚠️ *تنبيه: تعليقات ورسائل بدون رد* (${shown.length} صفحة)`);
+  for(const r of shown){
+    const c=k=>r.its.filter(x=>x.kind===k).length;
+    const parts=[c('fb_comment')&&`💬 ${c('fb_comment')} تعليق فيسبوك`,c('ig_comment')&&`📷 ${c('ig_comment')} تعليق انستا`,c('fb_dm')&&`✉️ ${c('fb_dm')} رسالة مسنجر`,c('ig_dm')&&`📩 ${c('ig_dm')} رسالة انستا`].filter(Boolean);
+    out.push('','━━━━━━━━━━',`${lvl(r.color)} *${r.p.name}*${r.p.wa_group?` — كروب ${r.p.wa_group}`:''}`,`أقدم واحد ينتظر: ${ago(r.oldest)}`,parts.join(' • '));
+    r.its.slice(0,15).forEach((x,n)=>{const m=mins(x.at);
+      out.push('',`${n+1}) ${KIND[x.kind][0]} ${x.customer||'زبون'} — ${KIND[x.kind][1]} — ${lvl(colorOf(m))} ${ago(m)}`,`«${String(x.body||'').replace(/\s+/g,' ').slice(0,90)}»`);
+      if(x.link)out.push(x.link);});
+    if(r.its.length>15)out.push('',`… و${r.its.length-15} غيرها (افتح المراقبة)`);
+  }
+  return out.join('\n');
 }
 const openWa=t=>window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');
 document.addEventListener('click',async e=>{
