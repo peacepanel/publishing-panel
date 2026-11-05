@@ -173,7 +173,9 @@ a{color:var(--accent)}
 #srcSeg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}#srcSeg button{background:transparent;color:var(--fg);border:0;border-radius:0;padding:6px 12px;font-weight:600;box-shadow:none}#srcSeg button.on{background:#00796b;color:#fff}
 body.ship #srcSeg button.on{background:#e65100;color:#fff}body.ship header{box-shadow:inset 0 -3px 0 #e65100}
 .shipline{border-inline-start:4px solid #e65100}
-body:not(.ship) .only-ship{display:none!important}body.ship .only-stock{display:none!important}
+body:not(.ship) .only-ship{display:none!important}body.ship .only-stock{display:none!important}body:not(.posts) .only-posts{display:none!important}body.posts .only-stock{display:none!important}
+body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box-shadow:inset 0 -3px 0 #6a1b9a}body.posts #tab-auto>:not(.only-posts){display:none!important}
+.postline{border-inline-start:4px solid #6a1b9a}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 </head>
@@ -185,7 +187,7 @@ body:not(.ship) .only-ship{display:none!important}body.ship .only-stock{display:
     <select id="pageSel" aria-label="الصفحة"></select>
   </div>
   <div class="srcseg" id="srcSeg" role="group" aria-label="مصدر المنتجات" title="مصدر المنتجات: المخزن أو الشحن">
-    <button data-src="stock" class="on">📦 المخزن</button><button data-src="ship">✈️ الشحن</button>
+    <button data-src="stock" class="on">📦 المخزن</button><button data-src="ship">✈️ الشحن</button><button data-src="posts">🔁 منشورات الصفحات</button>
   </div>
   <div class="sp"></div>
   <button id="guideBtn" class="line sm" title="تشغيل أو إيقاف الإرشاد">💡 إرشاد</button>
@@ -215,6 +217,7 @@ body:not(.ship) .only-ship{display:none!important}body.ship .only-stock{display:
     </div>
 
     <div id="tab-cand" class="stack">
+      <div class="tip only-posts">«🔁 منشورات الصفحات» = منشورات الشحن اللي نزلت فعلاً على صفحاتك بآخر 10 أيام (من المندوبات أو غيرهن). النظام يقرأ رمز السعر على الصور: يأخذ منشورات الشحن بس ويترك المباشر، ويجمع النسخ المتشابهة 90% على عدة صفحات بمنشور واحد. فوك تطلع الأكثر تفاعلاً (لايكات وتعليقات ومشاركات) والأحدث. اختر منشور وانشره على صفحات ثانية: الصور تنعاد مثل ما هي بجودتها الأصلية بدون رمز جديد، وترتيبها يتغير بكل صفحة، والصفحات اللي نازل عليها يتركها تلقائياً.<button class="tx">✕</button></div>
       <div class="tip">زر <b>📦 المخزن / ✈️ الشحن</b> بالأعلى يبدّل مصدر المنتجات للوحة كلها. «الشحن» = المنتجات اللي يقرأها المندوبين من تطبيق شي ان بفاحص السلة: تنسحب تلقائياً كل 5 دقائق، وتتسعّر بنفس قواعد وإعدادات فاحص السلة (سعر الدولار وإضافة كل فئة)، والرمز ينكتب على الصورة مع مدى القياسات للملابس والأطفال. الذكاء الاصطناعي يحدد فئتها ونوعها وموسمها حتى تروح للصفحات المناسبة، وتقدر تصحّح الفئة والنوع بضغطة على النوع. النشر الدوري والخطة والنسخ لكل مصدر منفصلة.<button class="tx">✕</button></div>
       <div class="tip">ابدأ بـ«جلب المنتجات». فلتر بالقياس أو الموديل (مثلاً 3XL أو A54)، وبـ«النوع» (فساتين، محابس، سلبر…) وبـ«الموسم» (❄ شتوي، ☀ صيفي، ↔ للموسمين، ↩ منقول من الموسم الآخر). على كل بطاقة نوعها وموسمها، واضغط النوع لتصحيحه. شريط «التصنيف» يبيّن ما ينتظر الذكاء الاصطناعي وما يحتاجك: فعّل «وضع التصنيف السريع» لتصنّف بضغطة. ثم «اختيار كل المعروض» و«إرسال للزبون» أو «تجهيز منشور». المنتجات المنشورة تنزل للأسفل باهتة، وعلامة «نُشر قبل X يوم» تعني أن دورة التكرار أعادته.<button class="tx">✕</button></div>
       <div class="box toolbar">
@@ -227,7 +230,7 @@ body:not(.ship) .only-ship{display:none!important}body.ship .only-stock{display:
           <select id="typeF" hidden><option value="">كل الأنواع</option></select>
           <select id="seasonF"><option value="">كل المواسم</option><option value="شتوي">❄ شتوي فقط</option><option value="صيفي">☀ صيفي فقط</option><option value="كل المواسم">↔ يصلح للموسمين</option><option value="__moved">↩ منقول من الموسم الآخر</option></select>
           <input id="modelQ" placeholder="بحث بقياس أو موديل (مثل 3XL، A54)" style="width:220px">
-          <select id="sortF"><option value="new">الأحدث تسلسلاً</option><option value="sizes">الأكثر قياسات</option><option value="imgs">الأكثر صوراً</option></select>
+          <select id="sortF"><option class="so" value="new">الأحدث تسلسلاً</option><option class="so" value="sizes">الأكثر قياسات</option><option class="so" value="imgs">الأكثر صوراً</option><option class="po" value="best" hidden>الأفضل (تفاعل + حداثة)</option><option class="po" value="eng" hidden>الأكثر تفاعلاً</option><option class="po" value="cmt" hidden>الأكثر تعليقات</option><option class="po" value="recent" hidden>الأحدث نشراً</option></select>
           <div class="seg" id="stF"><button data-v="fresh" class="on">غير منشور</button><button data-v="scheduled">مجدول</button><button data-v="published">منشور</button><button data-v="all">الكل</button></div>
         </div>
         <div class="row"><span id="candInfo" class="muted"></span><button id="selAllBtn" class="line sm">اختيار كل المعروض</button></div>
@@ -244,6 +247,7 @@ body:not(.ship) .only-ship{display:none!important}body.ship .only-stock{display:
     </div>
 
     <div id="tab-auto" class="stack" hidden>
+      <div class="box postline only-posts" style="padding:10px"><b>🔁 منشورات الصفحات</b> — النشر الدوري لهذا المصدر غير متاح بعد. اختر المنشورات من تبويب «المنتجات المتوفرة» وانشرها أو جدولها على الصفحات اللي تريدها.</div>
       <div class="box shipline only-ship" style="padding:10px"><b>✈️ النشر الدوري لمنتجات الشحن</b> — إعدادات وخطة مستقلة عن المخزن لنفس الصفحة. شغّل الاثنين معاً إذا تريد الصفحة تنشر من المصدرين، وكل مصدر بأوقاته وحده.</div>
       <div class="tip">كل منشور دوري من نوع واحد (حتى 10 منتجات) والأنواع تتناوب: يبدأ بالجديد من النوع، ثم اللي رجع بدورة التكرار، وإذا ما كفى يكمّل من الأنواع القريبة (تظهر مثلاً «فساتين 4 + عبايات 6»)، والنص يُختار من نصوص النوع المعتمدة. جدول «الأنواع» يبيّن المتوفر لكل نوع وآخر نشر، وتقدر توقف نوعاً أو ترفع أولويته. «خطة النشر»: اختر المدة (حتى شهر أو من تاريخ لتاريخ) والأيام والأوقات من الشريطين، ثم «إنشاء الخطة» وعدّل وقت أي منشور أو احذفه، ثم «اعتماد». «تطبيق الجدولة على صفحات أخرى» ينسخها لصفحات بنفس الفئة بإزاحة وقت. «إعادة نشر المنتج بعد (يوم)» = دورة التكرار، والجديد له الأولوية دائماً. «النشر التلقائي من الخادم» يعمل بلا خطة كل فاصل ضمن أوقات العمل.<button class="tx">✕</button></div>
       <div class="box" id="autoStatus"></div>
@@ -508,10 +512,11 @@ document.querySelectorAll('.seg').forEach(s=>s.addEventListener('click',e=>{cons
 const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:v;}catch(e){return d;}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
 // مصدر المنتجات: stock = المخزن (الشيتات)، ship = الشحن (منتجات فاحص السلة). لكل مصدر إعدادات نشر دوري خاصة به.
-let SRC=lsGet('src','stock')==='ship'?'ship':'stock';
-const AK=()=>SRC==='ship'?'auto_ship':'auto';
-function applySrc(){document.body.classList.toggle('ship',SRC==='ship');document.querySelectorAll('#srcSeg button').forEach(b=>b.classList.toggle('on',b.dataset.src===SRC));}
-document.querySelectorAll('#srcSeg button').forEach(b=>b.onclick=()=>{if(SRC===b.dataset.src)return;SRC=b.dataset.src;lsSet('src',SRC);applySrc();if(typeof page!=='undefined'&&page){onPageChange();const t=document.querySelector('.tabs button.on')?.dataset.tab||'cand';showTab(t);}toast(SRC==='ship'?'وضع الشحن: منتجات فاحص السلة':'وضع المخزن');});
+let SRC=['ship','posts'].includes(lsGet('src','stock'))?lsGet('src','stock'):'stock';
+const AK=()=>SRC==='ship'?'auto_ship':SRC==='posts'?'auto_posts':'auto';
+const PHOTO={}; // منشورات الصفحات: رابط العرض -> {id, fb} لجلب الصورة الأصلية عالية الجودة وقت النشر
+function applySrc(){document.body.classList.toggle('ship',SRC==='ship');document.body.classList.toggle('posts',SRC==='posts');const so=document.getElementById('sortF');if(so){so.querySelectorAll('.po').forEach(o=>o.hidden=SRC!=='posts');so.querySelectorAll('.so').forEach(o=>o.hidden=SRC==='posts');so.value=SRC==='posts'?'best':'new';}document.querySelectorAll('#srcSeg button').forEach(b=>b.classList.toggle('on',b.dataset.src===SRC));}
+document.querySelectorAll('#srcSeg button').forEach(b=>b.onclick=()=>{if(SRC===b.dataset.src)return;SRC=b.dataset.src;lsSet('src',SRC);applySrc();if(typeof page!=='undefined'&&page){onPageChange();const t=document.querySelector('.tabs button.on')?.dataset.tab||'cand';showTab(t);}toast(SRC==='ship'?'وضع الشحن: منتجات فاحص السلة':SRC==='posts'?'منشورات الشحن المنشورة على الصفحات (آخر 10 أيام)':'وضع المخزن');});
 applySrc();
 
 let me=null, pages=[], page=null, candidates=[], selected=new Set(), captions=[], busy=new Map(), lastSkipped=0;
@@ -534,7 +539,9 @@ async function start(){
   await loadPages(); await loadCaptions(); loadSourcePages();
 }
 async function callFn(name,body){
-  if((name==='candidates'&&!(body&&body.action))||name==='autopilot')body=Object.assign({source:SRC},body||{});
+  if(SRC==='posts'&&name==='autopilot')throw new Error('النشر الدوري غير متاح لمنشورات الصفحات بعد');
+  if(SRC==='posts'&&name==='candidates'&&!(body&&body.action)){name='page-posts';body={mode:'list',page_id:body&&body.page_id};}
+  else if((name==='candidates'&&!(body&&body.action))||name==='autopilot')body=Object.assign({source:SRC},body||{});
   const{data:{session}}=await sb.auth.getSession();
   const r=await fetch(`${SB_URL}/functions/v1/${name}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify(body||{})});
   const j=await r.json().catch(()=>({error:'bad_json'})); if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); return j;
@@ -558,7 +565,7 @@ $('pageSel').onchange=()=>onPageChange();
 function onPageChange(){
   page=pages.find(p=>p.id===$('pageSel').value)||pages[0]; if(!page) return; lsSet('page',page.id);
   $('catF').innerHTML='<option value="">كل الفئات</option>'+page.categories.map(c=>`<option>${esc(c)}</option>`).join('');
-  candidates=[];selected.clear();renderGrid();renderSelBar();fillSettings();loadBusy();renderMyCaps();fillCapPageSelect();if($('shipInfo'))$('shipInfo').hidden=SRC!=='ship';if(SRC==='ship')loadShipInfo();
+  candidates=[];selected.clear();renderGrid();renderSelBar();fillSettings();loadBusy();renderMyCaps();fillCapPageSelect();if($('shipInfo'))$('shipInfo').hidden=SRC==='stock';if(SRC!=='stock')loadShipInfo();
   $('candInfo').textContent='';
 }
 
@@ -569,7 +576,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dat
 // ───────── المنتجات ─────────
 $('loadBtn').onclick=async()=>{
   $('loadBtn').disabled=true;$('candInfo').textContent=SRC==='ship'?'جارٍ قراءة منتجات الشحن...':'جارٍ القراءة من الشيتات...';
-  try{const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;selected.clear();await loadTypes();fillSubF();renderCounts();renderGrid();renderSelBar();loadBusy();loadShipInfo();}
+  try{const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;selected.clear();candidates.forEach(it=>(it.photos||[]).forEach(ph=>{if(ph.id&&it.fb_page)PHOTO[ph.src]={id:ph.id,fb:it.fb_page};}));await loadTypes();fillSubF();renderCounts();renderGrid();renderSelBar();loadBusy();loadShipInfo();}
   catch(e){$('candInfo').textContent='خطأ: '+e.message;}
   $('loadBtn').disabled=false;
 };
@@ -583,12 +590,15 @@ function fillSizeF(){const c=$('catF').value,sub=$('subF').value;const set=new M
 let TAX={};
 async function loadTypes(){try{
   if(!Object.keys(TAX).length){const{data}=await sb.from('type_taxonomy').select('*');(data||[]).forEach(t=>TAX[t.category]=t);}
+  if(SRC==='posts')return;
   if(SRC==='ship'){const{data}=await sb.from('product_types').select('product_key,type,gender,season,source').like('product_key','ship:%').eq('source','manual');const man=new Map((data||[]).map(d=>[d.product_key,d]));
     candidates.forEach(it=>{const d=man.get(it.product_key);if(d){it.ptype=d.type||it.ptype;it.pgender=d.gender??it.pgender;it.season=d.season??it.season;it.psrc='manual';}else{it.psrc=it.ship?.provisional?null:(it.ptype?'ai':null);it.pconf=it.ship?.conf;if(it.ship?.provisional)it.ptype=null;}it.patt=0;});return;}
   const cats=[...new Set(candidates.map(it=>it.src_category||it.category))].filter(c=>TAX[c]);if(!cats.length)return;
   const map=new Map();for(let from=0;;from+=1000){const{data,error}=await sb.from('product_types').select('product_key,type,gender,season,confidence,source,attempts,error').in('category',cats).order('product_key').range(from,from+999);if(error||!data)break;data.forEach(d=>map.set(d.product_key,d));if(data.length<1000)break;}
   candidates.forEach(it=>{const d=map.get(it.product_key);it.ptype=d?.type||(it.ptab?it.sub:null);it.pgender=d?.gender||null;it.pconf=d?.confidence;it.psrc=d?.source;it.patt=d?.attempts||0;it.perr=d?.error||null;it.season=d?.season||it.season||null;});}catch(e){console.warn('types',e);}}
-async function loadShipInfo(){const b=$('shipInfo');if(SRC!=='ship'){b.hidden=true;return;}b.hidden=false;b.textContent='منتجات الشحن: جارٍ قراءة الحالة...';
+async function loadShipInfo(){const b=$('shipInfo');if(SRC==='posts'){b.hidden=false;b.className='box postline';b.textContent='منشورات الصفحات: جارٍ قراءة الحالة...';
+    try{const j=await callFn('page-posts',{mode:'status'});const c=j.counts||{};b.innerHTML=`<b>🔁 منشورات الشحن على الصفحات</b> (آخر ${j.days} أيام): ${j.groups} منشور مختلف من ${c.ship||0} منشور شحن • تُرك ${c.stock||0} مباشر و${c.none||0} بلا رمز${c.pending?` • ⏳ ${c.pending} بانتظار قراءة الرمز`:''}<div class="muted" style="font-size:12px;margin-top:4px">قُرئت ${j.pages_read} صفحة${j.last_run?` • آخر تحديث ${fmtAgo(j.last_run)}`:''} • الترتيب الافتراضي: الأكثر تفاعلاً والأحدث • عند إعادة النشر يتغير ترتيب الصور وتُترك الصفحات اللي نازل عليها المنشور</div>`;}catch(e){b.textContent='منشورات الصفحات: '+e.message;}return;}
+  b.className='box shipline';if(SRC!=='ship'){b.hidden=true;return;}b.hidden=false;b.textContent='منتجات الشحن: جارٍ قراءة الحالة...';
   try{const j=await callFn('ship-sync',{mode:'status'});const st=j.state||{};const pr=st.pricing||{};const ago=st.last_run?Math.max(0,Math.round((Date.now()-new Date(st.last_run))/60000)):null;
     const err=String(st.last_result||'');
     b.innerHTML=`<b>✈️ منتجات الشحن</b> (من فاحص السلة): ${j.active} منتج فعّال${j.skipped?` • تُرك ${j.skipped} (قياسات نافذة/بدون سعر)`:''}${j.unclassified?` • ⏳ ${j.unclassified} بانتظار تصنيف الذكاء${j.provisional?` (${j.provisional} موضوعة مؤقتاً حسب القياسات)`:''}`:''}${j.failed?` • ⚠ ${j.failed} تعذر تصنيفها`:''}
@@ -642,12 +652,14 @@ function fixHttps(items){items.forEach(it=>{if(Array.isArray(it.images))it.image
 function thumb(u){u=String(u||'').replace(/^http:\/\//,'https://');if(u.includes('/zoom/'))return u.replace('/zoom/','/thumbnail/');if(u.includes('_thumbnail_'))return u.replace(/_thumbnail_(\d+)x(\d+)\.webp/,(m,w,h)=>(+w<1000||+h<1300)?'_thumbnail_220x293.webp':m);if(u.includes('lh3.googleusercontent.com'))return u+'=w300';return u;}
 function visibleItems(){
   const q=$('q').value.trim(),c=$('catF').value,sub=$('subF').value,so=$('sortF').value,sf=segVal('stF')||'fresh',sz=$('sizeF').value,mq=normModel($('modelQ').value),ty=$('typeF').value,se=$('seasonF').value;
-  let list=candidates.map((it,i)=>({it,i})).filter(({it})=>(!c||it.category===c)&&(!sub||it.sub===sub)&&(!q||it.seqs.some(s=>String(s).includes(q)))&&(sf==='all'||stOf(it)===sf)
+  let list=candidates.map((it,i)=>({it,i})).filter(({it})=>(!c||it.category===c)&&(!sub||it.sub===sub)&&(!q||it.seqs.some(s=>String(s).includes(q))||(it.origin&&((it.label||'')+' '+it.origin.pages.map(o=>o.name).join(' ')+' '+(it.origin.message||'')).toLowerCase().includes(q.toLowerCase())))&&(sf==='all'||stOf(it)===sf)
     &&(!sz||Object.keys(it.sizeCounts||{}).includes(sz))&&(!ty||(ty==='__none'?!it.ptype:ty.startsWith('__')?clsState(it)===ty.slice(2):it.ptype===ty))&&(!se||(se==='__moved'?it.moved:it.season===se))&&(!mq||normModel(Object.keys(it.sizeCounts||{}).join(' ')+' '+(it.sizesShort||'')).includes(mq)));
   const nS=it=>Object.keys(it.sizeCounts||{}).length,rank={fresh:0,scheduled:1,published:2};
-  const cmp=so==='sizes'?(a,b)=>nS(b.it)-nS(a.it):so==='imgs'?(a,b)=>b.it.images.length-a.it.images.length:(a,b)=>(+b.it.seq||0)-(+a.it.seq||0);
+  const E=it=>it.origin?it.origin.eng.r+3*it.origin.eng.c+2*it.origin.eng.s:0;
+  const cmp=so==='best'?(a,b)=>(b.it.origin?.score||0)-(a.it.origin?.score||0):so==='eng'?(a,b)=>E(b.it)-E(a.it):so==='cmt'?(a,b)=>(b.it.origin?.eng.c||0)-(a.it.origin?.eng.c||0):so==='recent'?(a,b)=>String(b.it.origin?.newest||'').localeCompare(String(a.it.origin?.newest||'')):so==='sizes'?(a,b)=>nS(b.it)-nS(a.it):so==='imgs'?(a,b)=>b.it.images.length-a.it.images.length:(a,b)=>(+b.it.seq||0)-(+a.it.seq||0);
   list.sort((a,b)=>(rank[stOf(a.it)]-rank[stOf(b.it)])||cmp(a,b)); return list;
 }
+function fmtAgo(t){if(!t)return'';const m=Math.max(0,Math.round((Date.now()-new Date(t))/60000));return m<60?`قبل ${m} دقيقة`:m<1440?`قبل ${Math.round(m/60)} ساعة`:`قبل ${Math.round(m/1440)} يوم`;}
 function priceShort(it){return it.noDiscount?(it.label||''):`${it.before||''} ← ${it.after||''}`;}
 function renderGrid(){
   if(!candidates.length){$('grid').innerHTML='<div class="empty">لا توجد منتجات معروضة. اضغط «جلب المنتجات المتوفرة».</div>';return;}
@@ -657,7 +669,7 @@ function renderGrid(){
       :st==='published'&&it.post.fb_post_id?`<a class="muted" target="_blank" href="https://www.facebook.com/${esc(it.post.fb_post_id)}">عرض على فيسبوك</a>`:`<button class="sm line" onclick="cancelPost('${it.post.id}')">إلغاء الجدولة</button>`;
     return `<div class="card ${st!=='fresh'?'done':''} ${selected.has(i)?'sel':''}" id="c${i}">
       <div class="ph"><img loading="lazy" src="${esc(thumb(it.images[0]))}" alt=""><span class="n">${it.images.length} صور</span><span class="ck">✓</span></div>
-      <div class="bd"><div><b>${esc(it.seq)}</b> <span class="muted">${esc(it.sub||it.category)}</span></div>${it.ship?`<div class="muted" style="font-size:12px" title="${esc(it.ship.title||'')}">✈️ ${esc((it.ship.title||'').slice(0,50))}${it.ship.color?' • '+esc(it.ship.color):''} • قُرئ قبل ${Math.max(0,Math.round((Date.now()-new Date(it.ship.checked_at))/864e5))} يوم</div>`:''}${typePill(it,i)}${quickChips(it,i)}${badge}
+      <div class="bd"><div><b dir="ltr">${esc(it.seq)}</b> <span class="muted">${esc(it.sub||it.category)}</span></div>${it.origin?`<div class="muted" style="font-size:12px">❤ ${it.origin.eng.r}${it.origin.eng.c?` • 💬 ${it.origin.eng.c}`:''}${it.origin.eng.s?` • ↗ ${it.origin.eng.s}`:''} • ${fmtAgo(it.origin.newest)}${it.origin.pages.length>1?` • على ${it.origin.pages.length} صفحات`:''}</div><div style="font-size:12px">📍 ${it.origin.pages.slice(0,4).map(o=>`<a target="_blank" href="${esc(o.link)}" title="${esc(new Date(o.time).toLocaleString('ar-IQ'))}">${esc(o.name)}</a>`).join('، ')}${it.origin.pages.length>4?` +${it.origin.pages.length-4}`:''}</div>`:''}${it.ship?`<div class="muted" style="font-size:12px" title="${esc(it.ship.title||'')}">✈️ ${esc((it.ship.title||'').slice(0,50))}${it.ship.color?' • '+esc(it.ship.color):''} • قُرئ قبل ${Math.max(0,Math.round((Date.now()-new Date(it.ship.checked_at))/864e5))} يوم</div>`:''}${typePill(it,i)}${quickChips(it,i)}${badge}
         ${it.elsewhere?`<span class="pill">على ${it.elsewhere} صفحة أخرى</span>`:''}${st==='fresh'&&it.last_posted_at?`<span class="pill warn" title="أعادته دورة التكرار">نُشر قبل ${Math.round((Date.now()-new Date(it.last_posted_at))/864e5)} يوم</span>`:''}
         <div class="muted">${esc(it.sizesShort)}</div><div class="muted" dir="ltr" style="text-align:right">${esc(priceShort(it))}</div>
         <div class="acts">${acts}</div></div></div>`;}).join('')||'<div class="empty">لا توجد منتجات بهذا الفلتر.</div>';
@@ -711,8 +723,9 @@ function buildInstagramCanvas(src){const w=src.width,h=src.height;if(!w||!h)retu
   const fs=Math.min(outW/w,outH/h);const dw=w*fs,dh=h*fs;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(src,(outW-dw)/2,(outH-dh)/2,dw,dh);return out;}
 function zoomUrl(u){u=String(u||'').replace(/^http:\/\//,'https://');if(u.includes('/thumbnail/'))return u.replace('/thumbnail/','/zoom/');if(u.includes('_thumbnail_'))return u.replace(/_thumbnail_(\d+)x(\d+)\.webp/,(m,w,h)=>(+w<1000||+h<1300)?'_thumbnail_1000x1300.webp':m);if(u.includes('lh3.googleusercontent.com'))return u+'=w1000-h1300';return u;}
 const imgCache=new Map();
-function loadImg(u){if(imgCache.has(u))return imgCache.get(u);const p=(async()=>{const blob=await(await fetch(zoomUrl(u))).blob();return await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(blob);});})();imgCache.set(u,p);p.catch(()=>imgCache.delete(u));return p;}
-async function renderEncoded(url,product,pg){const img=await loadImg(url);const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);renderTextOnCanvas(ctx,img,product,colorsOf(pg));return c;}
+async function proxyImg(ph){const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SB_URL}/functions/v1/page-posts`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({mode:'img',photo:ph.id,fb_page:ph.fb})});if(!r.ok)throw new Error('تعذر جلب صورة المنشور الأصلية');return await r.blob();}
+function loadImg(u){if(imgCache.has(u))return imgCache.get(u);const p=(async()=>{const blob=PHOTO[u]?await proxyImg(PHOTO[u]):await(await fetch(zoomUrl(u))).blob();return await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(blob);});})();imgCache.set(u,p);p.catch(()=>imgCache.delete(u));return p;}
+async function renderEncoded(url,product,pg){const img=await loadImg(url);const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);if(!product.raw)renderTextOnCanvas(ctx,img,product,colorsOf(pg));return c;}
 
 // ───────── المحرر ─────────
 let comp=null; // {items:[product], sel:[{u,pi}], targets:[{page, when, capId, caption}], active:0}
@@ -1202,11 +1215,13 @@ async function doSave(later){
     for(let ti=0;ti<comp.targets.length;ti++){const t=comp.targets[ti];const pg=t.page;
       // منتج منشور أو مجدول مسبقاً على هذه الصفحة: يُترك من منشور هذه الصفحة فقط (الباقي ينشر)، وإذا كلها مكررة تُترك الصفحة
       const{data:busyRows}=await sb.from('post_products').select('product_key').eq('page_id',pg.id).eq('live',true).in('product_key',comp.items.map(x=>x.product_key));
-      const busy=new Set((busyRows||[]).map(r=>r.product_key));const its=comp.items.filter(it=>!busy.has(it.product_key));
+      const busy=new Set((busyRows||[]).map(r=>r.product_key));comp.items.forEach(it=>{if(it.origin&&it.origin.pages.some(o=>o.page_id===pg.id))busy.add(it.product_key);});const its=comp.items.filter(it=>!busy.has(it.product_key));
       if(!its.length){results.push({pg,res:{ok:false,skipped:true,error:'كل منتجات المنشور منشورة أو مجدولة مسبقاً على هذه الصفحة — تُركت'}});continue;}
       if(busy.size)partialP.push(`${pg.name} (بدون ${busy.size})`);
       const fb=[],ig=[],fbP=[],igP=[],perProd=comp.items.map(()=>({fb:[],ig:[]}));
-      for(let k=0;k<comp.sel.length;k++){const s=comp.sel[k];if(busy.has(comp.items[s.pi].product_key))continue;$('saveMsg').textContent=`${pg.name}: تجهيز الصورة ${k+1} من ${comp.sel.length}...`;
+      // إعادة نشر منشورات الصفحات: ترتيب الصور يتغير لكل صفحة (لا يطابق الأصل)
+      const ord=comp.sel.map((_,i)=>i);if(comp.items.some(it=>it.raw)&&ord.length>1){do{for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}}while(ord.every((v,i)=>v===i));}
+      for(const k of ord){const s=comp.sel[k];if(busy.has(comp.items[s.pi].product_key))continue;$('saveMsg').textContent=`${pg.name}: تجهيز الصورة ${k+1} من ${comp.sel.length}...`;
         const c=await renderEncoded(s.u,comp.items[s.pi],pg);const base=`${pg.id}/${batch}_${k+1}`;
         const fu=await upload(c,base+'.jpg');const iu=await upload(buildInstagramCanvas(c),base+'_ig.jpg');
         fb.push(fu);ig.push(iu);fbP.push(base+'.jpg');igP.push(base+'_ig.jpg');perProd[s.pi].fb.push(fu);perProd[s.pi].ig.push(iu);}
@@ -1264,7 +1279,7 @@ async function loadSchedule(){const since=new Date(Date.now()-24*3600e3).toISOSt
   $('schedList').innerHTML=[...groups.values()].map(g=>`<div class="box day"><h2>${AR_DAYS[g.d.getDay()]} ${g.d.getDate()}/${g.d.getMonth()+1} <span class="pill">${g.items.length} منشور</span></h2>
     ${g.items.map(p=>{const s=ST[p.status]||['',p.status];const d=new Date(p.scheduled_at);const n=(p.image_urls||[]).length||1;
       return`<div class="slot"><div class="tm">${h12(d.getHours())}:${String(d.getMinutes()).padStart(2,'0')}<div class="muted">${d.getHours()<12?'صباحاً':'مساءً'}</div></div><img src="${esc(p.image_url)}" alt="">
-      <div style="min-width:0"><b>${esc(p.seq)}</b> <span class="muted">${$('schedAll').checked?esc(pname(p.page_id))+' • ':''}${n} صور${p.created_by_name?' • '+esc(p.created_by_name):''}${p.source==='ship'?' <span class="pill" style="background:#e65100;color:#fff">✈️ شحن</span>':''}</span>
+      <div style="min-width:0"><b>${esc(p.seq)}</b> <span class="muted">${$('schedAll').checked?esc(pname(p.page_id))+' • ':''}${n} صور${p.created_by_name?' • '+esc(p.created_by_name):''}${p.source==='ship'?' <span class="pill" style="background:#e65100;color:#fff">✈️ شحن</span>':p.source==='posts'?' <span class="pill" style="background:#6a1b9a;color:#fff">🔁 إعادة نشر</span>':''}</span>
         <div><span class="pill ${s[0]}">${s[1]}</span>${p.channels&&p.channels!=='both'?` <span class="pill">${p.channels==='fb'?'فيسبوك فقط':'انستكرام فقط'}</span>`:''}${igPill(p)} ${p.cancel_reason?`<span class="muted">${esc(p.cancel_reason)}</span>`:''}${p.error?`<span class="muted">${esc(p.error)}</span>`:''}</div>
         <div class="muted" style="white-space:pre-wrap;overflow:hidden;max-height:3.2em">${esc(p.caption||'')}</div></div>
       <div class="acts row">${p.status==='scheduled'?`<button class="sm ghost" onclick="publishNow('${p.id}')">نشر الآن</button>`:''}${['scheduled','planned'].includes(p.status)?`<button class="sm line" onclick="editWhen('${p.id}',this)">تغيير الوقت</button><button class="sm line" onclick="cancelPost('${p.id}')">إلغاء</button>`:''}${openLinks(p)}</div></div>`;}).join('')}</div>`).join('')||'<div class="box empty">لا توجد منشورات مجدولة.</div>';}
