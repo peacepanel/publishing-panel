@@ -223,6 +223,7 @@ a{color:var(--accent)}
           <div class="seg" id="stF"><button data-v="fresh" class="on">غير منشور</button><button data-v="scheduled">مجدول</button><button data-v="published">منشور</button><button data-v="all">الكل</button></div>
         </div>
         <div class="row"><span id="candInfo" class="muted"></span><button id="selAllBtn" class="line sm">اختيار كل المعروض</button></div>
+        <div id="classBar" class="box stack" style="padding:10px;gap:6px;background:var(--surface2)" hidden></div>
       </div>
       <div id="grid" class="grid"><div class="empty">اضغط «جلب المنتجات المتوفرة» لقراءة المنتجات من شيتات الكتالوج وحالة المخزن.</div></div>
     </div>
@@ -263,6 +264,9 @@ a{color:var(--accent)}
           </div>
           <div class="row"><div class="field"><label>حد يومي للمنشورات (0 = بلا حد)</label><input id="aDaily" type="number" min="0" style="width:90px"></div></div>
           <div id="aRunway" class="muted"></div>
+          <div class="box stack" style="padding:10px"><div class="row" style="justify-content:space-between"><b>الأنواع في النشر الدوري لهذه الصفحة</b><span id="aTypesSum" class="muted"></span></div>
+            <div class="muted">كل منشور يأخذ نوعاً واحداً. أوقف أي نوع لا تريده على هذه الصفحة، أو ارفع أولويته ليُنشر أكثر. «احفظ الإعدادات» لتطبيق التغيير.</div>
+            <div class="tblwrap"><table id="aTypes"></table></div></div>
           <div class="box stack" style="padding:10px"><div class="row" style="justify-content:space-between"><b>المنشورات القادمة (معاينة)</b><button id="aPreview" class="line sm">عرض المعاينة</button></div>
             <div class="muted">كل منشور من نوع واحد (3–10 منتجات)، والأنواع تتناوب. النص يُختار من نصوص النوع المعتمدة.</div><div id="aPrevOut" class="stack"></div></div>
           <span class="muted">لا يُنشر شيء خارج أوقات العمل. النص يُختار بالتناوب من نصوص الصفحة.</span>
@@ -541,20 +545,35 @@ let TAX={};
 async function loadTypes(){try{
   if(!Object.keys(TAX).length){const{data}=await sb.from('type_taxonomy').select('*');(data||[]).forEach(t=>TAX[t.category]=t);}
   const cats=[...new Set(candidates.map(it=>it.src_category||it.category))].filter(c=>TAX[c]);if(!cats.length)return;
-  const map=new Map();for(let from=0;;from+=1000){const{data,error}=await sb.from('product_types').select('product_key,type,gender,season,confidence,source').in('category',cats).order('product_key').range(from,from+999);if(error||!data)break;data.forEach(d=>map.set(d.product_key,d));if(data.length<1000)break;}
-  candidates.forEach(it=>{const d=map.get(it.product_key);it.ptype=d?.type||null;it.pgender=d?.gender||null;it.pconf=d?.confidence;it.psrc=d?.source;it.season=d?.season||it.season||null;});}catch(e){console.warn('types',e);}}
+  const map=new Map();for(let from=0;;from+=1000){const{data,error}=await sb.from('product_types').select('product_key,type,gender,season,confidence,source,attempts,error').in('category',cats).order('product_key').range(from,from+999);if(error||!data)break;data.forEach(d=>map.set(d.product_key,d));if(data.length<1000)break;}
+  candidates.forEach(it=>{const d=map.get(it.product_key);it.ptype=d?.type||null;it.pgender=d?.gender||null;it.pconf=d?.confidence;it.psrc=d?.source;it.patt=d?.attempts||0;it.perr=d?.error||null;it.season=d?.season||it.season||null;});}catch(e){console.warn('types',e);}}
+function clsState(it){if(!TAX[it.src_category||it.category])return null;if(it.psrc==='manual')return'manual';if(it.ptype)return(it.pconf??1)<0.6?'low':'ai';return(it.patt||0)>=3?'failed':'queue';}
+function renderClassBar(){const its=candidates.filter(it=>TAX[it.src_category||it.category]&&stOf(it)==='fresh');const b=$('classBar');if(!its.length){b.hidden=true;return;}b.hidden=false;
+  const n={manual:0,ai:0,low:0,failed:0,queue:0};its.forEach(it=>n[clsState(it)]++);const done=n.manual+n.ai+n.low;const pct=Math.round(done*100/its.length);
+  const eta=n.queue?(n.queue<=8?'خلال دقيقة':`خلال نحو ${n.queue<480?Math.ceil(n.queue/8)+' دقيقة':Math.ceil(n.queue/480)+' ساعة'}`):'';
+  b.innerHTML=`<div class="row" style="justify-content:space-between"><div class="row" style="gap:8px"><b>التصنيف لهذه الصفحة: ${done} من ${its.length} (${pct}%)</b>
+    <div style="width:140px;height:8px;border-radius:9px;background:var(--line);overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--accent)"></div></div></div>
+    <label class="row" style="gap:4px;font-weight:600"><input type="checkbox" id="qcls" ${qcls?'checked':''}> وضع التصنيف السريع</label></div>
+  <div class="row" style="gap:6px">${n.queue?`<button class="gchip" data-cf="__queue">⏳ بانتظار الذكاء الاصطناعي ${n.queue} <small>${eta}</small></button>`:''}${n.failed?`<button class="gchip part" data-cf="__failed">⚠ لم يستطع الذكاء تصنيفها ${n.failed}</button>`:''}${n.low?`<button class="gchip part" data-cf="__low">؟ ثقة منخفضة — راجعها ${n.low}</button>`:''}<button class="gchip" data-cf="__manual">✓ مصحّحة يدوياً ${n.manual}</button>${n.queue+n.failed+n.low===0?'<span class="pill ok">اكتمل تصنيف منتجات هذه الصفحة</span>':''}</div>
+  <div class="muted">ابدأ بـ«لم يستطع الذكاء تصنيفها» و«ثقة منخفضة». فعّل «وضع التصنيف السريع» فتظهر أزرار الأنواع على كل بطاقة: ضغطة واحدة تحفظ النوع وتنقلك للتالي. المنتظرة يصنّفها الذكاء الاصطناعي تلقائياً.</div>`;
+  $('qcls').onchange=e=>{qcls=e.target.checked;renderGrid();};}
+let qcls=false;
 function fillTypeF(){const c=$('catF').value,sub=$('subF').value;const set=new Map();let none=0;
   const its=candidates.filter(it=>(!c||it.category===c)&&(!sub||it.sub===sub)&&stOf(it)==='fresh'&&TAX[it.src_category||it.category]);
   its.forEach(it=>{if(!it.ptype){none++;return;}const k=it.pgender?it.ptype+' · '+it.pgender:it.ptype;set.set(it.ptype,(set.get(it.ptype)||0)+1);});
   const cur=$('typeF').value;const keys=[...set.keys()].sort((a,b)=>set.get(b)-set.get(a));
-  $('typeF').innerHTML='<option value="">كل الأنواع</option>'+keys.map(k=>`<option value="${esc(k)}">${esc(k)} (${set.get(k)})</option>`).join('')+(none?`<option value="__none">غير مصنّف بعد (${none})</option>`:'');
-  if([...$('typeF').options].some(o=>o.value===cur))$('typeF').value=cur;$('typeF').hidden=!candidates.some(it=>TAX[it.src_category||it.category]);}
+  $('typeF').innerHTML='<option value="">كل الأنواع</option>'+keys.map(k=>`<option value="${esc(k)}">${esc(k)} (${set.get(k)})</option>`).join('')+(none?`<option value="__none">غير مصنّف بعد (${none})</option>`:'')+`<option value="__failed">⚠ لم يستطع الذكاء تصنيفها</option><option value="__low">؟ ثقة منخفضة</option><option value="__queue">⏳ بانتظار الذكاء الاصطناعي</option><option value="__manual">✓ مصحّحة يدوياً</option>`;
+  if([...$('typeF').options].some(o=>o.value===cur))$('typeF').value=cur;$('typeF').hidden=!candidates.some(it=>TAX[it.src_category||it.category]);renderClassBar();}
 window.editType=async(i,ev)=>{ev&&ev.stopPropagation();const it=candidates[i];const t=TAX[it.src_category||it.category];if(!t)return;
   const box=document.getElementById('ty'+i);if(!box)return;
   box.innerHTML=`<select onchange="saveType(${i},this.value,null)" onclick="event.stopPropagation()"><option value="">— اختر النوع —</option>${t.types.map(x=>`<option ${x===it.ptype?'selected':''}>${esc(x)}</option>`).join('')}</select>${t.genders?`<select onchange="saveType(${i},null,this.value)" onclick="event.stopPropagation()"><option value="">لمن؟</option>${t.genders.map(x=>`<option ${x===it.pgender?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}${t.seasonal?`<select onchange="saveType(${i},null,null,this.value)" onclick="event.stopPropagation()"><option value="">الموسم</option>${['شتوي','صيفي','كل المواسم'].map(x=>`<option ${x===it.season?'selected':''}>${x}</option>`).join('')}</select>`:''}`;};
 window.saveType=async(i,type,gender,season)=>{const it=candidates[i];const row={product_key:it.product_key,seq:it.seq,category:it.src_category||it.category,sub:it.sub||null,type:type??it.ptype,gender:gender??it.pgender,season:season??it.season,confidence:1,source:'manual',image_url:it.images[0],error:null,updated_by:me.email,updated_at:new Date().toISOString()};
   if(!row.type)return;const{error}=await sb.from('product_types').upsert(row,{onConflict:'product_key'});if(error)return toast('خطأ: '+error.message);
-  it.ptype=row.type;it.pgender=row.gender;it.season=row.season;it.pconf=1;it.psrc='manual';toast(season?'حُفظ الموسم — يُطبَّق التوزيع عند جلب المنتجات التالي':'حُفظ التصنيف');fillTypeF();renderGrid();};
+  it.ptype=row.type;it.pgender=row.gender;it.season=row.season;it.pconf=1;it.psrc='manual';toast(season?'حُفظ الموسم — يُطبَّق التوزيع عند جلب المنتجات التالي':'حُفظ التصنيف');it.patt=0;fillTypeF();renderGrid();};
+function quickChips(it,i){const t=TAX[it.src_category||it.category];if(!qcls||!t||stOf(it)!=='fresh')return'';
+  const ch=(arr,cur,fn)=>arr.map(x=>`<button type="button" class="gchip ${x===cur?'on':''}" style="font-size:11px;padding:2px 7px" onclick="event.stopPropagation();${fn}(${i},'${x.replace(/'/g,"\\'")}')">${esc(x)}</button>`).join('');
+  return`<div class="chips" style="gap:3px;margin:4px 0">${ch(t.types,it.ptype,'qType')}</div>${t.genders?`<div class="chips" style="gap:3px">${ch(t.genders,it.pgender,'qGender')}</div>`:''}${t.seasonal?`<div class="chips" style="gap:3px;margin-top:3px">${ch(['شتوي','صيفي','كل المواسم'],it.season,'qSeason')}</div>`:''}`;}
+window.qType=(i,v)=>saveType(i,v,null);window.qGender=(i,v)=>{const it=candidates[i];if(!it.ptype)return toast('اختر النوع أولاً');saveType(i,null,v);};window.qSeason=(i,v)=>{const it=candidates[i];if(!it.ptype)return toast('اختر النوع أولاً');saveType(i,null,null,v);};
 function typePill(it,i){const tc=it.src_category||it.category;if(!TAX[tc])return'';const sp=it.season?` <span class="pill" title="${it.moved?'ظهر هنا لأن موسمه '+esc(it.season)+' (من شيت '+esc(it.src_category)+')':'الموسم الحقيقي'}">${it.season==='شتوي'?'❄ شتوي':it.season==='صيفي'?'☀ صيفي':'↔ كل المواسم'}${it.moved?' ↩':''}</span>`:'';
   if(!it.ptype)return`<span class="pill" id="ty${i}" style="cursor:pointer" onclick="editType(${i},event)" title="اضغط للتصنيف يدوياً">غير مصنّف</span>${sp}`;
   const low=it.psrc!=='manual'&&(it.pconf??1)<0.6;
@@ -565,6 +584,7 @@ $('catF').addEventListener('input',()=>{fillSubF();renderGrid();});
 ['q','sortF','sizeF','modelQ'].forEach(id=>$(id).addEventListener('input',renderGrid));
 $('subF').addEventListener('input',()=>{fillSizeF();fillTypeF();renderGrid();});$('typeF').addEventListener('input',renderGrid);$('seasonF').addEventListener('input',renderGrid);
 $('stF').addEventListener('change',renderGrid);
+$('classBar').addEventListener('click',e=>{const b=e.target.closest('[data-cf]');if(!b)return;$('typeF').value=b.dataset.cf;if(!$('typeF').value){fillTypeF();$('typeF').value=b.dataset.cf;}seg('stF','fresh');renderGrid();});
 function stOf(it){const s=it.post?.status;if(!s)return'fresh';if(s==='published')return'published';return'scheduled';}
 function renderCounts(){const c={fresh:0,scheduled:0,published:0};candidates.forEach(it=>c[stOf(it)]++);
   $('candInfo').innerHTML=`<span class="pill ok">غير منشور ${c.fresh}</span> <span class="pill warn">مجدول ${c.scheduled}</span> <span class="pill">منشور ${c.published}</span> <span class="pill">مستبعد بحالة المخزن ${lastSkipped}</span>`;}
@@ -574,7 +594,7 @@ function thumb(u){u=String(u||'').replace(/^http:\/\//,'https://');if(u.includes
 function visibleItems(){
   const q=$('q').value.trim(),c=$('catF').value,sub=$('subF').value,so=$('sortF').value,sf=segVal('stF')||'fresh',sz=$('sizeF').value,mq=normModel($('modelQ').value),ty=$('typeF').value,se=$('seasonF').value;
   let list=candidates.map((it,i)=>({it,i})).filter(({it})=>(!c||it.category===c)&&(!sub||it.sub===sub)&&(!q||it.seqs.some(s=>String(s).includes(q)))&&(sf==='all'||stOf(it)===sf)
-    &&(!sz||Object.keys(it.sizeCounts||{}).includes(sz))&&(!ty||(ty==='__none'?!it.ptype:it.ptype===ty))&&(!se||(se==='__moved'?it.moved:it.season===se))&&(!mq||normModel(Object.keys(it.sizeCounts||{}).join(' ')+' '+(it.sizesShort||'')).includes(mq)));
+    &&(!sz||Object.keys(it.sizeCounts||{}).includes(sz))&&(!ty||(ty==='__none'?!it.ptype:ty.startsWith('__')?clsState(it)===ty.slice(2):it.ptype===ty))&&(!se||(se==='__moved'?it.moved:it.season===se))&&(!mq||normModel(Object.keys(it.sizeCounts||{}).join(' ')+' '+(it.sizesShort||'')).includes(mq)));
   const nS=it=>Object.keys(it.sizeCounts||{}).length,rank={fresh:0,scheduled:1,published:2};
   const cmp=so==='sizes'?(a,b)=>nS(b.it)-nS(a.it):so==='imgs'?(a,b)=>b.it.images.length-a.it.images.length:(a,b)=>(+b.it.seq||0)-(+a.it.seq||0);
   list.sort((a,b)=>(rank[stOf(a.it)]-rank[stOf(b.it)])||cmp(a,b)); return list;
@@ -588,7 +608,7 @@ function renderGrid(){
       :st==='published'&&it.post.fb_post_id?`<a class="muted" target="_blank" href="https://www.facebook.com/${esc(it.post.fb_post_id)}">عرض على فيسبوك</a>`:`<button class="sm line" onclick="cancelPost('${it.post.id}')">إلغاء الجدولة</button>`;
     return `<div class="card ${st!=='fresh'?'done':''} ${selected.has(i)?'sel':''}" id="c${i}">
       <div class="ph"><img loading="lazy" src="${esc(thumb(it.images[0]))}" alt=""><span class="n">${it.images.length} صور</span><span class="ck">✓</span></div>
-      <div class="bd"><div><b>${esc(it.seq)}</b> <span class="muted">${esc(it.sub||it.category)}</span></div>${typePill(it,i)}${badge}
+      <div class="bd"><div><b>${esc(it.seq)}</b> <span class="muted">${esc(it.sub||it.category)}</span></div>${typePill(it,i)}${quickChips(it,i)}${badge}
         ${it.elsewhere?`<span class="pill">على ${it.elsewhere} صفحة أخرى</span>`:''}${st==='fresh'&&it.last_posted_at?`<span class="pill warn" title="أعادته دورة التكرار">نُشر قبل ${Math.round((Date.now()-new Date(it.last_posted_at))/864e5)} يوم</span>`:''}
         <div class="muted">${esc(it.sizesShort)}</div><div class="muted" dir="ltr" style="text-align:right">${esc(priceShort(it))}</div>
         <div class="acts">${acts}</div></div></div>`;}).join('')||'<div class="empty">لا توجد منتجات بهذا الفلتر.</div>';
@@ -886,7 +906,7 @@ function serverStatusText(a){if(!a.enabled)return'متوقف. شغّله واح�
 async function ensureCandidates(){if(candidates.length&&candidates._page===page.id)return;const j=await callFn('candidates',{page_id:page.id});candidates=fixHttps(j.items||[]);candidates._page=page.id;lastSkipped=j.skippedStatus;await loadTypes();}
 async function loadAuto(){const a=autoCfg();$('autoPage').textContent='— '+page.name;
   $('aEnabled').checked=!!a.enabled;$('aServerStatus').textContent=serverStatusText(a);
-  $('aMax').value=a.max;$('aGap').value=a.gap;$('aStart').value=a.start;$('aEnd').value=a.end;$('aImgs').value=a.imgs;$('aMode').value=a.mode||'group';$('aChan').value=a.channels||'both';$('aDaily').value=a.daily_max||0;$('aPrevOut').innerHTML='';$('aRepeat').value=page.settings.repeat_days??14;$('aPlan').innerHTML='';
+  $('aMax').value=a.max;$('aGap').value=a.gap;$('aStart').value=a.start;$('aEnd').value=a.end;$('aImgs').value=a.imgs;$('aMode').value=a.mode||'group';$('aChan').value=a.channels||'both';$('aDaily').value=a.daily_max||0;$('aPrevOut').innerHTML='';aTypesDraft=JSON.parse(JSON.stringify(a.types||{}));$('aRepeat').value=page.settings.repeat_days??14;$('aPlan').innerHTML='';
   $('aCats').innerHTML='<div class="muted">جارٍ قراءة المنتجات...</div>';renderAutoStatus();
   try{await ensureCandidates();}catch(e){$('aCats').innerHTML='خطأ: '+esc(e.message);return;}
   $('aCats').innerHTML=page.categories.map(c=>{const r=a.ranges[c]||{};const its=candidates.filter(it=>it.category===c);const subs=[...new Set(its.map(it=>it.sub).filter(Boolean))];
@@ -908,12 +928,25 @@ function updAutoCounts(){const R=readRanges();document.querySelectorAll('#aCats 
   const max=Math.max(1,+$('aMax').value||1),gap=Math.max(30,+$('aGap').value||90),st=+$('aStart').value||0,en=+$('aEnd').value||24,imgs=Math.max(1,+$('aImgs').value||1);
   const perRun=$('aMode').value==='single'?max:max*imgs,runs=Math.max(1,Math.floor((en-st)*60/gap)),perDay=perRun*runs,days=nNew/perDay,rep=parseInt($('aRepeat').value??14,10)||0;
   $('aRunway').innerHTML=nNew===0?`<span class="pill ${rep?'warn':'bad'}">انتهت المنتجات الجديدة${rep?` — يعمل الآن من دورة التكرار (${rep} يوم)`:' — التكرار متوقف، فلن يُنشر شيء'}</span>`
-    :`يُنشر تقريباً ${perDay} منتج يومياً، فالمنتجات الجديدة تكفي ${days<1?'أقل من يوم':`نحو ${Math.floor(days)} يوم`}${days<3?` <span class="pill warn">${rep?`بعدها تبدأ دورة التكرار (منتجات نُشرت قبل ${rep} يوم فأكثر)`:'بعدها يتوقف النشر لأن التكرار متوقف'}</span>`:''}.`;}
-['aMax','aGap','aStart','aEnd','aImgs','aRepeat'].forEach(id=>$(id).addEventListener('input',updAutoCounts));$('aMode').addEventListener('change',updAutoCounts);
+    :`يُنشر تقريباً ${perDay} منتج يومياً، فالمنتجات الجديدة تكفي ${days<1?'أقل من يوم':`نحو ${Math.floor(days)} يوم`}${days<3?` <span class="pill warn">${rep?`بعدها تبدأ دورة التكرار (منتجات نُشرت قبل ${rep} يوم فأكثر)`:'بعدها يتوقف النشر لأن التكرار متوقف'}</span>`:''}.`;renderAutoTypes();}
+['aMax','aGap','aStart','aEnd','aImgs','aRepeat'].forEach(id=>$(id).addEventListener('input',updAutoCounts));
+let aTypesDraft={};
+function renderAutoTypes(){const a=autoCfg();const R=readRanges();const pool=autoPool(R).filter(it=>stOf(it)==='fresh');const per=Math.min(10,Math.max(3,+$('aImgs').value||10));
+  const g=new Map();let untyped=0;pool.forEach(it=>{if(!it.ptype||!TAX[it.src_category||it.category]){untyped++;return;}const k=`${it.category}|${it.ptype}|${it.pgender||''}`;if(!g.has(k))g.set(k,{cat:it.category,t:it.ptype,gd:it.pgender,n:0,again:0});const o=g.get(k);o.n++;if(it.last_posted_at)o.again++;});
+  const used=a.type_used||{},recent=(a.recent_types||[]).slice(-2);const rows=[...g.entries()].sort((x,y)=>y[1].n-x[1].n);
+  const en=o=>{const t=TAX[o.cat];const ge=o.gd&&t?.genders_en?.[o.gd]?t.genders_en[o.gd]+' ':'';return ge+(t?.types_en?.[o.t]||o.t);};
+  $('aTypes').innerHTML=`<thead><tr><th>النوع</th><th>متوفر</th><th>يكفي لـ</th><th>آخر نشر</th><th>الحالة</th><th>مشمول</th><th>الأولوية</th></tr></thead><tbody>`+rows.map(([k,o])=>{const cfg=aTypesDraft[k]||{};const posts=Math.floor(o.n/per)+((o.n%per)>=3?1:0);
+    const st=cfg.off?'<span class="pill">موقوف</span>':o.n<3?'<span class="pill warn">أقل من 3 — يُدمج مع نوع قريب أو ينتظر</span>':recent.includes(k)?'<span class="pill">نُشر مؤخراً، ينتظر دوره</span>':'<span class="pill ok">جاهز</span>';
+    return`<tr data-k="${esc(k)}"><td><b>${esc(o.t)}</b>${o.gd?' · '+esc(o.gd):''} <span class="muted" dir="ltr">${esc(en(o))}</span>${page.categories.length>1?`<div class="muted" style="font-size:11px">${esc(o.cat)}</div>`:''}</td><td>${o.n}${o.again?` <span class="muted">(${o.again} تكرار)</span>`:''}</td><td>${posts} منشور</td><td class="muted">${used[k]?fmtT(new Date(used[k])):'لم يُنشر بعد'}</td><td>${st}</td>
+      <td><input type="checkbox" class="ton" ${cfg.off?'':'checked'}></td><td><select class="tw"><option value="2" ${cfg.w==2?'selected':''}>عالية</option><option value="1" ${!cfg.w||cfg.w==1?'selected':''}>عادية</option><option value="0.5" ${cfg.w==0.5?'selected':''}>منخفضة</option></select></td></tr>`;}).join('')+'</tbody>';
+  const totalPosts=rows.reduce((n,[k,o])=>n+((aTypesDraft[k]||{}).off?0:Math.floor(o.n/per)+((o.n%per)>=3?1:0)),0);
+  $('aTypesSum').textContent=`${rows.length} نوع • يكفي لنحو ${totalPosts} منشور${untyped?` • ${untyped} منتج غير مصنّف بعد`:''}`;}
+$('aTypes').addEventListener('change',e=>{const tr=e.target.closest('tr[data-k]');if(!tr)return;const k=tr.dataset.k;const c=aTypesDraft[k]=aTypesDraft[k]||{};
+  if(e.target.classList.contains('ton'))c.off=!e.target.checked;if(e.target.classList.contains('tw'))c.w=+e.target.value;renderAutoTypes();});$('aMode').addEventListener('change',updAutoCounts);
 $('aServerNow').onclick=async()=>{$('aServerNow').disabled=true;$('aServerStatus').textContent='الخادم يجهز المنشورات...';
   try{const j=await callFn('autopilot',{page_id:page.id});const r=(j.results||[])[0]||{};$('aServerStatus').textContent=r.error?('خطأ: '+r.error):r.skip?('لم يُجهّز شيء: '+r.skip):(r.made&&r.made.length?`جُهّز ${r.made.length} منشور (${r.made.join('، ')}). يُرسم الترميز خلال دقيقة أو دقيقتين ثم يُنشر في وقته.`:'لا توجد منتجات جديدة في النطاق.');await loadPages();renderAutoStatus();}
   catch(e){$('aServerStatus').textContent='خطأ: '+e.message;}$('aServerNow').disabled=false;};
-$('aSave').onclick=async()=>{const prev=page.settings.auto||{};const a={enabled:$('aEnabled').checked,last_run:prev.last_run||null,last_result:prev.last_result||null,max:Math.max(1,+$('aMax').value||1),gap:Math.max(30,+$('aGap').value||90),start:Math.min(23,Math.max(0,+$('aStart').value||0)),end:Math.min(24,Math.max(1,+$('aEnd').value||24)),imgs:Math.max(1,+$('aImgs').value||1),mode:$('aMode').value,channels:$('aChan').value,daily_max:Math.max(0,+$('aDaily').value||0),recent_types:prev.recent_types||[],type_used:prev.type_used||{},ranges:readRanges()};
+$('aSave').onclick=async()=>{const prev=page.settings.auto||{};const a={enabled:$('aEnabled').checked,last_run:prev.last_run||null,last_result:prev.last_result||null,max:Math.max(1,+$('aMax').value||1),gap:Math.max(30,+$('aGap').value||90),start:Math.min(23,Math.max(0,+$('aStart').value||0)),end:Math.min(24,Math.max(1,+$('aEnd').value||24)),imgs:Math.max(1,+$('aImgs').value||1),mode:$('aMode').value,channels:$('aChan').value,daily_max:Math.max(0,+$('aDaily').value||0),types:aTypesDraft,recent_types:prev.recent_types||[],type_used:prev.type_used||{},ranges:readRanges()};
   if(a.end<=a.start)return toast('نهاية أوقات العمل يجب أن تكون بعد البداية');page.settings.auto=a;page.settings.repeat_days=Math.max(0,Math.min(365,parseInt($('aRepeat').value??14,10)||0));const{error}=await sb.from('pages').update({settings:page.settings}).eq('id',page.id);$('aMsg').textContent=error?'خطأ: '+error.message:(a.enabled?'حُفظت الإعدادات والنشر التلقائي من الخادم يعمل':'حُفظت الإعدادات');$('aServerStatus').textContent=serverStatusText(a);};
 $('aPreview').onclick=async()=>{$('aPreview').disabled=true;$('aPrevOut').innerHTML='<span class="muted">جارٍ تخطيط المنشورات...</span>';
   try{const j=await callFn('autopilot',{mode:'preview',page_id:page.id,n:5});
