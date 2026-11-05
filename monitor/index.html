@@ -178,6 +178,7 @@ function render(){
     </div>`;}).join('')||'<div class="box muted">ماكو صفحات بهذا الفلتر.</div>';
 }
 // the WhatsApp alert carries only what is late (red: waiting longer than the red limit), laid out like the card
+const GO=new URL('go.html',location.href).href.split('?')[0];
 const redOf=r=>r.its.filter(x=>mins(x.at)>RMIN);
 function waText(rows){
   const out=[];const shown=rows.map(r=>({r,late:redOf(r)})).filter(o=>o.late.length);
@@ -189,7 +190,7 @@ function waText(rows){
     late.slice(0,15).forEach((x,n)=>{
       out.push('',`${n+1}) ${KIND[x.kind][0]} ${x.customer||'زبون'} — ${KIND[x.kind][1]} — ${ago(mins(x.at))}`,`«${String(x.body||'').replace(/\s+/g,' ').slice(0,90)}»`);
       // a message has no link that opens on the phone: the rep finds it in the page's inbox by the customer's name
-      if(x.kind.endsWith('dm'))out.push(`↩ افتحي صندوق رسائل الصفحة وابحثي باسم «${x.customer||'الزبون'}»`);
+      if(x.kind.endsWith('dm'))out.push(`↩ المحادثة (تفتح بتطبيق Business Suite، وإذا ما فتحت ابحثي باسم «${x.customer||'الزبون'}»): ${GO}?p=${r.p.fb_page_id}&c=${encodeURIComponent(x.id)}${x.kind==='ig_dm'?'&t=ig':''}`);
       else if(x.link)out.push(`↩ التعليق: ${x.link}`);});
     if(late.length>15)out.push('',`… و${late.length-15} غيرها (افتح المراقبة)`);
   }

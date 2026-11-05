@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فتح المحادثة</title>
+<style>
+:root{--bg:#f4f6f5;--surface:#fff;--fg:#17211c;--muted:#66746c;--accent:#0f6b5f;--line:#dfe6e2}
+@media (prefers-color-scheme: dark){:root{--bg:#111816;--surface:#19221f;--fg:#e9f1ed;--muted:#9eb0a7;--accent:#5fd0bd;--line:#2f3c37;color-scheme:dark}}
+body{margin:0;font-family:Tajawal,Tahoma,Arial,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6}
+.box{max-width:420px;margin:40px auto;padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:16px;margin-inline:16px}
+@media (min-width:452px){.box{margin-inline:auto}}
+h1{font-size:18px;margin:0 0 8px}
+a.btn{display:block;text-align:center;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;border-radius:12px;padding:12px;margin:10px 0}
+a.alt{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.muted{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>✉️ فتح رسائل الصفحة</h1>
+  <div id="msg" class="muted">جارٍ فتح تطبيق Meta Business Suite…</div>
+  <a id="app" class="btn" href="#">افتح بتطبيق Business Suite</a>
+  <a id="web" class="btn alt" href="#">افتح بالمتصفح (الحاسبة)</a>
+  <div class="muted">إذا فتح الصندوق بدون المحادثة: ابحث باسم الزبون اللي بالتنبيه. لازم تكون داخل بحساب عنده صلاحية على الصفحة.</div>
+</div>
+<script>
+// Opens a page's inbox in the Meta Business Suite app instead of the Facebook app (which shows "content not available").
+// Android: an intent aimed at the Business Suite app (falls back to the web inbox). iPhone: the business.facebook.com link,
+// which the Business Suite app opens when installed. Only ids travel in the link (no customer data).
+const q=new URLSearchParams(location.search);
+const page=(q.get('p')||'').replace(/\D/g,''), conv=(q.get('c')||'').replace(/[^\w.-]/g,''), ig=q.get('t')==='ig';
+const path=`business.facebook.com/latest/inbox/${ig?'instagram_direct':'messenger'}?asset_id=${page}${conv?`&selected_item_id=${encodeURIComponent(conv)}`:''}`;
+const web='https://'+path;
+const ua=navigator.userAgent||'';const android=/Android/i.test(ua), ios=/iPhone|iPad|iPod/i.test(ua);
+const intent=`intent://${path}#Intent;scheme=https;package=com.facebook.pages.app;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.facebook.pages.app')};end`;
+document.getElementById('web').href=web;
+document.getElementById('app').href=android?intent:web;
+if(!page){document.getElementById('msg').textContent='الرابط ناقص.';}
+else if(android){location.href=intent;}
+else if(ios){location.href=web;}
+else{document.getElementById('msg').textContent='على الحاسبة افتح الرابط بالمتصفح.';location.href=web;}
+</script>
+</body>
+</html>
