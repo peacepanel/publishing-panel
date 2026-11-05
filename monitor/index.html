@@ -188,7 +188,9 @@ function waText(rows){
     out.push('','━━━━━━━━━━',`🔴 *${r.p.name}*${r.p.wa_group?` — كروب ${r.p.wa_group}`:''}`,`أقدم واحد ينتظر: ${ago(mins(late[0].at))}`,parts.join(' • '));
     late.slice(0,15).forEach((x,n)=>{
       out.push('',`${n+1}) ${KIND[x.kind][0]} ${x.customer||'زبون'} — ${KIND[x.kind][1]} — ${ago(mins(x.at))}`,`«${String(x.body||'').replace(/\s+/g,' ').slice(0,90)}»`);
-      if(x.link)out.push(x.link);});
+      // a message has no link that opens on the phone: the rep finds it in the page's inbox by the customer's name
+      if(x.kind.endsWith('dm'))out.push(`↩ افتحي صندوق رسائل الصفحة وابحثي باسم «${x.customer||'الزبون'}»`);
+      else if(x.link)out.push(`↩ التعليق: ${x.link}`);});
     if(late.length>15)out.push('',`… و${late.length-15} غيرها (افتح المراقبة)`);
   }
   return out.join('\n');
