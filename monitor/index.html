@@ -111,7 +111,7 @@ $('themeBtn').onclick=()=>{const dark=matchMedia('(prefers-color-scheme: dark)')
 
 const GO=new URL('go.html',location.href).href.split('?')[0];
 // Business Suite finds a thread reliably by words of the message (search in conversations), not by the name Meta gives apps
-const srch=x=>{const w=String(x.body||'').replace(/[^\p{L}\p{N}\s]/gu,' ').trim().split(/\s+/).filter(Boolean).slice(0,3).join(' ');return w&&!/^\(/.test(x.body||'')?w:(x.customer||'');};
+const srch=x=>{const w=String(x.body||'').replace(/[^\p{L}\p{M}\p{N}\s]/gu,' ').trim().split(/\s+/).filter(Boolean).slice(0,3).join(' ');return w&&!/^\(/.test(x.body||'')?w:(x.customer||'');};
 const KIND={fb_comment:['💬','تعليق فيسبوك'],ig_comment:['📷','تعليق انستكرام'],fb_dm:['✉️','رسالة مسنجر'],ig_dm:['📩','رسالة انستكرام']};
 let pages=[],items=[],state=new Map(),grp=lsGet('grp','__all'),kind=lsGet('kind','all');
 let YMIN=+lsGet('ymin',15),RMIN=+lsGet('rmin',60);
