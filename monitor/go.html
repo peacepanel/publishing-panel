@@ -29,8 +29,9 @@ a.alt{background:transparent;color:var(--fg);border:1px solid var(--line)}
 // Android: an intent aimed at the Business Suite app (falls back to the web inbox). iPhone: the business.facebook.com link,
 // which the Business Suite app opens when installed. Only ids travel in the link (no customer data).
 const q=new URLSearchParams(location.search);
-const page=(q.get('p')||'').replace(/\D/g,''), conv=(q.get('c')||'').replace(/[^\w.-]/g,''), ig=q.get('t')==='ig';
-const path=`business.facebook.com/latest/inbox/${ig?'instagram_direct':'messenger'}?asset_id=${page}${conv?`&selected_item_id=${encodeURIComponent(conv)}`:''}`;
+// Business Suite picks the thread by the CUSTOMER's id (u) + thread_type; a conversation id (t_…) opens someone else.
+const page=(q.get('p')||'').replace(/\D/g,''), cust=(q.get('u')||'').replace(/\D/g,''), ig=q.get('t')==='ig';
+const path=`business.facebook.com/latest/inbox/all?asset_id=${page}${cust?`&selected_item_id=${cust}`:''}&thread_type=${ig?'IG_MESSAGE':'FB_MESSAGE'}`;
 const web='https://'+path;
 const ua=navigator.userAgent||'';const android=/Android/i.test(ua), ios=/iPhone|iPad|iPod/i.test(ua);
 const intent=`intent://${path}#Intent;scheme=https;package=com.facebook.pages.app;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.facebook.pages.app')};end`;

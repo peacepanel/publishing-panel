@@ -130,7 +130,7 @@ async function load(){
   const since=new Date(Date.now()-48*3600e3).toISOString();
   const [p,i,s]=await Promise.all([
     sb.from('pages').select('id,name,fb_page_id,ig_user_id,wa_group').eq('active',true).order('name'),
-    sb.from('monitor_inbox').select('id,kind,page_id,customer,body,at,link').eq('status','waiting').gte('at',since).order('at',{ascending:true}).limit(3000),
+    sb.from('monitor_inbox').select('id,kind,page_id,customer,body,at,link,cust_id').eq('status','waiting').gte('at',since).order('at',{ascending:true}).limit(3000),
     sb.from('monitor_state').select('page_id,last_run,errors')]);
   if(p.error||i.error){toast('خطأ: '+(p.error||i.error).message,6000);return;}
   pages=p.data||[];items=i.data||[];state=new Map((s.data||[]).map(x=>[x.page_id,x]));
@@ -190,13 +190,14 @@ function waText(rows){
     late.slice(0,15).forEach((x,n)=>{
       out.push('',`${n+1}) ${KIND[x.kind][0]} ${x.customer||'زبون'} — ${KIND[x.kind][1]} — ${ago(mins(x.at))}`,`«${String(x.body||'').replace(/\s+/g,' ').slice(0,90)}»`);
       // a message has no link that opens on the phone: the rep finds it in the page's inbox by the customer's name
-      if(x.kind.endsWith('dm'))out.push(`↩ المحادثة (تفتح بتطبيق Business Suite، وإذا ما فتحت ابحثي باسم «${x.customer||'الزبون'}»): ${GO}?p=${r.p.fb_page_id}&c=${encodeURIComponent(x.id)}${x.kind==='ig_dm'?'&t=ig':''}`);
+      if(x.kind.endsWith('dm'))out.push(`↩ المحادثة (تفتح بتطبيق Business Suite، وإذا ما فتحت ابحثي باسم «${x.customer||'الزبون'}»): ${GO}?p=${r.p.fb_page_id}${x.cust_id?`&u=${x.cust_id}`:''}${x.kind==='ig_dm'?'&t=ig':''}`);
       else if(x.link)out.push(`↩ التعليق: ${x.link}`);});
     if(late.length>15)out.push('',`… و${late.length-15} غيرها (افتح المراقبة)`);
   }
   return out.join('\n');
 }
-const openWa=t=>window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');
+// wa.me's redirect breaks emojis (shows �) on some devices; go straight to WhatsApp Web on a computer and to api.whatsapp.com on phones
+const openWa=t=>{const mob=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');window.open((mob?'https://api.whatsapp.com/send?text=':'https://web.whatsapp.com/send?text=')+encodeURIComponent(t),'_blank');};
 document.addEventListener('click',async e=>{
   const g=e.target.closest('[data-g]'),k=e.target.closest('[data-k]'),ck=e.target.closest('[data-chk]'),wa=e.target.closest('[data-wa]');
   if(g){grp=g.dataset.g;lsSet('grp',grp);render();}
