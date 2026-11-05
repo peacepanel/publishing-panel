@@ -290,6 +290,17 @@ a{color:var(--accent)}
             <div class="row"><span class="muted">الدقيقة للوقت الجديد</span><div class="seg" id="aMin"><button data-v="0" class="on">00</button><button data-v="15">15</button><button data-v="30">30</button><button data-v="45">45</button></div>
               <span class="muted">اضغط ساعة لإضافتها، واضغطها مرة ثانية لحذفها.</span></div></div>
           <div class="row"><button id="aBuild">إنشاء الخطة (معاينة)</button><button id="aCommit" class="ok" hidden>اعتماد وجدولة الخطة</button><button id="aNow" class="ghost">▶ نشر الآن (دفعة واحدة)</button></div>
+          <div class="box stack" style="padding:10px;gap:8px;background:var(--surface2)">
+            <div class="row" style="justify-content:space-between"><b>تطبيق الجدولة على صفحات أخرى</b><span id="cpInfo" class="muted"></span></div>
+            <div class="row" style="gap:6px"><span class="muted">مجموعات</span><div class="chips" id="cpGroups"></div></div>
+            <div class="chips" id="cpPages"></div>
+            <div class="row"><label class="row" style="gap:4px"><input type="radio" name="cpMode" value="fresh" checked> منتجات جديدة لكل صفحة بنفس الأوقات (موصى به)</label>
+              <label class="row" style="gap:4px"><input type="radio" name="cpMode" value="same"> نفس المنشورات ونفس المنتجات</label></div>
+            <div class="row"><span class="muted">إزاحة الوقت بين الصفحات</span><select id="cpShift"><option value="0">بنفس الوقت</option><option value="15">15 دقيقة</option><option value="30" selected>30 دقيقة</option><option value="60">ساعة</option><option value="120">ساعتين</option><option value="rand">عشوائي (±20 دقيقة)</option></select>
+              <label class="row muted" style="gap:4px"><input type="checkbox" id="cpSettings" checked> انسخ أيضاً إعدادات النشر الدوري (الأوقات، الأيام، الأنواع، عدد المنتجات)</label></div>
+            <div class="row"><button id="cpGo">تطبيق على الصفحات المختارة</button><span class="muted">تُنسخ المنشورات القادمة لهذه الصفحة (المخططة والمجدولة).</span></div>
+            <div id="cpOut" class="muted"></div>
+          </div>
         </div>
         <span id="aInfo" class="muted"></span>
       </div>
@@ -1008,6 +1019,46 @@ async function runPlanLocked(plan,a,later){const okc=captions.filter(c=>c.status
       its.forEach(it=>it.post=st);ok++;}catch(e){bad++;console.warn(e.message);}}
   return{ok,bad};}
 function showPlan(plan){$('aPlan').innerHTML=plan.length?`<div class="box stack"><h3>الخطة: ${plan.length} منشور</h3>${plan.slice(0,60).map(p=>`<div class="row"><span class="pill warn">${p.when?fmtT(p.when):'الآن'}</span>${p.g.slice(0,10).map(x=>`<img src="${esc(thumb(x.it.images[0]))}" title="${esc(x.it.seq)}" style="width:30px;height:40px;object-fit:cover;border-radius:5px">`).join('')}<span class="muted">${p.g.length} منتج • ${p.g.reduce((n,x)=>n+x.imgs.length,0)} صورة</span></div>`).join('')}${plan.length>60?`<div class="muted">و${plan.length-60} أخرى...</div>`:''}</div>`:'';}
+
+// ── تطبيق الجدولة على صفحات أخرى ──
+let cpSel=new Set();
+function renderCopy(){if(!page)return;const near=pages.filter(p=>p.id!==page.id&&p.categories.some(c=>page.categories.includes(c)));
+  const gs=[...new Set(near.flatMap(p=>p.groups||[]))];
+  $('cpGroups').innerHTML=`<button type="button" class="gchip" data-cg="__same">نفس الفئة (${near.length})</button>`+gs.map(g=>{const n=near.filter(p=>(p.groups||[]).includes(g)).length;return`<button type="button" class="gchip" data-cg="${esc(g)}"><bdi>${esc(g)}</bdi><small>${n}</small></button>`;}).join('');
+  $('cpPages').innerHTML=near.map(p=>`<button type="button" class="gchip ${cpSel.has(p.id)?'on':''}" data-cp="${p.id}"><bdi>${esc(p.name)}</bdi><small>${esc(p.categories.join('، '))}</small></button>`).join('')||'<span class="muted">لا توجد صفحات أخرى بنفس الفئة.</span>';
+  $('cpInfo').textContent=cpSel.size?`مختارة: ${cpSel.size} صفحة`:'';}
+$('cpGroups').addEventListener('click',e=>{const b=e.target.closest('[data-cg]');if(!b)return;const g=b.dataset.cg;const near=pages.filter(p=>p.id!==page.id&&p.categories.some(c=>page.categories.includes(c)));
+  const ps=g==='__same'?near:near.filter(p=>(p.groups||[]).includes(g));const all=ps.every(p=>cpSel.has(p.id));ps.forEach(p=>all?cpSel.delete(p.id):cpSel.add(p.id));renderCopy();});
+$('cpPages').addEventListener('click',e=>{const b=e.target.closest('[data-cp]');if(!b)return;const id=b.dataset.cp;cpSel.has(id)?cpSel.delete(id):cpSel.add(id);renderCopy();});
+async function upcomingOf(pageId){const{data,error}=await sb.from('posts').select('id,scheduled_at,status').eq('page_id',pageId).in('status',['planned','scheduled','rendering']).gt('scheduled_at',new Date(Date.now()+10*60000).toISOString()).order('scheduled_at').limit(200);
+  if(error)throw new Error(error.message);return data||[];}
+$('cpGo').onclick=async()=>{if(!cpSel.size)return toast('اختر صفحة واحدة على الأقل');
+  const mode=document.querySelector('input[name=cpMode]:checked').value,sh=$('cpShift').value;
+  $('cpGo').disabled=true;$('cpOut').textContent='جارٍ قراءة الجدولة الحالية...';
+  try{const src=await upcomingOf(page.id);if(!src.length){toast('لا توجد منشورات قادمة على هذه الصفحة لنسخها. اعتمد خطة أولاً');return;}
+    let keysBy=new Map(),meta=new Map();
+    if(mode==='same'){const{data:pp}=await sb.from('post_products').select('post_id,product_key').in('post_id',src.map(x=>x.id)).eq('live',true);
+      (pp||[]).forEach(r=>{if(!keysBy.has(r.post_id))keysBy.set(r.post_id,[]);keysBy.get(r.post_id).push(r.product_key);});
+      const firsts=[...new Set([...keysBy.values()].map(k=>k[0]).filter(Boolean))];
+      for(let i=0;i<firsts.length;i+=100){const{data:t}=await sb.from('product_types').select('product_key,category,type,gender').in('product_key',firsts.slice(i,i+100));(t||[]).forEach(x=>meta.set(x.product_key,x));}}
+    const targets=[...cpSel].map(id=>pages.find(p=>p.id===id)).filter(Boolean);const lines=[];
+    for(let ti=0;ti<targets.length;ti++){const pg=targets[ti];$('cpOut').textContent=`${pg.name}: جارٍ التجهيز (${ti+1} من ${targets.length})...`;
+      const shift=sh==='rand'?null:(+sh)*(ti+1);
+      const when=t=>new Date(new Date(t).getTime()+(shift==null?Math.round((Math.random()*40-20))*60000:shift*60000));
+      let posts;
+      if(mode==='same'){posts=src.map(x=>{const keys=keysBy.get(x.id)||[];const m=meta.get(keys[0]);const tax=m&&TAX[m.category];
+          const typeEn=m&&m.type?((m.gender&&tax?.genders_en?.[m.gender]?tax.genders_en[m.gender]+' ':'')+(tax?.types_en?.[m.type]||m.type)):'';
+          return{when:when(x.scheduled_at).toISOString(),keys,ptype:m?.type||null,gender:m?.gender||null,typeEn,src_category:m?.category||null};}).filter(p=>p.keys.length);}
+      else{const j=await callFn('autopilot',{mode:'plan',page_id:pg.id,n:src.length});posts=(j.plan||[]).map((p,k)=>({when:when(src[k].scheduled_at).toISOString(),keys:p.keys,ptype:p.ptype,gender:p.gender,typeEn:p.typeEn,src_category:p.src_category}));}
+      if($('cpSettings').checked){const mine=page.settings.auto||{};const keep=pg.settings.auto||{};
+        pg.settings.auto=Object.assign({},keep,{slots:mine.slots||aSlots,week:mine.week||aWeekOn,imgs:mine.imgs,mode:mine.mode,channels:mine.channels,daily_max:mine.daily_max,max:mine.max,gap:mine.gap,start:mine.start,end:mine.end,types:mine.types||{}});
+        pg.settings.repeat_days=page.settings.repeat_days??pg.settings.repeat_days;await sb.from('pages').update({settings:pg.settings}).eq('id',pg.id);}
+      if(!posts.length){lines.push(`${pg.name}: لا توجد منتجات كافية`);continue;}
+      try{const r=await callFn('autopilot',{mode:'schedule',page_id:pg.id,posts});lines.push(`${pg.name}: جُدول ${r.created}${r.skipped&&r.skipped.length?` (تُرك ${r.skipped.length})`:''}`);}
+      catch(e){lines.push(`${pg.name}: خطأ — ${e.message}`);}}
+    $('cpOut').innerHTML=lines.map(esc).join('<br>');toast('اكتمل التطبيق على '+targets.length+' صفحة',5000);}
+  catch(e){toast('خطأ: '+e.message,6000);$('cpOut').textContent='';}finally{$('cpGo').disabled=false;}};
+
 // ── خطة النشر: مدة + أيام + أوقات حرة + تعديل كل منشور ──
 let aSlots=[],aWeekOn=[0,1,2,3,4,5,6],aPlanRows=[];
 const pad2=n=>String(n).padStart(2,'0');
@@ -1022,7 +1073,7 @@ $('aSlots').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');i
   if(ex.length)aSlots=aSlots.filter(t=>+t.split(':')[0]!==h);else aSlots.push(`${pad2(h)}:${pad2(+segVal('aMin')||0)}`);renderSlots2();}));
 $('aWeek').addEventListener('click',e=>{const b=e.target.closest('[data-wd]');if(!b)return;const d=+b.dataset.wd;aWeekOn=aWeekOn.includes(d)?aWeekOn.filter(x=>x!==d):[...aWeekOn,d];if(!aWeekOn.length)aWeekOn=[d];renderSlots2();});
 $('aDays').addEventListener('input',()=>{$('aRange').hidden=$('aDays').value!=='custom';if($('aDays').value==='custom'&&!$('aFrom').value){const d=new Date();$('aFrom').value=d.toISOString().slice(0,10);d.setDate(d.getDate()+30);$('aTo').value=d.toISOString().slice(0,10);}});
-function initPlanUI(){const a=autoCfg();aSlots=(a.slots&&a.slots.length?a.slots:['10:00','16:00','21:00']).slice();aWeekOn=(a.week&&a.week.length?a.week:[0,1,2,3,4,5,6]).slice();renderSlots2();$('aCommit').hidden=true;aPlanRows=[];$('aPlan').innerHTML='';}
+function initPlanUI(){const a=autoCfg();aSlots=(a.slots&&a.slots.length?a.slots:['10:00','16:00','21:00']).slice();aWeekOn=(a.week&&a.week.length?a.week:[0,1,2,3,4,5,6]).slice();renderSlots2();$('aCommit').hidden=true;aPlanRows=[];$('aPlan').innerHTML='';cpSel=new Set();renderCopy();$('cpOut').textContent='';}
 function planTimes(){let start=new Date(),end;const v=$('aDays').value;
   if(v==='custom'){if(!$('aFrom').value||!$('aTo').value)return[];start=new Date($('aFrom').value+'T00:00');end=new Date($('aTo').value+'T23:59');}else{end=new Date(start.getTime()+(+v)*864e5);}
   const out=[];const d=new Date(start);d.setHours(0,0,0,0);const minT=Date.now()+15*60000;
