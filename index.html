@@ -400,7 +400,8 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
     </div>
 
     <div id="tab-map" class="stack" hidden>
-      <div class="tip">فئات كل صفحة وانستكرام والمجموعات هنا. بطاقة «انستكرام» تبيّن الصفحات المربوطة وغير المربوطة، وعمود انستكرام في الجدول يشغّل أو يوقف النشر عليه لكل صفحة. «المجموعات»: فلتر الصفحات ثم اكتب اسم مجموعة و«أضفها للظاهر» لتختار الصفحات لاحقاً بضغطة («محفظة …» تُحدَّث من ميتا). بطاقة «تصنيف المنتجات» تعرض تقدّم الذكاء الاصطناعي وتعديل قوائم الأنواع. الصفحات المعلّمة «راجع» فئاتها غير مؤكدة.<button class="tx">✕</button></div>
+      <div class="tip">فئات كل صفحة وانستكرام والمجموعات هنا. «📦 الصفحات المتروكة» = صفحات معزولة ما تنشر وما تنسحب وما تدخل المراقبة؛ زر «📦 نقل» بالجدول يعزلها (ويلغي جدولتها)، و«↩ إرجاع للشغل» يرجعها. الشارة الخضرة 💬 = كروب الواتساب للصفحة (من شيت راك). الصفحات بدون انستكرام مربوط تنشر فيسبوك بس لحد ما تربطها وتسوي «تحديث من ميتا». الصفحات الجديدة بفيسبوك تنضاف تلقائياً عند «تحديث من ميتا». بطاقة «انستكرام» تبيّن الصفحات المربوطة وغير المربوطة، وعمود انستكرام في الجدول يشغّل أو يوقف النشر عليه لكل صفحة. «المجموعات»: فلتر الصفحات ثم اكتب اسم مجموعة و«أضفها للظاهر» لتختار الصفحات لاحقاً بضغطة («محفظة …» تُحدَّث من ميتا). بطاقة «تصنيف المنتجات» تعرض تقدّم الذكاء الاصطناعي وتعديل قوائم الأنواع. الصفحات المعلّمة «راجع» فئاتها غير مؤكدة.<button class="tx">✕</button></div>
+      <div class="box stack" id="parkCard" style="gap:8px"></div>
       <div class="box stack" id="igCard" style="gap:8px"></div>
       <div class="box stack" style="gap:8px"><div class="row" style="justify-content:space-between"><h3 style="margin:0">تصنيف المنتجات (الأنواع)</h3>
         <div class="row"><button id="clsStatus" class="line sm">عرض التقدّم</button><button id="taxEdit" class="line sm">تعديل قوائم الأنواع</button></div></div>
@@ -1173,14 +1174,28 @@ $('aNow').onclick=async()=>{$('aNow').disabled=true;try{await ensureCandidates()
   catch(e){toast('خطأ: '+e.message,5000);}finally{$('aNow').disabled=false;}};
 
 // ───────── الصفحات والفئات ─────────
-let mapRows=[],mapDirty=new Map();
-async function loadMap(){await loadCats();const{data,error}=await sb.from('pages').select('id,name,categories,active,review_note,groups,ig_user_id,ig_username,settings').order('name');if(error)return toast(error.message);
-  mapRows=data||[];mapDirty.clear();$('mapCat').innerHTML='<option value="">كل الفئات</option>'+ALL_CATS.map(c=>`<option>${esc(c)}</option>`).join('');fillGrpOpts();renderIgCard();renderMap();}
+let mapRows=[],allMapRows=[],mapDirty=new Map();
+async function loadMap(){await loadCats();const{data,error}=await sb.from('pages').select('id,name,categories,active,review_note,groups,ig_user_id,ig_username,settings,wa_group').order('name');if(error)return toast(error.message);
+  allMapRows=data||[];mapRows=allMapRows.filter(r=>r.active);mapDirty.clear();renderPark();$('mapCat').innerHTML='<option value="">كل الفئات</option>'+ALL_CATS.map(c=>`<option>${esc(c)}</option>`).join('');fillGrpOpts();renderIgCard();renderMap();}
+
+// ── الصفحات المتروكة: معزولة (لا نشر ولا سحب ولا مراقبة) لحد ما ترجعها للشغل ──
+function renderPark(){const off=allMapRows.filter(r=>!r.active);
+  $('parkCard').innerHTML=`<div class="row" style="justify-content:space-between"><h3 style="margin:0">📦 الصفحات المتروكة <span class="pill">${off.length}</span></h3><span class="muted">معزولة: ما تنشر وما تنسحب منشوراتها وما تدخل المراقبة. «إرجاع للشغل» يرجعها مثل باقي الصفحات.</span></div>
+   ${off.length?`<div class="chips">${off.map(r=>`<span class="gchip"><bdi>${esc(r.name)}</bdi>${r.wa_group?` <small>💬 ${esc(r.wa_group)}</small>`:''} <button type="button" class="sm ok" data-unpark="${r.id}">↩ إرجاع للشغل</button></span>`).join('')}</div>`:'<span class="muted">ماكو صفحات متروكة.</span>'}`;}
+document.addEventListener('click',async e=>{const pb=e.target.closest('[data-park]'),ub=e.target.closest('[data-unpark]');if(!pb&&!ub)return;
+  const id=(pb||ub).dataset.park||(pb||ub).dataset.unpark;const r=allMapRows.find(x=>x.id===id);if(!r)return;
+  if(pb){const{count}=await sb.from('posts').select('id',{count:'exact',head:true}).eq('page_id',id).in('status',['planned','scheduled','paused']);
+    if(!confirm(`نقل «${r.name}» للصفحات المتروكة؟\nتتوقف عن النشر والسحب والمراقبة لحد ما ترجعها.${count?`\nعليها ${count} منشور مجدول راح يتلغى وترجع منتجاته غير منشورة.`:''}`))return;
+    if(count){const{error:e1}=await sb.from('posts').update({status:'cancelled',cancel_reason:'الصفحة انتقلت للمتروكة',paused_from:null}).eq('page_id',id).in('status',['planned','scheduled','paused']);if(e1)return toast('خطأ: '+e1.message);}
+    const st=Object.assign({},r.settings||{});['auto','auto_ship'].forEach(k=>{if(st[k])st[k]=Object.assign({},st[k],{enabled:false});});
+    const{error}=await sb.from('pages').update({active:false,settings:st,review_note:'متروكة'}).eq('id',id);if(error)return toast('خطأ: '+error.message);toast(`«${r.name}» صارت بالمتروكة`);}
+  else{const{error}=await sb.from('pages').update({active:true,review_note:'رجعت من المتروكة — راجع فئاتها'}).eq('id',id);if(error)return toast('خطأ: '+error.message);toast(`«${r.name}» رجعت للشغل — راجع فئاتها وإعداداتها`,5000);}
+  await loadMap();await loadPages();});
 function renderIgCard(){const act=mapRows.filter(r=>r.active);const yes=act.filter(r=>r.ig_user_id),no=act.filter(r=>!r.ig_user_id);const off=yes.filter(r=>(r.settings||{}).ig_publish===false);
   $('igCard').innerHTML=`<div class="row" style="justify-content:space-between"><h3 style="margin:0">انستكرام</h3><div class="row"><span class="pill ok">${yes.length} مربوطة</span><span class="pill">${no.length} بلا حساب</span>${off.length?`<span class="pill warn">${off.length} موقوف النشر عليها</span>`:''}<button id="igSyncMap" class="line sm">تحديث من ميتا</button></div></div>
   <details><summary>الصفحات المربوطة بانستكرام (${yes.length})</summary><div class="chips" style="margin-top:6px">${yes.map(r=>`<span class="pill ${(r.settings||{}).ig_publish===false?'warn':'ok'}"><bdi>${esc(r.name)}</bdi> · <bdi dir="ltr">@${esc(r.ig_username||'')}</bdi></span>`).join('')}</div></details>
   <details><summary>الصفحات بدون انستكرام (${no.length})</summary><div class="chips" style="margin-top:6px">${no.map(r=>`<span class="pill"><bdi>${esc(r.name)}</bdi></span>`).join('')}</div><div class="muted" style="margin-top:6px">لربط حساب: من إعدادات الصفحة في فيسبوك ← الحسابات المرتبطة ← انستكرام، ثم «تحديث من ميتا».</div></details>`;
-  $('igSyncMap').onclick=async()=>{$('igSyncMap').disabled=true;try{const j=await callFn('ig-sync',{});toast(`${j.linked} صفحة مربوطة بانستكرام`);await loadMap();await loadPages();}catch(e){toast('خطأ: '+e.message);}};}
+  $('igSyncMap').onclick=async()=>{$('igSyncMap').disabled=true;try{const j=await callFn('ig-sync',{});toast(`${j.linked} صفحة مربوطة بانستكرام${j.added&&j.added.length?` • أُضيفت ${j.added.length} صفحة جديدة: ${j.added.join('، ')} (حدد فئاتها أو انقلها للمتروكة)`:''}`,8000);await loadMap();await loadPages();}catch(e){toast('خطأ: '+e.message);}};}
 $('clsStatus').onclick=async()=>{$('clsStatus').disabled=true;$('clsOut').innerHTML='<span class="muted">جارٍ الحساب...</span>';
   try{const j=await callFn('classify',{mode:'status'});$('clsOut').innerHTML=`<table><thead><tr><th>الفئة</th><th>المنتجات</th><th>مصنّفة</th><th>متبقية</th></tr></thead><tbody>${j.status.map(r=>`<tr><td>${esc(r.category)}</td><td>${r.products}</td><td>${r.classified}</td><td>${r.by_tab?'<span class="pill">من تبويبات الشيت</span>':r.remaining?`<span class="pill warn">${r.remaining}</span>`:'<span class="pill ok">اكتملت</span>'}</td></tr>`).join('')}</tbody></table>`;}
   catch(e){$('clsOut').textContent='خطأ: '+e.message;}$('clsStatus').disabled=false;};
@@ -1198,9 +1213,9 @@ function grpBulk(add){const g=$('grpName').value.trim();if(!g)return toast('اك
   fillGrpOpts();renderMap();toast(`${add?'أُضيفت':'أُزيلت'} «${g}» ${add?'إلى':'من'} ${rows.length} صفحة — اضغط حفظ التغييرات`);}
 $('grpAdd').onclick=()=>grpBulk(true);$('grpDel').onclick=()=>grpBulk(false);
 function renderMap(){const rows=mapShown();
-  $('mapTbl').innerHTML=`<thead><tr><th>الصفحة</th><th>فعّالة</th><th>انستكرام</th>${ALL_CATS.map(c=>`<th style="font-size:12px;white-space:nowrap">${esc(c)}</th>`).join('')}</tr></thead><tbody>`+
-    rows.map(r=>`<tr data-id="${r.id}" style="${mapDirty.has(r.id)?'background:var(--warn-soft)':''}"><td style="min-width:150px"><b>${esc(r.name)}</b><div>${(r.groups||[]).map(g=>`<span class="pill${g.startsWith('محفظة ')?'':' ok'}" style="font-size:11px">${esc(g)}</span>`).join(' ')}</div>${r.review_note?`<div class="muted"><span class="pill warn">راجع</span> ${esc(r.review_note)}</div>`:''}</td>
-      <td><input type="checkbox" data-a="1" ${r.active?'checked':''}></td><td style="white-space:nowrap">${r.ig_user_id?`<label class="row" style="gap:4px"><input type="checkbox" data-ig="1" ${(r.settings||{}).ig_publish!==false?'checked':''}><bdi dir="ltr" class="muted" style="font-size:12px">@${esc(r.ig_username||'')}</bdi></label>`:'<span class="muted">—</span>'}</td>${ALL_CATS.map(c=>`<td style="text-align:center"><input type="checkbox" data-c="${esc(c)}" ${r.categories.includes(c)?'checked':''}></td>`).join('')}</tr>`).join('')+'</tbody>';
+  $('mapTbl').innerHTML=`<thead><tr><th>الصفحة</th><th>متروكة؟</th><th>انستكرام</th>${ALL_CATS.map(c=>`<th style="font-size:12px;white-space:nowrap">${esc(c)}</th>`).join('')}</tr></thead><tbody>`+
+    rows.map(r=>`<tr data-id="${r.id}" style="${mapDirty.has(r.id)?'background:var(--warn-soft)':''}"><td style="min-width:150px"><b>${esc(r.name)}</b><div>${(r.groups||[]).map(g=>`<span class="pill${g.startsWith('محفظة ')?'':' ok'}" style="font-size:11px">${esc(g)}</span>`).join(' ')}${r.wa_group?` <span class="pill" style="font-size:11px;background:#e8f5e9;color:#1b5e20" title="كروب الواتساب">💬 ${esc(r.wa_group)}</span>`:''}</div>${r.review_note?`<div class="muted"><span class="pill warn">راجع</span> ${esc(r.review_note)}</div>`:''}</td>
+      <td><button type="button" class="sm line" data-park="${r.id}" title="نقل الصفحة لقسم المتروكة: تتوقف عن النشر والسحب والمراقبة">📦 نقل</button></td><td style="white-space:nowrap">${r.ig_user_id?`<label class="row" style="gap:4px"><input type="checkbox" data-ig="1" ${(r.settings||{}).ig_publish!==false?'checked':''}><bdi dir="ltr" class="muted" style="font-size:12px">@${esc(r.ig_username||'')}</bdi></label>`:'<span class="muted">—</span>'}</td>${ALL_CATS.map(c=>`<td style="text-align:center"><input type="checkbox" data-c="${esc(c)}" ${r.categories.includes(c)?'checked':''}></td>`).join('')}</tr>`).join('')+'</tbody>';
   $('mapInfo').textContent=`${rows.length} صفحة${mapDirty.size?` • ${mapDirty.size} معدّلة`:''}`;$('mapSave').disabled=!mapDirty.size;}
 ['mapQ','mapCat','mapFlag','mapGrp'].forEach(id=>$(id).addEventListener('input',renderMap));
 $('mapTbl').addEventListener('change',e=>{const tr=e.target.closest('tr[data-id]');if(!tr)return;const r=mapRows.find(x=>x.id===tr.dataset.id);
