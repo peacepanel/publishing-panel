@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مراقبة الصفحات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#f4f6f5; --surface:#ffffff; --surface2:#eef2f0; --line:#dfe6e2;
+  --fg:#17211c; --muted:#66746c; --accent:#0f6b5f; --accent-ink:#ffffff; --accent-soft:#e0f3ef;
+  --red:#c62828; --red-soft:#fdecea; --yel:#a86b00; --yel-soft:#fff4d6; --grn:#23804e; --grn-soft:#e3f4ea;
+  --display:'Noto Kufi Arabic','Tajawal',Tahoma,sans-serif; --body:'Tajawal',Tahoma,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111816; --surface:#19221f; --surface2:#212c28; --line:#2f3c37;
+  --fg:#e9f1ed; --muted:#9eb0a7; --accent:#5fd0bd; --accent-ink:#0f1a17; --accent-soft:#16332e;
+  --red:#ff8a80; --red-soft:#3d1f1d; --yel:#f0c050; --yel-soft:#3a3016; --grn:#6fd59a; --grn-soft:#1b3427; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111816;--surface:#19221f;--surface2:#212c28;--line:#2f3c37;--fg:#e9f1ed;--muted:#9eb0a7;--accent:#5fd0bd;--accent-ink:#0f1a17;--accent-soft:#16332e;--red:#ff8a80;--red-soft:#3d1f1d;--yel:#f0c050;--yel-soft:#3a3016;--grn:#6fd59a;--grn-soft:#1b3427;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0}
+body{font-family:var(--body);background:var(--bg);color:var(--fg);font-size:15px;line-height:1.55}
+header{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+header h1{font-family:var(--display);font-size:17px;margin:0}
+header .sp{flex:1}
+.wrap{max-width:1320px;margin:0 auto;padding:16px 16px 80px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:700}
+button.line{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button.sm{padding:5px 10px;font-size:13px;border-radius:8px}
+button:disabled{opacity:.5;cursor:default}
+input,select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.kpi b{display:block;font-family:var(--display);font-size:26px;line-height:1.2}
+.kpi.red b{color:var(--red)}.kpi.yel b{color:var(--yel)}.kpi.grn b{color:var(--grn)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:500;cursor:pointer}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip small{opacity:.75;margin-inline-start:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;border-inline-start:5px solid var(--grn)}
+.card.red{border-inline-start-color:var(--red)}.card.yel{border-inline-start-color:var(--yel)}
+.card h3{margin:0;font-size:15px}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;background:var(--surface2);color:var(--fg)}
+.pill.red{background:var(--red-soft);color:var(--red)}.pill.yel{background:var(--yel-soft);color:var(--yel)}.pill.grn{background:var(--grn-soft);color:var(--grn)}
+.pill.wa{background:var(--grn-soft);color:var(--grn)}
+.cnts{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.items{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:340px;overflow:auto}
+.it{border:1px solid var(--line);border-radius:10px;padding:8px;font-size:14px}
+.it .top{display:flex;gap:6px;align-items:center;justify-content:space-between}
+.it .body{margin-top:2px;word-break:break-word}
+.it a{color:var(--accent);font-weight:700;text-decoration:none}
+.toast{position:fixed;bottom:16px;inset-inline-start:16px;background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:10px;z-index:9;max-width:90vw}
+.login{max-width:380px;margin:60px auto}
+.tip{background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-size:14px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>👁 مراقبة الصفحات</h1>
+  <span id="upd" class="muted" style="font-size:13px"></span>
+  <span class="sp"></span>
+  <a href="../" class="muted" style="font-size:13px">↩ منظومة النشر</a>
+  <button id="themeBtn" class="line sm" title="الوضع الفاتح / الداكن">◐</button>
+</header>
+
+<div id="loginBox" class="box login stack" hidden>
+  <h2 style="margin:0;font-family:var(--display)">تسجيل الدخول</h2>
+  <input id="email" type="email" placeholder="البريد" autocomplete="username">
+  <input id="pass" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+  <button id="loginBtn">دخول</button><div id="loginMsg" class="muted"></div>
+</div>
+
+<main id="app" class="wrap stack" hidden>
+  <div class="tip">التعليقات والرسائل اللي تنتظر رد بكل الصفحات الشغالة (آخر 48 ساعة). الخادم يفحص كل صفحة تلقائياً تقريباً كل 20 دقيقة، و«فحص الآن» يحدّث صفحة فوراً. ما ينحسب: رد الصفحة تحت التعليق أو الرد الخاص عليه، وعبارات الختام («شكراً»، «تمام»، 👍، ستيكر)، والتعليقات اللي بيها بس تاك لصديق، والمخفية. اللون حسب أقدم واحد ينتظر: 🟢 أقل من <span class="ymin">15</span> دقيقة • 🟡 أكثر • 🔴 أكثر من <span class="rmin">60</span> دقيقة.</div>
+  <div class="kpis" id="kpis"></div>
+  <div class="box stack" style="gap:10px">
+    <div class="row"><span class="muted" style="font-size:13px">كروب الواتساب</span><div class="chips" id="grpChips"></div></div>
+    <div class="row">
+      <div class="chips" id="kindChips"></div>
+      <input id="q" placeholder="بحث صفحة أو زبون أو نص" style="flex:1;min-width:180px">
+      <label class="row muted" style="gap:4px;font-size:13px"><input type="checkbox" id="onlyWait" checked> الصفحات اللي عليها انتظار بس</label>
+      <button id="waGroup" class="sm" style="background:#25D366;color:#fff">📱 تنبيه واتساب للمعروض</button>
+    </div>
+    <div class="row muted" style="font-size:13px">أصفر بعد <input id="ymin" type="number" min="1" style="width:64px"> دقيقة • أحمر بعد <input id="rmin" type="number" min="1" style="width:64px"> دقيقة</div>
+  </div>
+  <div id="grid" class="grid"></div>
+</main>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const SB_URL='https://lxikqgjfjnfkhvuckihx.supabase.co';
+const SB_KEY='sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lsGet=(k,d)=>{try{const v=localStorage.getItem('mon_'+k);return v==null?d:v;}catch(_){return d;}};
+const lsSet=(k,v)=>{try{localStorage.setItem('mon_'+k,v);}catch(_){}};
+let tT;function toast(m,ms=3500){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(tT);tT=setTimeout(()=>t.hidden=true,ms);}
+// theme
+const applyTheme=()=>{const t=lsGet('theme','');if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme;};applyTheme();
+$('themeBtn').onclick=()=>{const dark=matchMedia('(prefers-color-scheme: dark)').matches;const cur=lsGet('theme','')||(dark?'dark':'light');lsSet('theme',cur==='dark'?'light':'dark');applyTheme();};
+
+const KIND={fb_comment:['💬','تعليق فيسبوك'],ig_comment:['📷','تعليق انستكرام'],fb_dm:['✉️','رسالة مسنجر'],ig_dm:['📩','رسالة انستكرام']};
+let pages=[],items=[],state=new Map(),grp=lsGet('grp','__all'),kind=lsGet('kind','all');
+let YMIN=+lsGet('ymin',15),RMIN=+lsGet('rmin',60);
+const mins=t=>Math.max(0,Math.round((Date.now()-new Date(t).getTime())/60000));
+const ago=m=>m<60?`${m} دقيقة`:m<1440?`${Math.floor(m/60)} ساعة${m%60?` و${m%60} د`:''}`:`${Math.floor(m/1440)} يوم`;
+const colorOf=m=>m==null?'grn':m>RMIN?'red':m>YMIN?'yel':'grn';
+
+async function start(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){$('loginBox').hidden=false;$('app').hidden=true;return;}
+  const{data:adm}=await sb.from('admins').select('email').limit(1);
+  if(!adm||!adm.length){$('loginBox').hidden=false;$('loginMsg').textContent='هذا الحساب ليس مسؤولاً.';return;}
+  $('loginBox').hidden=true;$('app').hidden=false;
+  $('ymin').value=YMIN;$('rmin').value=RMIN;await load();setInterval(load,60000);
+}
+$('loginBtn').onclick=async()=>{$('loginMsg').textContent='...';const{error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});$('loginMsg').textContent=error?('خطأ: '+error.message):'';if(!error)start();};
+
+async function load(){
+  const since=new Date(Date.now()-48*3600e3).toISOString();
+  const [p,i,s]=await Promise.all([
+    sb.from('pages').select('id,name,fb_page_id,ig_user_id,wa_group').eq('active',true).order('name'),
+    sb.from('monitor_inbox').select('id,kind,page_id,customer,body,at,link').eq('status','waiting').gte('at',since).order('at',{ascending:true}).limit(3000),
+    sb.from('monitor_state').select('page_id,last_run,errors')]);
+  if(p.error||i.error){toast('خطأ: '+(p.error||i.error).message,6000);return;}
+  pages=p.data||[];items=i.data||[];state=new Map((s.data||[]).map(x=>[x.page_id,x]));
+  $('upd').textContent='آخر تحديث للواجهة: '+new Date().toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'});
+  render();
+}
+function kindOk(k){return kind==='all'||(kind==='comments'?k.endsWith('comment'):k.endsWith('dm'));}
+function pageRows(){
+  const q=$('q').value.trim().toLowerCase();
+  return pages.filter(p=>grp==='__all'||(grp==='__none'?!p.wa_group:p.wa_group===grp)).map(p=>{
+    const its=items.filter(x=>x.page_id===p.id&&kindOk(x.kind)&&(!q||p.name.toLowerCase().includes(q)||(x.customer||'').toLowerCase().includes(q)||(x.body||'').toLowerCase().includes(q)));
+    const oldest=its.length?mins(its[0].at):null;
+    return{p,its,oldest,color:colorOf(oldest),st:state.get(p.id)};})
+   .filter(r=>!q||r.its.length||r.p.name.toLowerCase().includes(q))
+   .sort((a,b)=>(b.oldest??-1)-(a.oldest??-1)||b.its.length-a.its.length||a.p.name.localeCompare(b.p.name,'ar'));
+}
+function render(){
+  const groups=[...new Set(pages.map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cnt=g=>items.filter(x=>{const p=pages.find(y=>y.id===x.page_id);return p&&(g==='__all'||p.wa_group===g)&&kindOk(x.kind);}).length;
+  $('grpChips').innerHTML=[['__all','الكل'],...groups.map(g=>[g,g])].map(([v,l])=>`<button class="chip ${grp===v?'on':''}" data-g="${esc(v)}">${esc(l)}<small>${cnt(v)}</small></button>`).join('');
+  $('kindChips').innerHTML=[['all','الكل'],['comments','💬 تعليقات'],['dms','✉️ رسائل']].map(([v,l])=>`<button class="chip ${kind===v?'on':''}" data-k="${v}">${l}</button>`).join('');
+  const rows=pageRows();
+  const shownItems=rows.flatMap(r=>r.its);
+  const red=rows.filter(r=>r.color==='red'&&r.its.length).length,yel=rows.filter(r=>r.color==='yel'&&r.its.length).length;
+  const checked=pages.filter(p=>state.get(p.id)?.last_run).length;
+  $('kpis').innerHTML=`
+    <div class="kpi red"><span class="muted">صفحات حمرة</span><b>${red}</b></div>
+    <div class="kpi yel"><span class="muted">صفحات صفرة</span><b>${yel}</b></div>
+    <div class="kpi"><span class="muted">تعليقات تنتظر</span><b>${shownItems.filter(x=>x.kind.endsWith('comment')).length}</b></div>
+    <div class="kpi"><span class="muted">رسائل تنتظر</span><b>${shownItems.filter(x=>x.kind.endsWith('dm')).length}</b></div>
+    <div class="kpi grn"><span class="muted">صفحات انفحصت</span><b>${checked}<span class="muted" style="font-size:14px"> / ${pages.length}</span></b></div>`;
+  const list=$('onlyWait').checked?rows.filter(r=>r.its.length):rows;
+  $('grid').innerHTML=list.map(r=>{const c=k=>r.its.filter(x=>x.kind===k).length;const st=r.st;
+    return`<div class="card ${r.its.length?r.color:''}" data-pid="${r.p.id}">
+      <div class="row" style="justify-content:space-between"><h3>${esc(r.p.name)}</h3>${r.p.wa_group?`<span class="pill wa">💬 ${esc(r.p.wa_group)}</span>`:''}</div>
+      <div class="cnts">
+        ${r.its.length?`<span class="pill ${r.color}">أقدم واحد: ${ago(r.oldest)}</span>`:'<span class="pill grn">✓ ماكو انتظار</span>'}
+        ${c('fb_comment')?`<span class="pill">💬 ${c('fb_comment')} فيسبوك</span>`:''}${c('ig_comment')?`<span class="pill">📷 ${c('ig_comment')} انستا</span>`:''}
+        ${c('fb_dm')?`<span class="pill">✉️ ${c('fb_dm')} مسنجر</span>`:''}${c('ig_dm')?`<span class="pill">📩 ${c('ig_dm')} انستا</span>`:''}
+      </div>
+      <div class="muted" style="font-size:12px">${st?.last_run?`آخر فحص قبل ${ago(mins(st.last_run))}`:'بعد ما انفحصت'}${st?.errors?` • <span title="${esc(st.errors)}" style="color:var(--yel)">⚠ جزء ما انقرا</span>`:''}${!r.p.ig_user_id?' • بدون انستكرام':''}</div>
+      ${r.its.length?`<div class="items">${r.its.map(x=>{const m=mins(x.at);return`<div class="it"><div class="top"><span>${KIND[x.kind][0]} <b>${esc(x.customer||'زبون')}</b> <span class="muted" style="font-size:12px">${KIND[x.kind][1]}</span></span><span class="pill ${colorOf(m)}">${ago(m)}</span></div>
+        <div class="body">${esc(x.body||'')}</div>${x.link?`<a href="${esc(x.link)}" target="_blank" rel="noopener">فتح ←</a>`:''}</div>`;}).join('')}</div>`:''}
+      <div class="row" style="margin-top:8px"><button class="sm line" data-chk="${r.p.id}">🔄 فحص الآن</button>${r.its.length?`<button class="sm" data-wa="${r.p.id}" style="background:#25D366;color:#fff">📱 تنبيه واتساب</button>`:''}</div>
+    </div>`;}).join('')||'<div class="box muted">ماكو صفحات بهذا الفلتر.</div>';
+}
+function waText(rows){
+  const lines=['⚠️ تنبيه رسائل وتعليقات بدون رد',''];
+  for(const r of rows){if(!r.its.length)continue;const icon=r.color==='red'?'🔴':r.color==='yel'?'🟡':'🟢';
+    const nc=r.its.filter(x=>x.kind.endsWith('comment')).length,nd=r.its.length-nc;
+    lines.push(`${icon} *${r.p.name}*: ${nd?`${nd} رسالة`:''}${nd&&nc?' و':''}${nc?`${nc} تعليق`:''} — أقدمها من ${ago(r.oldest)}`);
+    r.its.slice(0,4).forEach(x=>lines.push(`   • ${KIND[x.kind][1]} (${ago(mins(x.at))}): «${String(x.body||'').slice(0,60)}»${x.link?`\n     ${x.link}`:''}`));
+    if(r.its.length>4)lines.push(`   … و${r.its.length-4} غيرها`);
+    lines.push('');}
+  return lines.join('\n').trim();
+}
+const openWa=t=>window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');
+document.addEventListener('click',async e=>{
+  const g=e.target.closest('[data-g]'),k=e.target.closest('[data-k]'),ck=e.target.closest('[data-chk]'),wa=e.target.closest('[data-wa]');
+  if(g){grp=g.dataset.g;lsSet('grp',grp);render();}
+  else if(k){kind=k.dataset.k;lsSet('kind',kind);render();}
+  else if(wa){const r=pageRows().find(x=>x.p.id===wa.dataset.wa);if(r)openWa(waText([r]));}
+  else if(ck){ck.disabled=true;ck.textContent='⏳ جارٍ الفحص...';
+    try{const{data:{session}}=await sb.auth.getSession();const res=await fetch(`${SB_URL}/functions/v1/monitor`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({page_id:ck.dataset.chk})});
+      const j=await res.json();if(j.error)throw new Error(j.error);toast(`${j.page}: انفحصت${j.errors?' (جزء ما انقرا)':''}`);await load();}
+    catch(er){toast('خطأ: '+er.message,6000);ck.disabled=false;ck.textContent='🔄 فحص الآن';}}
+});
+$('waGroup').onclick=()=>{const rows=pageRows().filter(r=>r.its.length);if(!rows.length)return toast('ماكو انتظار بالمعروض');openWa(waText(rows));};
+$('q').addEventListener('input',render);$('onlyWait').addEventListener('change',render);
+['ymin','rmin'].forEach(id=>$(id).addEventListener('change',()=>{YMIN=Math.max(1,+$('ymin').value||15);RMIN=Math.max(YMIN+1,+$('rmin').value||60);lsSet('ymin',YMIN);lsSet('rmin',RMIN);document.querySelectorAll('.ymin').forEach(x=>x.textContent=YMIN);document.querySelectorAll('.rmin').forEach(x=>x.textContent=RMIN);render();}));
+document.querySelectorAll('.ymin').forEach(x=>x.textContent=YMIN);document.querySelectorAll('.rmin').forEach(x=>x.textContent=RMIN);
+start();
+</script>
+</body>
+</html>
