@@ -22,16 +22,17 @@ a.alt{background:transparent;color:var(--fg);border:1px solid var(--line)}
   <div id="msg" class="muted">جارٍ فتح تطبيق Meta Business Suite…</div>
   <a id="app" class="btn" href="#">افتح بتطبيق Business Suite</a>
   <a id="web" class="btn alt" href="#">افتح بالمتصفح (الحاسبة)</a>
-  <div class="muted">إذا فتح الصندوق بدون المحادثة: ابحث باسم الزبون اللي بالتنبيه. لازم تكون داخل بحساب عنده صلاحية على الصفحة.</div>
+  <div class="muted">يفتح صندوق رسائل الصفحة: ابحث باسم الزبون اللي بالتنبيه. لازم تكون داخل بحساب عنده صلاحية على الصفحة.</div>
 </div>
 <script>
 // Opens a page's inbox in the Meta Business Suite app instead of the Facebook app (which shows "content not available").
 // Android: an intent aimed at the Business Suite app (falls back to the web inbox). iPhone: the business.facebook.com link,
 // which the Business Suite app opens when installed. Only ids travel in the link (no customer data).
 const q=new URLSearchParams(location.search);
-// Business Suite picks the thread by the CUSTOMER's id (u) + thread_type; a conversation id (t_…) opens someone else.
 const page=(q.get('p')||'').replace(/\D/g,''), cust=(q.get('u')||'').replace(/\D/g,''), ig=q.get('t')==='ig';
-const path=`business.facebook.com/latest/inbox/all?asset_id=${page}${cust?`&selected_item_id=${cust}`:''}&thread_type=${ig?'IG_MESSAGE':'FB_MESSAGE'}`;
+// Meta gives apps no id that Business Suite accepts for one thread (tested: conversation id, customer id and thread number
+// all open the wrong or an empty chat), so the link opens the page's Messenger / Instagram inbox and the rep searches by name.
+const path=`business.facebook.com/latest/inbox/${ig?'instagram_direct':'messenger'}?asset_id=${page}`;
 const web='https://'+path;
 const ua=navigator.userAgent||'';const android=/Android/i.test(ua), ios=/iPhone|iPad|iPod/i.test(ua);
 const intent=`intent://${path}#Intent;scheme=https;package=com.facebook.pages.app;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.facebook.pages.app')};end`;

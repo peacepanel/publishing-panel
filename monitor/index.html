@@ -109,6 +109,7 @@ let tT;function toast(m,ms=3500){const t=$('toast');t.textContent=m;t.hidden=fal
 const applyTheme=()=>{const t=lsGet('theme','');if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme;};applyTheme();
 $('themeBtn').onclick=()=>{const dark=matchMedia('(prefers-color-scheme: dark)').matches;const cur=lsGet('theme','')||(dark?'dark':'light');lsSet('theme',cur==='dark'?'light':'dark');applyTheme();};
 
+const GO=new URL('go.html',location.href).href.split('?')[0];
 const KIND={fb_comment:['💬','تعليق فيسبوك'],ig_comment:['📷','تعليق انستكرام'],fb_dm:['✉️','رسالة مسنجر'],ig_dm:['📩','رسالة انستكرام']};
 let pages=[],items=[],state=new Map(),grp=lsGet('grp','__all'),kind=lsGet('kind','all');
 let YMIN=+lsGet('ymin',15),RMIN=+lsGet('rmin',60);
@@ -173,12 +174,11 @@ function render(){
       </div>
       <div class="muted" style="font-size:12px">${st?.last_run?`آخر فحص قبل ${ago(mins(st.last_run))}`:'بعد ما انفحصت'}${st?.errors?` • <span title="${esc(st.errors)}" style="color:var(--yel)">⚠ جزء ما انقرا</span>`:''}${!r.p.ig_user_id?' • بدون انستكرام':''}</div>
       ${r.its.length?`<div class="items">${r.its.map(x=>{const m=mins(x.at);return`<div class="it"><div class="top"><span>${KIND[x.kind][0]} <b>${esc(x.customer||'زبون')}</b> <span class="muted" style="font-size:12px">${KIND[x.kind][1]}</span></span><span class="pill ${colorOf(m)}">${ago(m)}</span></div>
-        <div class="body">${esc(x.body||'')}</div>${x.link?`<a href="${esc(x.link)}" target="_blank" rel="noopener">فتح ←</a>`:''}</div>`;}).join('')}</div>`:''}
+        <div class="body">${esc(x.body||'')}</div>${x.kind.endsWith('dm')?`<a href="${esc(GO+'?p='+r.p.fb_page_id+(x.kind==='ig_dm'?'&t=ig':''))}" target="_blank" rel="noopener">فتح الصندوق ← ابحث باسمه</a>`:x.link?`<a href="${esc(x.link)}" target="_blank" rel="noopener">فتح ←</a>`:''}</div>`;}).join('')}</div>`:''}
       <div class="row" style="margin-top:8px"><button class="sm line" data-chk="${r.p.id}">🔄 فحص الآن</button>${redOf(r).length?`<button class="sm" data-wa="${r.p.id}" style="background:#25D366;color:#fff" title="يرسل المتأخرة (الحمرة) بس">📱 تنبيه واتساب (${redOf(r).length} متأخرة)</button>`:''}</div>
     </div>`;}).join('')||'<div class="box muted">ماكو صفحات بهذا الفلتر.</div>';
 }
 // the WhatsApp alert carries only what is late (red: waiting longer than the red limit), laid out like the card
-const GO=new URL('go.html',location.href).href.split('?')[0];
 const redOf=r=>r.its.filter(x=>mins(x.at)>RMIN);
 function waText(rows){
   const out=[];const shown=rows.map(r=>({r,late:redOf(r)})).filter(o=>o.late.length);
@@ -190,7 +190,7 @@ function waText(rows){
     late.slice(0,15).forEach((x,n)=>{
       out.push('',`${n+1}) ${KIND[x.kind][0]} ${x.customer||'زبون'} — ${KIND[x.kind][1]} — ${ago(mins(x.at))}`,`«${String(x.body||'').replace(/\s+/g,' ').slice(0,90)}»`);
       // a message has no link that opens on the phone: the rep finds it in the page's inbox by the customer's name
-      if(x.kind.endsWith('dm'))out.push(`↩ المحادثة (تفتح بتطبيق Business Suite، وإذا ما فتحت ابحثي باسم «${x.customer||'الزبون'}»): ${GO}?p=${r.p.fb_page_id}${x.cust_id?`&u=${x.cust_id}`:''}${x.kind==='ig_dm'?'&t=ig':''}`);
+      if(x.kind.endsWith('dm'))out.push(`↩ افتحي صندوق رسائل الصفحة وابحثي باسم «${x.customer||'الزبون'}»: ${GO}?p=${r.p.fb_page_id}${x.kind==='ig_dm'?'&t=ig':''}`);
       else if(x.link)out.push(`↩ التعليق: ${x.link}`);});
     if(late.length>15)out.push('',`… و${late.length-15} غيرها (افتح المراقبة)`);
   }
