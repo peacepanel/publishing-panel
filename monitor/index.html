@@ -80,7 +80,7 @@ input,select{background:var(--surface);border:1px solid var(--line);border-radiu
 </div>
 
 <main id="app" class="wrap stack" hidden>
-  <div class="tip">التعليقات والرسائل اللي تنتظر رد بكل الصفحات الشغالة (آخر 48 ساعة). الخادم يفحص كل صفحة تلقائياً تقريباً كل 20 دقيقة، و«فحص الآن» يحدّث صفحة فوراً. ما ينحسب: رد الصفحة تحت التعليق أو الرد الخاص عليه، وعبارات الختام («شكراً»، «تمام»، 👍، ستيكر)، والتعليقات اللي بيها بس تاك لصديق، والمخفية. اللون حسب أقدم واحد ينتظر: 🟢 أقل من <span class="ymin">15</span> دقيقة • 🟡 أكثر • 🔴 أكثر من <span class="rmin">60</span> دقيقة.</div>
+  <div class="tip">التعليقات والرسائل اللي تنتظر رد بكل الصفحات الشغالة (آخر 48 ساعة). الخادم يفحص كل صفحة تلقائياً تقريباً كل 20 دقيقة، و«فحص الآن» يحدّث صفحة فوراً. تنبيه الواتساب يرسل المتأخرة بس (الحمرة، أكثر من <span class="rmin">60</span> دقيقة). ما ينحسب: رد الصفحة تحت التعليق أو الرد الخاص عليه، وعبارات الختام («شكراً»، «تمام»، 👍، ستيكر)، والتعليقات اللي بيها بس تاك لصديق، والمخفية. اللون حسب أقدم واحد ينتظر: 🟢 أقل من <span class="ymin">15</span> دقيقة • 🟡 أكثر • 🔴 أكثر من <span class="rmin">60</span> دقيقة.</div>
   <div class="kpis" id="kpis"></div>
   <div class="box stack" style="gap:10px">
     <div class="row"><span class="muted" style="font-size:13px">كروب الواتساب</span><div class="chips" id="grpChips"></div></div>
@@ -88,7 +88,7 @@ input,select{background:var(--surface);border:1px solid var(--line);border-radiu
       <div class="chips" id="kindChips"></div>
       <input id="q" placeholder="بحث صفحة أو زبون أو نص" style="flex:1;min-width:180px">
       <label class="row muted" style="gap:4px;font-size:13px"><input type="checkbox" id="onlyWait" checked> الصفحات اللي عليها انتظار بس</label>
-      <button id="waGroup" class="sm" style="background:#25D366;color:#fff">📱 تنبيه واتساب للمعروض</button>
+      <button id="waGroup" class="sm" style="background:#25D366;color:#fff">📱 تنبيه واتساب بالمتأخرة</button>
     </div>
     <div class="row muted" style="font-size:13px">أصفر بعد <input id="ymin" type="number" min="1" style="width:64px"> دقيقة • أحمر بعد <input id="rmin" type="number" min="1" style="width:64px"> دقيقة</div>
   </div>
@@ -174,22 +174,22 @@ function render(){
       <div class="muted" style="font-size:12px">${st?.last_run?`آخر فحص قبل ${ago(mins(st.last_run))}`:'بعد ما انفحصت'}${st?.errors?` • <span title="${esc(st.errors)}" style="color:var(--yel)">⚠ جزء ما انقرا</span>`:''}${!r.p.ig_user_id?' • بدون انستكرام':''}</div>
       ${r.its.length?`<div class="items">${r.its.map(x=>{const m=mins(x.at);return`<div class="it"><div class="top"><span>${KIND[x.kind][0]} <b>${esc(x.customer||'زبون')}</b> <span class="muted" style="font-size:12px">${KIND[x.kind][1]}</span></span><span class="pill ${colorOf(m)}">${ago(m)}</span></div>
         <div class="body">${esc(x.body||'')}</div>${x.link?`<a href="${esc(x.link)}" target="_blank" rel="noopener">فتح ←</a>`:''}</div>`;}).join('')}</div>`:''}
-      <div class="row" style="margin-top:8px"><button class="sm line" data-chk="${r.p.id}">🔄 فحص الآن</button>${r.its.length?`<button class="sm" data-wa="${r.p.id}" style="background:#25D366;color:#fff">📱 تنبيه واتساب</button>`:''}</div>
+      <div class="row" style="margin-top:8px"><button class="sm line" data-chk="${r.p.id}">🔄 فحص الآن</button>${redOf(r).length?`<button class="sm" data-wa="${r.p.id}" style="background:#25D366;color:#fff" title="يرسل المتأخرة (الحمرة) بس">📱 تنبيه واتساب (${redOf(r).length} متأخرة)</button>`:''}</div>
     </div>`;}).join('')||'<div class="box muted">ماكو صفحات بهذا الفلتر.</div>';
 }
-// the WhatsApp message mirrors the card: page + group, oldest wait, counts by type, then every item with who / what / when / link
+// the WhatsApp alert carries only what is late (red: waiting longer than the red limit), laid out like the card
+const redOf=r=>r.its.filter(x=>mins(x.at)>RMIN);
 function waText(rows){
-  const out=[];const lvl=c=>c==='red'?'🔴':c==='yel'?'🟡':'🟢';
-  const shown=rows.filter(r=>r.its.length);
-  out.push(`⚠️ *تنبيه: تعليقات ورسائل بدون رد* (${shown.length} صفحة)`);
-  for(const r of shown){
-    const c=k=>r.its.filter(x=>x.kind===k).length;
+  const out=[];const shown=rows.map(r=>({r,late:redOf(r)})).filter(o=>o.late.length);
+  out.push(`🔴 *تنبيه: متأخرة بدون رد* (أكثر من ${ago(RMIN)}) — ${shown.length} صفحة`);
+  for(const {r,late} of shown){
+    const c=k=>late.filter(x=>x.kind===k).length;
     const parts=[c('fb_comment')&&`💬 ${c('fb_comment')} تعليق فيسبوك`,c('ig_comment')&&`📷 ${c('ig_comment')} تعليق انستا`,c('fb_dm')&&`✉️ ${c('fb_dm')} رسالة مسنجر`,c('ig_dm')&&`📩 ${c('ig_dm')} رسالة انستا`].filter(Boolean);
-    out.push('','━━━━━━━━━━',`${lvl(r.color)} *${r.p.name}*${r.p.wa_group?` — كروب ${r.p.wa_group}`:''}`,`أقدم واحد ينتظر: ${ago(r.oldest)}`,parts.join(' • '));
-    r.its.slice(0,15).forEach((x,n)=>{const m=mins(x.at);
-      out.push('',`${n+1}) ${KIND[x.kind][0]} ${x.customer||'زبون'} — ${KIND[x.kind][1]} — ${lvl(colorOf(m))} ${ago(m)}`,`«${String(x.body||'').replace(/\s+/g,' ').slice(0,90)}»`);
+    out.push('','━━━━━━━━━━',`🔴 *${r.p.name}*${r.p.wa_group?` — كروب ${r.p.wa_group}`:''}`,`أقدم واحد ينتظر: ${ago(mins(late[0].at))}`,parts.join(' • '));
+    late.slice(0,15).forEach((x,n)=>{
+      out.push('',`${n+1}) ${KIND[x.kind][0]} ${x.customer||'زبون'} — ${KIND[x.kind][1]} — ${ago(mins(x.at))}`,`«${String(x.body||'').replace(/\s+/g,' ').slice(0,90)}»`);
       if(x.link)out.push(x.link);});
-    if(r.its.length>15)out.push('',`… و${r.its.length-15} غيرها (افتح المراقبة)`);
+    if(late.length>15)out.push('',`… و${late.length-15} غيرها (افتح المراقبة)`);
   }
   return out.join('\n');
 }
@@ -204,7 +204,7 @@ document.addEventListener('click',async e=>{
       const j=await res.json();if(j.error)throw new Error(j.error);toast(`${j.page}: انفحصت${j.errors?' (جزء ما انقرا)':''}`);await load();}
     catch(er){toast('خطأ: '+er.message,6000);ck.disabled=false;ck.textContent='🔄 فحص الآن';}}
 });
-$('waGroup').onclick=()=>{const rows=pageRows().filter(r=>r.its.length);if(!rows.length)return toast('ماكو انتظار بالمعروض');openWa(waText(rows));};
+$('waGroup').onclick=()=>{const rows=pageRows().filter(r=>redOf(r).length);if(!rows.length)return toast('ماكو متأخرة (حمرة) بالمعروض');openWa(waText(rows));};
 $('q').addEventListener('input',render);$('onlyWait').addEventListener('change',render);
 ['ymin','rmin'].forEach(id=>$(id).addEventListener('change',()=>{YMIN=Math.max(1,+$('ymin').value||15);RMIN=Math.max(YMIN+1,+$('rmin').value||60);lsSet('ymin',YMIN);lsSet('rmin',RMIN);document.querySelectorAll('.ymin').forEach(x=>x.textContent=YMIN);document.querySelectorAll('.rmin').forEach(x=>x.textContent=RMIN);render();}));
 document.querySelectorAll('.ymin').forEach(x=>x.textContent=YMIN);document.querySelectorAll('.rmin').forEach(x=>x.textContent=RMIN);
