@@ -179,6 +179,7 @@ body:not(.ship) .only-ship{display:none!important}body.ship .only-stock{display:
 body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box-shadow:inset 0 -3px 0 #6a1b9a}body.posts #tab-auto>:not(.only-posts){display:none!important}
 .postline{border-inline-start:4px solid #6a1b9a}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+#zoomBox{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:16px}#zoomBox[hidden]{display:none}#zoomBox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5)}.order .o{cursor:zoom-in}
 </style>
 </head>
 <body>
@@ -760,9 +761,13 @@ let sortable=null;
 function renderOrder(){
   $('order').innerHTML=comp.sel.map((s,k)=>`<div class="o" data-k="${k}"><img src="${esc(thumb(s.u))}" alt=""><span class="k">${k+1}</span><button class="x" data-x="${k}" title="إزالة">✕</button></div>`).join('');
   if(sortable) sortable.destroy();
-  sortable=Sortable.create($('order'),{animation:150,ghostClass:'ghostDrag',filter:'.x',onEnd:e=>{if(e.oldIndex===e.newIndex)return;const [m]=comp.sel.splice(e.oldIndex,1);comp.sel.splice(e.newIndex,0,m);renderOrder();renderPreview();}});
+  sortable=Sortable.create($('order'),{animation:150,ghostClass:'ghostDrag',filter:'.x',onStart:()=>{dragAt=Date.now();},onEnd:e=>{dragAt=Date.now();if(e.oldIndex===e.newIndex)return;const [m]=comp.sel.splice(e.oldIndex,1);comp.sel.splice(e.newIndex,0,m);renderOrder();renderPreview();}});
 }
-$('order').addEventListener('click',e=>{const x=e.target.closest('[data-x]');if(!x)return;if(comp.sel.length===1)return toast('يجب أن يبقى في المنشور صورة واحدة على الأقل');comp.sel.splice(+x.dataset.x,1);renderPick();renderOrder();renderPreview();});
+let dragAt=0;
+// نقرة على الصورة تكبّرها، ونقرة ثانية ترجعها
+function zoomShow(u){let z=$('zoomBox');if(!z){z=document.createElement('div');z.id='zoomBox';z.onclick=()=>z.hidden=true;document.body.appendChild(z);}z.innerHTML=`<img src="${esc(u)}" alt="">`;z.hidden=false;}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('zoomBox')&&!$('zoomBox').hidden){$('zoomBox').hidden=true;e.stopPropagation();}},true);
+$('order').addEventListener('click',e=>{const x=e.target.closest('[data-x]');if(!x){const o=e.target.closest('.o');if(o&&Date.now()-dragAt>300){const s=comp.sel[+o.dataset.k];if(s)zoomShow(String(s.u).replace(/^http:\/\//,'https://'));}return;}if(comp.sel.length===1)return toast('يجب أن يبقى في المنشور صورة واحدة على الأقل');comp.sel.splice(+x.dataset.x,1);renderPick();renderOrder();renderPreview();});
 $('pvMode').addEventListener('change',renderPreview);
 let pvToken=0;
 async function renderPreview(){
