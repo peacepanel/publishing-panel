@@ -184,6 +184,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .orig{background:#3a1f4d;color:#e1bee7}}
 .pgname{font-weight:700;color:var(--accent,#5e35b1)}
 .rep td{vertical-align:top;padding:8px 6px;border-bottom:1px solid var(--line,#e6e0ee)}.rep th{text-align:right;padding:6px;font-size:13px;color:var(--muted)}.rep tr.paused{opacity:.7}.rep .tm{margin:2px 0}.rep .bar{height:4px;background:var(--accent-soft);border-radius:3px;margin-top:4px;min-width:60px}.rep .bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.rep .tmc{display:inline-flex;align-items:center;margin:2px 0}.rep .tmx{border:0;background:none;color:#c62828;cursor:pointer;font-size:12px;padding:0 4px}.rep .tmadd{margin:2px 0}.rep .autot{margin-top:4px;font-size:12px}
 </style>
 </head>
 <body>
@@ -249,7 +250,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
     </div>
 
     <div id="tab-rep" class="stack" hidden>
-      <div class="tip">تقرير كل الصفحات اللي عليها جدولة، لكل مصدر (📦 مباشر من المخزن • ✈️ شحن • 🔁 إعادة من الصفحات): من وين لوين، كم منشور، كم نُشر وكم باقي، وأوقات النشر اليومية. «إيقاف» يوقف المتبقي مؤقتاً (يبقى محجوز بمنتجاته وأوقاته) ويطفي النشر التلقائي من الخادم، و«تشغيل» يرجعه؛ المنشورات اللي فات وقتها أثناء الإيقاف تُلغى حتى ما تنزل مرة وحدة. اضغط على أي وقت لتغييره لكل المتبقي، و«إلغاء المتبقي» يحرر المنتجات. «فتح» ينقلك لجدول الصفحة لتعديل منشور معيّن.<button class="tx">✕</button></div>
+      <div class="tip">تقرير كل الصفحات اللي عليها جدولة، لكل مصدر (📦 مباشر من المخزن • ✈️ شحن • 🔁 إعادة من الصفحات): من وين لوين، كم منشور، كم نُشر وكم باقي، وأوقات النشر اليومية. «إيقاف» يوقف المتبقي مؤقتاً (يبقى محجوز بمنتجاته وأوقاته) ويطفي النشر التلقائي من الخادم، و«تشغيل» يرجعه؛ المنشورات اللي فات وقتها أثناء الإيقاف تُلغى حتى ما تنزل مرة وحدة. اضغط على أي وقت لتغييره لكل المتبقي، و✕ جنبه يلغي هذا الوقت من المتبقي، و«＋ وقت» يضيف وقت يومي جديد لباقي أيام الجدولة بمنتجات جديدة. «⚡ تلقائي» زر واحد يشغّل أو يطفي النشر التلقائي من الخادم (الخادم ينشئ منشورات جديدة بنفسه كل فاصل ضمن أوقات العمل، فوق الجدولة). «إلغاء المتبقي» يحرر المنتجات. «فتح» ينقلك لجدول الصفحة لتعديل منشور معيّن.<button class="tx">✕</button></div>
       <div class="box row"><button id="repBtn" class="ghost">تحديث التقرير</button><span id="repSum" class="muted"></span></div>
       <div id="repList" class="stack"></div>
     </div>
@@ -553,9 +554,9 @@ async function start(){
   $('loginBox').hidden=true;$('app').hidden=false;$('who').textContent=me.name;$('logoutBtn').hidden=false;$('pagePick').hidden=false;
   await loadPages(); await loadCaptions(); loadSourcePages();
 }
-async function callFn(name,body){
-  if(SRC==='posts'&&name==='autopilot')throw new Error('النشر الدوري غير متاح لمنشورات الصفحات بعد');
-  if(SRC==='posts'&&name==='candidates'&&!(body&&body.action)){name='page-posts';body={mode:'list',page_id:body&&body.page_id};}
+async function callFn(name,body,raw){
+  if(raw){}else if(SRC==='posts'&&name==='autopilot')throw new Error('النشر الدوري غير متاح لمنشورات الصفحات بعد');
+  else if(SRC==='posts'&&name==='candidates'&&!(body&&body.action)){name='page-posts';body={mode:'list',page_id:body&&body.page_id};}
   else if((name==='candidates'&&!(body&&body.action))||name==='autopilot')body=Object.assign({source:SRC},body||{});
   const{data:{session}}=await sb.auth.getSession();
   const r=await fetch(`${SB_URL}/functions/v1/${name}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify(body||{})});
@@ -1301,13 +1302,41 @@ async function loadReport(){$('repList').innerHTML='<div class="box muted">جا�
     <td><b>${r.total}</b></td>
     <td>${r.published}${r.failed?` <span class="pill bad" title="فشل">${r.failed} فشل</span>`:''}<div class="bar"><i style="width:${done}%"></i></div></td>
     <td><b>${r.remaining}</b>${r.paused?` <span class="pill warn">${r.paused} موقوف</span>`:''}${r.next_at?`<div class="muted">التالي: ${fmtT(new Date(r.next_at))}</div>`:''}</td>
-    <td>${(r.times||[]).map(t=>`<button class="sm line tm" data-rt="${i}" data-t="${t}" title="غيّر هذا الوقت لكل المتبقي">${fmtHM(t)}</button>`).join(' ')||'<span class="muted">—</span>'}</td>
+    <td>${(r.times||[]).map(t=>`<span class="tmc"><button class="sm line tm" data-rt="${i}" data-t="${t}" title="غيّر هذا الوقت لكل المتبقي">${fmtHM(t)}</button><button class="tmx" data-rx="${i}" data-t="${t}" title="إلغاء هذا الوقت من المتبقي">✕</button></span>`).join(' ')||'<span class="muted">—</span>'}${r.source!=='posts'?` <button class="sm tmadd" data-radd="${i}" title="إضافة وقت يومي جديد لباقي أيام الجدولة">＋ وقت</button>`:''}</td>
     <td>${r.ig_ok?`<span class="pill ok">${r.ig_ok} ✓</span>`:''}${r.ig_fail?` <span class="pill bad">${r.ig_fail} فشل</span>`:''}${!r.ig_ok&&!r.ig_fail?'<span class="muted">—</span>':''}</td>
-    <td>${paused?'<span class="pill warn">⏸ موقوف</span>':'<span class="pill ok">▶ يعمل</span>'}${r.auto_on?'<div class="muted">+ تلقائي من الخادم</div>':''}</td>
+    <td><div>${paused?'<span class="pill warn">⏸ الجدولة موقوفة</span>':r.remaining?'<span class="pill ok">▶ الجدولة تعمل</span>':'<span class="pill">لا جدولة متبقية</span>'}</div>${r.source!=='posts'?`<button class="sm ${r.auto_on?'ok':'line'} autot" data-rauto="${i}" title="النشر التلقائي من الخادم: ينشئ منشورات جديدة بنفسه كل فاصل ضمن أوقات العمل، فوق الجدولة">⚡ تلقائي: ${r.auto_on?'مفعّل':'مطفأ'}</button>`:''}</td>
     <td style="white-space:nowrap">${paused?`<button class="sm ok" data-ra="resume" data-i="${i}">▶ تشغيل</button>`:`<button class="sm" data-ra="pause" data-i="${i}">⏸ إيقاف</button>`}
       <button class="sm line" data-ra="open" data-i="${i}">فتح</button> <button class="sm line" data-ra="cancel" data-i="${i}" style="color:#c62828">إلغاء المتبقي</button></td></tr>`;}).join('')}</tbody></table></div>`;}
+
+// إضافة وقت يومي جديد لباقي أيام الجدولة: منتجات جديدة من النشر الدوري لكل يوم
+async function repAddTime(r,btn){const v=prompt(`وقت يومي جديد لـ ${r.page_name} (${SRCN[r.source]}) بصيغة 24 ساعة مثل 13:30:`,'');if(!v)return;const t=v.trim();
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(t))return toast('اكتب الوقت مثل 09:30 أو 21:00');
+  if((r.times||[]).includes(t))return toast('هذا الوقت موجود بالجدولة');
+  const [h,mi]=t.split(':').map(Number);const B=3*3600e3;// توقيت بغداد ثابت +3
+  const toB=d=>new Date(new Date(d).getTime()+B);const today=toB(Date.now()),last=toB(r.end_at);
+  const days=[];for(let d=new Date(Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate()));d<=last&&days.length<200;d=new Date(d.getTime()+864e5)){
+    const when=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate(),h,mi)-B);if(when.getTime()>Date.now()+10*60e3)days.push(when);}
+  if(!days.length)return toast('ماكو أيام باقية بالجدولة لهذا الوقت');
+  if(!confirm(`إضافة ${days.length} منشور جديد بوقت ${fmtHM(t)} يومياً من ${fmtD(days[0])} إلى ${fmtD(days[days.length-1])}؟\nالمنتجات تُختار من النشر الدوري للصفحة (الجديد أولاً).`))return;
+  btn.disabled=true;toast('جارٍ تجهيز المنشورات...');
+  try{const j=await callFn('autopilot',{mode:'plan',page_id:r.page_id,source:r.source,n:days.length},true);const plan=j.plan||[];
+    if(!plan.length)throw new Error('ماكو منتجات غير منشورة كافية بالنطاق');
+    const posts=plan.slice(0,days.length).map((p,k)=>({when:days[k].toISOString(),keys:p.keys,ptype:p.ptype,gender:p.gender,typeEn:p.typeEn,src_category:p.src_category}));
+    const j2=await callFn('autopilot',{mode:'schedule',page_id:r.page_id,source:r.source,posts},true);
+    toast(`أُضيف ${j2.created} منشور بوقت ${fmtHM(t)}${plan.length<days.length?` • المنتجات كفت لـ ${plan.length} يوم فقط من ${days.length}`:''}${j2.skipped&&j2.skipped.length?` • تُرك ${j2.skipped.length}`:''}`,8000);
+    loadReport();loadBusy();}
+  catch(e){toast('خطأ: '+e.message,6000);}btn.disabled=false;}
 $('repBtn').onclick=loadReport;
 $('repList').addEventListener('click',async e=>{const tb=e.target.closest('[data-rt]');const ab=e.target.closest('[data-ra]');
+  const xb=e.target.closest('[data-rx]'),addb=e.target.closest('[data-radd]'),aub=e.target.closest('[data-rauto]');
+  if(xb){const r=repRows[+xb.dataset.rx],t=xb.dataset.t;if(!confirm(`إلغاء وقت ${fmtHM(t)} من كل المنشورات المتبقية لـ ${r.page_name}؟ منتجاتها ترجع غير منشورة.`))return;
+    const{data,error}=await sb.rpc('schedule_remove_time',{p_page:r.page_id,p_source:r.source,p_time:t});if(error)return toast('خطأ: '+error.message);
+    toast(`أُلغي ${data} منشور بوقت ${fmtHM(t)}`,5000);loadReport();loadBusy();return;}
+  if(addb){const r=repRows[+addb.dataset.radd];await repAddTime(r,addb);return;}
+  if(aub){const r=repRows[+aub.dataset.rauto];const on=!r.auto_on;
+    if(on&&!confirm(`تشغيل النشر التلقائي من الخادم لـ ${r.page_name} (${SRCN[r.source]})؟\nيصير الخادم ينشئ منشورات جديدة بنفسه كل فاصل ضمن أوقات العمل (حسب إعدادات «النشر الدوري» للصفحة)، فوق الجدولة الموجودة.`))return;
+    aub.disabled=true;const{error}=await sb.rpc('schedule_set_auto',{p_page:r.page_id,p_source:r.source,p_on:on});if(error){aub.disabled=false;return toast('خطأ: '+error.message);}
+    toast(`النشر التلقائي من الخادم ${on?'مفعّل':'مطفأ'} لـ ${r.page_name}`);await loadPages();loadReport();return;}
   if(tb){const r=repRows[+tb.dataset.rt];const from=tb.dataset.t;const to=prompt(`الوقت الجديد بدل ${fmtHM(from)} لكل منشورات ${r.page_name} المتبقية (بصيغة 24 ساعة مثل 14:30):`,from);
     if(!to||to===from)return;if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(to.trim()))return toast('اكتب الوقت مثل 09:30 أو 21:00');
     const{data,error}=await sb.rpc('schedule_move_time',{p_page:r.page_id,p_source:r.source,p_from:from,p_to:to.trim()});if(error)return toast('خطأ: '+error.message);
