@@ -183,6 +183,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
 .orig{font-size:13px;font-weight:700;margin:3px 0;padding:3px 8px;background:#f3e5f5;color:#4a148c;border-radius:6px;display:inline-block}.orig a{color:inherit}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .orig{background:#3a1f4d;color:#e1bee7}}
 .pgname{font-weight:700;color:var(--accent,#5e35b1)}
+.rep td{vertical-align:top;padding:8px 6px;border-bottom:1px solid var(--line,#e6e0ee)}.rep th{text-align:right;padding:6px;font-size:13px;color:var(--muted)}.rep tr.paused{opacity:.7}.rep .tm{margin:2px 0}.rep .bar{height:4px;background:var(--accent-soft);border-radius:3px;margin-top:4px;min-width:60px}.rep .bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
 </style>
 </head>
 <body>
@@ -215,6 +216,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
     <div class="tabs">
       <button data-tab="cand" class="on">المنتجات المتوفرة</button>
       <button data-tab="sched">جدول النشر <span id="schedCount" class="pill"></span></button>
+      <button data-tab="rep">تقرير الجداول</button>
       <button data-tab="auto">النشر الدوري</button>
       <button data-tab="lib">مكتبة النصوص</button>
       <button data-tab="set">إعدادات الصفحة</button>
@@ -246,6 +248,11 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
       <div id="grid" class="grid"><div class="empty">اضغط «جلب المنتجات المتوفرة» لقراءة المنتجات من شيتات الكتالوج وحالة المخزن.</div></div>
     </div>
 
+    <div id="tab-rep" class="stack" hidden>
+      <div class="tip">تقرير كل الصفحات اللي عليها جدولة، لكل مصدر (📦 مباشر من المخزن • ✈️ شحن • 🔁 إعادة من الصفحات): من وين لوين، كم منشور، كم نُشر وكم باقي، وأوقات النشر اليومية. «إيقاف» يوقف المتبقي مؤقتاً (يبقى محجوز بمنتجاته وأوقاته) ويطفي النشر التلقائي من الخادم، و«تشغيل» يرجعه؛ المنشورات اللي فات وقتها أثناء الإيقاف تُلغى حتى ما تنزل مرة وحدة. اضغط على أي وقت لتغييره لكل المتبقي، و«إلغاء المتبقي» يحرر المنتجات. «فتح» ينقلك لجدول الصفحة لتعديل منشور معيّن.<button class="tx">✕</button></div>
+      <div class="box row"><button id="repBtn" class="ghost">تحديث التقرير</button><span id="repSum" class="muted"></span></div>
+      <div id="repList" class="stack"></div>
+    </div>
     <div id="tab-sched" class="stack" hidden>
       <div class="tip">المنشورات تُنشر من الخادم في وقتها حتى لو كان جهازك مغلقاً. كل منشور يبين عليه اسم صفحته. انستكرام ينشر كخطوة مستقلة بعد فيسبوك بدقيقة إلى ثلاث («بالدور» ثم «قيد النشر» ثم ✓)، وإذا فشل يكتب السبب بوضوح ويعيد تلقائياً لحد 3 مرات، ويتأكد من حساب انستكرام قبل الإعادة حتى ما يتكرر المنشور. «مخطط» = محجوز بمنتجاته ووقته، وصوره تُجهّز قبل موعده بساعتين ثم يصير «مجدول». غيّر وقت أي منشور بـ«تغيير الوقت» أو ألغه. قبل النشر يُفحص المخزن: المنتج الذي نفد يُحذف، وإذا نفد كله يُلغى المنشور. بعد النشر «فتح فيسبوك/انستكرام» و«نسخ» الرابط، و«أعد على انستكرام» إذا فشل.<button class="tx">✕</button></div>
       <div class="box row"><button id="schedBtn" class="ghost">تحديث الجدول</button><label class="row muted"><input type="checkbox" id="schedAll"> كل الصفحات</label></div>
@@ -578,7 +585,7 @@ function onPageChange(){
 }
 
 // ───────── التبويبات ─────────
-function showTab(t){document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));['cand','sched','auto','lib','set','map','hist'].forEach(k=>$('tab-'+k).hidden=k!==t);if(t==='auto')loadAuto();if(t==='hist')loadHistory();if(t==='map')loadMap();if(t==='sched')loadSchedule();}
+function showTab(t){document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));['cand','sched','rep','auto','lib','set','map','hist'].forEach(k=>$('tab-'+k).hidden=k!==t);if(t==='rep')loadReport();if(t==='auto')loadAuto();if(t==='hist')loadHistory();if(t==='map')loadMap();if(t==='sched')loadSchedule();}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 
 // ───────── المنتجات ─────────
@@ -1275,8 +1282,46 @@ window.cancelPost=async id=>{const{error}=await sb.from('posts').update({status:
   candidates.forEach(it=>{if(it.post?.id===id)it.post=null;});toast('أُلغيت الجدولة وعاد المنتج إلى غير المنشور');renderCounts();renderGrid();loadBusy();if(!$('tab-sched').hidden)loadSchedule();};
 window.publishNow=async id=>{try{const res=await callFn('publish',{post_id:id,bg:true});if(!res.ok)throw new Error(res.error);toast('🚀 أُرسل للنشر — يكمل بالخلفية');}catch(e){toast('لم يُنشر: '+e.message,5000);}loadSchedule();loadBusy();setTimeout(()=>{if(!$('tab-sched').hidden)loadSchedule();},60000);};
 
+
+// ───────── تقرير الجداول ─────────
+const SRCN={stock:'📦 مباشر',ship:'✈️ شحن',posts:'🔁 إعادة من الصفحات'};
+let repRows=[];
+const fmtD=d=>{const x=new Date(d);return`${AR_DAYS[x.getDay()]} ${x.getDate()}/${x.getMonth()+1}`;};
+const fmtHM=t=>{const[h,m]=t.split(':').map(Number);return`${((h+11)%12)+1}:${String(m).padStart(2,'0')} ${h<12?'ص':'م'}`;};
+async function loadReport(){$('repList').innerHTML='<div class="box muted">جارٍ التحميل...</div>';
+  const{data,error}=await sb.rpc('schedule_report');if(error){$('repList').innerHTML=`<div class="box">خطأ: ${esc(error.message)}</div>`;return;}
+  repRows=data||[];const pagesN=new Set(repRows.map(r=>r.page_id)).size;
+  $('repSum').textContent=`${pagesN} صفحة • ${repRows.reduce((a,r)=>a+r.remaining,0)} منشور متبقي • ${repRows.reduce((a,r)=>a+r.paused,0)} موقوف`;
+  if(!repRows.length){$('repList').innerHTML='<div class="box muted">لا توجد صفحات عليها جدولة حالياً.</div>';return;}
+  $('repList').innerHTML=`<div class="box" style="overflow-x:auto"><table class="rep"><thead><tr><th>الصفحة</th><th>المصدر</th><th>المدة</th><th>العدد</th><th>نُشر</th><th>متبقي</th><th>أوقات النشر اليومي</th><th>انستكرام</th><th>الحالة</th><th></th></tr></thead><tbody>${repRows.map((r,i)=>{
+    const done=r.total?Math.round(r.published/r.total*100):0;const paused=r.paused>0&&!r.remaining;
+    return`<tr class="${paused?'paused':''}">
+    <td><b>${esc(r.page_name)}</b></td><td>${SRCN[r.source]||esc(r.source)}</td>
+    <td style="white-space:nowrap">من ${fmtD(r.start_at)}<br>إلى ${fmtD(r.end_at)}<div class="muted">${r.days} يوم</div></td>
+    <td><b>${r.total}</b></td>
+    <td>${r.published}${r.failed?` <span class="pill bad" title="فشل">${r.failed} فشل</span>`:''}<div class="bar"><i style="width:${done}%"></i></div></td>
+    <td><b>${r.remaining}</b>${r.paused?` <span class="pill warn">${r.paused} موقوف</span>`:''}${r.next_at?`<div class="muted">التالي: ${fmtT(new Date(r.next_at))}</div>`:''}</td>
+    <td>${(r.times||[]).map(t=>`<button class="sm line tm" data-rt="${i}" data-t="${t}" title="غيّر هذا الوقت لكل المتبقي">${fmtHM(t)}</button>`).join(' ')||'<span class="muted">—</span>'}</td>
+    <td>${r.ig_ok?`<span class="pill ok">${r.ig_ok} ✓</span>`:''}${r.ig_fail?` <span class="pill bad">${r.ig_fail} فشل</span>`:''}${!r.ig_ok&&!r.ig_fail?'<span class="muted">—</span>':''}</td>
+    <td>${paused?'<span class="pill warn">⏸ موقوف</span>':'<span class="pill ok">▶ يعمل</span>'}${r.auto_on?'<div class="muted">+ تلقائي من الخادم</div>':''}</td>
+    <td style="white-space:nowrap">${paused?`<button class="sm ok" data-ra="resume" data-i="${i}">▶ تشغيل</button>`:`<button class="sm" data-ra="pause" data-i="${i}">⏸ إيقاف</button>`}
+      <button class="sm line" data-ra="open" data-i="${i}">فتح</button> <button class="sm line" data-ra="cancel" data-i="${i}" style="color:#c62828">إلغاء المتبقي</button></td></tr>`;}).join('')}</tbody></table></div>`;}
+$('repBtn').onclick=loadReport;
+$('repList').addEventListener('click',async e=>{const tb=e.target.closest('[data-rt]');const ab=e.target.closest('[data-ra]');
+  if(tb){const r=repRows[+tb.dataset.rt];const from=tb.dataset.t;const to=prompt(`الوقت الجديد بدل ${fmtHM(from)} لكل منشورات ${r.page_name} المتبقية (بصيغة 24 ساعة مثل 14:30):`,from);
+    if(!to||to===from)return;if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(to.trim()))return toast('اكتب الوقت مثل 09:30 أو 21:00');
+    const{data,error}=await sb.rpc('schedule_move_time',{p_page:r.page_id,p_source:r.source,p_from:from,p_to:to.trim()});if(error)return toast('خطأ: '+error.message);
+    toast(`تغيّر ${data} منشور من ${fmtHM(from)} إلى ${fmtHM(to.trim())}`,5000);loadReport();return;}
+  if(!ab)return;const r=repRows[+ab.dataset.i];const act=ab.dataset.ra;
+  if(act==='open'){SRC=r.source;lsSet('src',SRC);applySrc();$('pageSel').value=r.page_id;if($('pageSel').value!==r.page_id){$('pageSearch').value='';fillPageSelect();$('pageSel').value=r.page_id;}onPageChange();showTab('sched');return;}
+  if(act==='cancel'&&!confirm(`إلغاء كل المتبقي (${r.remaining+r.paused} منشور) لـ ${r.page_name} — ${SRCN[r.source]}؟ المنتجات ترجع غير منشورة.`))return;
+  ab.disabled=true;
+  const fn={pause:'schedule_pause',resume:'schedule_resume',cancel:'schedule_cancel_rest'}[act];
+  const{data,error}=await sb.rpc(fn,{p_page:r.page_id,p_source:r.source});if(error){ab.disabled=false;return toast('خطأ: '+error.message);}
+  toast(act==='pause'?`أُوقف ${data} منشور لـ ${r.page_name}`:act==='resume'?`رجع ${data.resumed} منشور${data.missed?` • أُلغي ${data.missed} فات وقتها أثناء الإيقاف`:''}`:`أُلغي ${data} منشور`,6000);
+  loadReport();loadBusy();await loadPages();});
 // ───────── جدول النشر والسجل ─────────
-const ST={planned:['','مخطط — تُجهّز صوره قبل موعده بساعتين'],rendering:['warn','قيد التجهيز'],published:['ok','نُشر'],failed:['bad','فشل'],publishing:['warn','قيد النشر'],approved:['warn','معتمد'],scheduled:['warn','مجدول'],rejected:['','مرفوض'],cancelled:['','ملغى'],pending_review:['','بانتظار المراجعة']};
+const ST={planned:['','مخطط — تُجهّز صوره قبل موعده بساعتين'],rendering:['warn','قيد التجهيز'],published:['ok','نُشر'],failed:['bad','فشل'],publishing:['warn','قيد النشر'],approved:['warn','معتمد'],scheduled:['warn','مجدول'],rejected:['','مرفوض'],paused:['warn','⏸ موقوف (من تقرير الجداول)'],cancelled:['','ملغى'],pending_review:['','بانتظار المراجعة']};
 const pname=id=>pages.find(p=>p.id===id)?.name||'';
 const IGST={published:['ok','انستكرام ✓'],failed:['bad','انستكرام فشل'],pending:['warn','انستكرام بالدور (خلال دقائق)'],publishing:['warn','انستكرام قيد النشر'],skipped:['','انستكرام بلا صور']};
 function igPill(p){if(!p.ig_status)return'';const s=IGST[p.ig_status]||['',p.ig_status];
@@ -1291,7 +1336,7 @@ function openLinks(p){let h='';if(p.fb_post_id){const u=fbLink(p);h+=`<a target=
 window.copyLink=async u=>{try{await navigator.clipboard.writeText(u);toast('نُسخ الرابط');}catch(e){prompt('انسخ الرابط',u);}};
 window.igRetry=async(id,b)=>{b.disabled=true;try{const r=await callFn('publish',{post_id:id,ig_retry:true});toast(r.ok?(r.queued?'أُرسل لانستكرام — ينشر خلال دقيقة أو دقيقتين':'منشور على انستكرام'):'تعذر: '+(r.error||''),5000);}catch(e){toast('خطأ: '+e.message,5000);}loadSchedule();if(typeof loadHistory==='function')loadHistory();};
 async function loadSchedule(){const since=new Date(Date.now()-24*3600e3).toISOString();
-  let q=sb.from('posts').select('*').or(`status.eq.planned,status.eq.scheduled,status.eq.rendering,status.eq.publishing,and(status.in.(published,failed,cancelled),created_at.gte.${since})`).not('scheduled_at','is',null).order('scheduled_at',{ascending:true}).limit(300);
+  let q=sb.from('posts').select('*').or(`status.eq.planned,status.eq.scheduled,status.eq.rendering,status.eq.publishing,status.eq.paused,and(status.in.(published,failed,cancelled),created_at.gte.${since})`).not('scheduled_at','is',null).order('scheduled_at',{ascending:true}).limit(300);
   if(!$('schedAll').checked)q=q.eq('page_id',page.id);
   const{data,error}=await q;if(error){$('schedList').innerHTML=`<div class="box">${esc(error.message)}</div>`;return;}
   const groups=new Map();(data||[]).forEach(p=>{const d=new Date(p.scheduled_at);const k=d.toDateString();if(!groups.has(k))groups.set(k,{d,items:[]});groups.get(k).items.push(p);});
