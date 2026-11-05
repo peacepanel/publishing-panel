@@ -92,6 +92,8 @@ button:disabled{opacity:.45;cursor:default}
 .pick .t.on{border-color:var(--accent)}
 .pick .t.on::after{content:"✓";position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
 .order{display:flex;gap:8px;overflow-x:auto;padding:6px 2px;min-height:96px}
+#modal.repost .order{flex-wrap:wrap;overflow:visible}#modal.repost .order .o{flex-basis:96px}
+#modal.repost .norepost{display:none!important}.onlyrepost{display:none!important}#modal.repost .onlyrepost{display:flex!important}
 .order .o{position:relative;flex:0 0 72px;aspect-ratio:3/4;border-radius:8px;overflow:hidden;background:var(--surface2);cursor:grab;border:1px solid var(--line);touch-action:none}
 .order .o img,.order .o canvas{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .order .o .k{position:absolute;bottom:3px;right:3px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:0 6px}
@@ -217,7 +219,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
     </div>
 
     <div id="tab-cand" class="stack">
-      <div class="tip only-posts">«🔁 منشورات الصفحات» = منشورات الشحن اللي نزلت فعلاً على صفحاتك بآخر 3 أيام (من المندوبات أو غيرهن). النظام يقرأ رمز السعر على الصور: يأخذ منشورات الشحن بس ويترك المباشر، ويجمع النسخ المتشابهة 90% على عدة صفحات بمنشور واحد. فوك تطلع الأسرع تفاعلاً: التفاعل بالنسبة لعمر المنشور، يعني منشور عمره ساعات وتفاعله عالي يسبق منشور قديم. اختر منشور وانشره على صفحات ثانية: الصور تنعاد مثل ما هي بجودتها الأصلية بدون رمز جديد، وترتيبها يتغير بكل صفحة، والصفحات اللي نازل عليها يتركها تلقائياً.<button class="tx">✕</button></div>
+      <div class="tip only-posts">«🔁 منشورات الصفحات» = منشورات الشحن اللي نزلت فعلاً على صفحاتك بآخر 3 أيام (من المندوبات أو غيرهن). النظام يقرأ رمز السعر على الصور: يأخذ منشورات الشحن بس ويترك المباشر، ويجمع النسخ المتشابهة 90% على عدة صفحات بمنشور واحد. فوك تطلع الأسرع تفاعلاً: التفاعل بالنسبة لعمر المنشور، يعني منشور عمره ساعات وتفاعله عالي يسبق منشور قديم. لما تختار صفحة تطلع بس المنشورات اللي من نفس فئاتها. زر «🔁 إعادة نشر» بالبطاقة يفتح خيارات بسيطة: الصفحات (فلتر «المناسبة للمنتج» يطلع الصفحات اللي بنفس الفئة ويترك اللي نازل عليها المنشور)، ووقت النشر أو الجدولة، وترتيب الصور بالسحب والإفلات لأي موقع. أول صفحة تاخذ ترتيبك، والصفحات الإضافية تاخذ ترتيباً مختلفاً تلقائياً إذا الخيار مفعّل. الصور تنعاد بجودتها الأصلية بدون رمز جديد، والنص هو نص المنشور الأصلي مع تبديل اسم الصفحة.<button class="tx">✕</button></div>
       <div class="tip">زر <b>📦 المخزن / ✈️ الشحن</b> بالأعلى يبدّل مصدر المنتجات للوحة كلها. «الشحن» = المنتجات اللي يقرأها المندوبين من تطبيق شي ان بفاحص السلة: تنسحب تلقائياً كل 5 دقائق، وتتسعّر بنفس قواعد وإعدادات فاحص السلة (سعر الدولار وإضافة كل فئة)، والرمز ينكتب على الصورة مع مدى القياسات للملابس والأطفال. الذكاء الاصطناعي يحدد فئتها ونوعها وموسمها حتى تروح للصفحات المناسبة، وتقدر تصحّح الفئة والنوع بضغطة على النوع. النشر الدوري والخطة والنسخ لكل مصدر منفصلة.<button class="tx">✕</button></div>
       <div class="tip">ابدأ بـ«جلب المنتجات». فلتر بالقياس أو الموديل (مثلاً 3XL أو A54)، وبـ«النوع» (فساتين، محابس، سلبر…) وبـ«الموسم» (❄ شتوي، ☀ صيفي، ↔ للموسمين، ↩ منقول من الموسم الآخر). على كل بطاقة نوعها وموسمها، واضغط النوع لتصحيحه. شريط «التصنيف» يبيّن ما ينتظر الذكاء الاصطناعي وما يحتاجك: فعّل «وضع التصنيف السريع» لتصنّف بضغطة. ثم «اختيار كل المعروض» و«إرسال للزبون» أو «تجهيز منشور». المنتجات المنشورة تنزل للأسفل باهتة، وعلامة «نُشر قبل X يوم» تعني أن دورة التكرار أعادته.<button class="tx">✕</button></div>
       <div class="box toolbar">
@@ -428,20 +430,21 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
         <h2 id="cTitle"></h2>
         <button id="closeBtn" class="line sm">إغلاق</button>
       </div>
-      <div id="smartTips"></div>
-      <h3>صور المنتجات <span id="selCount" class="pill"></span></h3>
-      <div class="tip">اضغط الصورة لإضافتها إلى المنشور أو إزالتها. كل صورة يُرسم عليها ترميز منتجها.<button class="tx">✕</button></div>
-      <div id="pick" class="pick"></div>
+      <div id="smartTips" class="norepost"></div>
+      <h3 class="norepost">صور المنتجات <span id="selCount" class="pill"></span></h3>
+      <div class="tip norepost">اضغط الصورة لإضافتها إلى المنشور أو إزالتها. كل صورة يُرسم عليها ترميز منتجها.<button class="tx">✕</button></div>
+      <div id="pick" class="pick norepost"></div>
       <div class="row" style="justify-content:space-between"><h3>الترتيب</h3><span class="muted">اسحب لتغيير الموضع</span></div>
-      <div class="tip">اسحب أي صورة إلى البداية لتصبح الصورة الكبيرة في المنشور. الترتيب هنا هو ما يعتمده فيسبوك في التوزيع.<button class="tx">✕</button></div>
+      <div class="tip norepost">اسحب أي صورة إلى البداية لتصبح الصورة الكبيرة في المنشور. الترتيب هنا هو ما يعتمده فيسبوك في التوزيع.<button class="tx">✕</button></div>
+      <div class="box onlyrepost" style="padding:8px 10px;gap:8px;flex-wrap:wrap;align-items:center">اسحب أي صورة وحطها بأي موقع (الأولى أو الثانية أو السادسة…). <label class="row" style="gap:4px"><input type="checkbox" id="shufPer" checked> ترتيب مختلف تلقائياً لكل صفحة إضافية</label><span class="muted">(أول صفحة تاخذ ترتيبك هذا)</span></div>
       <div id="order" class="order"></div>
-      <div class="row" style="justify-content:space-between">
+      <div class="row norepost" style="justify-content:space-between">
         <h3>المعاينة</h3>
         <div class="seg" id="pvMode"><button data-v="fb" class="on">شكل فيسبوك</button><button data-v="ig">شكل إنستغرام 4:5</button></div>
       </div>
-      <div id="fbPrev" class="fbprev"><div class="hd"><span class="av"></span><b id="fbPage"></b></div><div class="fbcap" id="fbCap"></div><div id="fbGrid" class="fbgrid"></div></div>
-      <div id="igPrev" class="igwrap" hidden></div>
-      <div id="pvMsg" class="muted"></div>
+      <div id="fbPrev" class="fbprev norepost"><div class="hd"><span class="av"></span><b id="fbPage"></b></div><div class="fbcap" id="fbCap"></div><div id="fbGrid" class="fbgrid"></div></div>
+      <div id="igPrev" class="igwrap norepost" hidden></div>
+      <div id="pvMsg" class="muted norepost"></div>
     </section>
     <section>
       <h3>الصفحات</h3>
@@ -471,15 +474,16 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
           <div id="whenText" class="pill warn" style="align-self:flex-start"></div>
         </div>
       </div>
-      <h3>نص المنشور <span id="capFor" class="muted"></span></h3>
-      <div class="row"><input id="capSearch" placeholder="بحث في النصوص" style="flex:1"><button id="toLibBtn" class="line sm">إدارة المكتبة</button></div>
-      <div id="capList" class="caps"></div>
-      <div class="chips" id="varChips"></div>
-      <textarea id="cCaption" style="min-height:140px"></textarea>
-      <div class="row"><button id="saveCapFromComposer" class="line sm">حفظ هذا النص لهذه الصفحة</button><button id="capAllBtn" class="line sm">استخدمه لكل الصفحات</button></div>
-      <div class="row" style="justify-content:space-between"><b>النشر على</b>
+      <div class="box onlyrepost" style="padding:8px 10px">النص: نص المنشور الأصلي، واسم الصفحة الأصلية يتبدل باسم الصفحة الجديدة تلقائياً.</div>
+      <h3 class="norepost">نص المنشور <span id="capFor" class="muted"></span></h3>
+      <div class="row norepost"><input id="capSearch" placeholder="بحث في النصوص" style="flex:1"><button id="toLibBtn" class="line sm">إدارة المكتبة</button></div>
+      <div id="capList" class="caps norepost"></div>
+      <div class="chips norepost" id="varChips"></div>
+      <textarea id="cCaption" class="norepost" style="min-height:140px"></textarea>
+      <div class="row norepost"><button id="saveCapFromComposer" class="line sm">حفظ هذا النص لهذه الصفحة</button><button id="capAllBtn" class="line sm">استخدمه لكل الصفحات</button></div>
+      <div class="row norepost" style="justify-content:space-between"><b>النشر على</b>
         <div class="seg" id="chanSeg"><button data-v="both" class="on">فيسبوك + انستكرام</button><button data-v="fb">فيسبوك فقط</button><button data-v="ig">انستكرام فقط</button></div></div>
-      <div id="chanNote" class="muted"></div>
+      <div id="chanNote" class="muted norepost"></div>
       <button id="publishBtn" class="ok">إضافة إلى جدول النشر</button>
       <div id="confirmBox" class="confirm" hidden>
         <div id="confirmText"></div>
@@ -665,7 +669,7 @@ function renderGrid(){
   if(!candidates.length){$('grid').innerHTML='<div class="empty">لا توجد منتجات معروضة. اضغط «جلب المنتجات المتوفرة».</div>';return;}
   $('grid').innerHTML=visibleItems().slice(0,600).map(({it,i})=>{const st=stOf(it);
     const badge=st==='published'?`<span class="pill">منشور ${it.post.published_at?fmtShort(it.post.published_at):''}</span>`:st==='scheduled'?`<span class="pill warn">${it.post.scheduled_at?'مجدول '+fmtShort(it.post.scheduled_at):'قيد النشر'}</span>`:'';
-    const acts=st==='fresh'?`<button class="sm" onclick="toggleSel(${i})">${selected.has(i)?'إلغاء':'اختيار'}</button><button class="sm line" onclick="composeOne(${i})">منشور له</button>`
+    const acts=st==='fresh'&&it.raw?`<button class="sm" onclick="openComposer([${i}],{repost:true})">🔁 إعادة نشر</button>`:st==='fresh'?`<button class="sm" onclick="toggleSel(${i})">${selected.has(i)?'إلغاء':'اختيار'}</button><button class="sm line" onclick="composeOne(${i})">منشور له</button>`
       :st==='published'&&it.post.fb_post_id?`<a class="muted" target="_blank" href="https://www.facebook.com/${esc(it.post.fb_post_id)}">عرض على فيسبوك</a>`:`<button class="sm line" onclick="cancelPost('${it.post.id}')">إلغاء الجدولة</button>`;
     return `<div class="card ${st!=='fresh'?'done':''} ${selected.has(i)?'sel':''}" id="c${i}">
       <div class="ph"><img loading="lazy" src="${esc(thumb(it.images[0]))}" alt=""><span class="n">${it.images.length} صور</span><span class="ck">✓</span></div>
@@ -729,13 +733,14 @@ async function renderEncoded(url,product,pg){const img=await loadImg(url);const 
 
 // ───────── المحرر ─────────
 let comp=null; // {items:[product], sel:[{u,pi}], targets:[{page, when, capId, caption}], active:0}
-function openComposer(idxs){
+function openComposer(idxs,opt={}){
   const seenK=new Set();const items=idxs.map(i=>candidates[i]).filter(it=>it&&stOf(it)==='fresh'&&!seenK.has(it.product_key)&&seenK.add(it.product_key)); if(!items.length) return;
-  const n=items.length===1?Math.max(1,Math.min(page.settings.last_images||1,items[0].images.length)):1;
+  const repost=!!opt.repost||items.every(it=>it.raw);
+  const n=repost?99:items.length===1?Math.max(1,Math.min(page.settings.last_images||1,items[0].images.length)):1;
   const sel=[]; items.forEach((it,pi)=>it.images.slice(0,n).forEach(u=>sel.push({u,pi})));
-  comp={items,idxs,sel,targets:[],active:0};
+  comp={items,idxs,sel,targets:[],active:0,repost};$('modal').classList.toggle('repost',repost);
   addTarget(page);
-  $('cTitle').textContent=items.length===1?`منشور: ${items[0].seq}`:`منشور مشترك: ${items.length} منتجات`;
+  $('cTitle').textContent=repost?`🔁 إعادة نشر منشور (${sel.length} صور)`:items.length===1?`منشور: ${items[0].seq}`:`منشور مشترك: ${items.length} منتجات`;
   $('saveMsg').textContent='';$('pvMsg').textContent='';$('confirmBox').hidden=true;$('publishBtn').disabled=false;$('tgSearch').value='';
   seg('when','later');seg('pvMode','fb');seg('chanSeg','both');syncWhen();renderChanNote();
   renderPick();renderOrder();renderPgList();renderTargets();selectTarget(0);
@@ -755,7 +760,7 @@ let sortable=null;
 function renderOrder(){
   $('order').innerHTML=comp.sel.map((s,k)=>`<div class="o" data-k="${k}"><img src="${esc(thumb(s.u))}" alt=""><span class="k">${k+1}</span><button class="x" data-x="${k}" title="إزالة">✕</button></div>`).join('');
   if(sortable) sortable.destroy();
-  sortable=Sortable.create($('order'),{animation:150,ghostClass:'ghostDrag',direction:'horizontal',filter:'.x',onEnd:e=>{if(e.oldIndex===e.newIndex)return;const [m]=comp.sel.splice(e.oldIndex,1);comp.sel.splice(e.newIndex,0,m);renderOrder();renderPreview();}});
+  sortable=Sortable.create($('order'),{animation:150,ghostClass:'ghostDrag',filter:'.x',onEnd:e=>{if(e.oldIndex===e.newIndex)return;const [m]=comp.sel.splice(e.oldIndex,1);comp.sel.splice(e.newIndex,0,m);renderOrder();renderPreview();}});
 }
 $('order').addEventListener('click',e=>{const x=e.target.closest('[data-x]');if(!x)return;if(comp.sel.length===1)return toast('يجب أن يبقى في المنشور صورة واحدة على الأقل');comp.sel.splice(+x.dataset.x,1);renderPick();renderOrder();renderPreview();});
 $('pvMode').addEventListener('change',renderPreview);
@@ -789,7 +794,9 @@ function chanOf(){return segVal('chanSeg')||'both';}
 function chanLabel(pg,ch){ch=ch||chanOf();if(ch==='fb')return'فيسبوك';if(ch==='ig')return pg.ig_user_id?'انستكرام':'⚠ بلا انستكرام';return igOn(pg)?'فيسبوك + انستكرام':'فيسبوك';}
 function renderChanNote(){if(!comp)return;const ch=chanOf();const no=comp.targets.filter(t=>!t.page.ig_user_id);
   $('chanNote').innerHTML=ch==='ig'&&no.length?`<span class="pill bad">${no.length} صفحة بلا انستكرام ستُستبعد: ${no.map(t=>esc(t.page.name)).join('، ')}</span>`:ch==='both'&&no.length?`${no.length} صفحة بلا انستكرام تُنشر على فيسبوك فقط.`:'';}
-function fits(pg){return comp.items.every(it=>pg.categories.includes(it.category));}
+function fits(pg){return comp.items.every(it=>{if(!it.raw)return pg.categories.includes(it.category);
+  const op=(it.origin?.pages||[]).map(o=>o.page_id);if(op.includes(pg.id))return false;
+  const oc=new Set(pages.filter(x=>op.includes(x.id)).flatMap(x=>x.categories||[]));return pg.categories.some(c=>oc.has(c));});}
 let tgCat='__fit';
 const allGroups=()=>[...new Set(pages.flatMap(p=>p.groups||[]))].sort((a,b)=>a.startsWith('محفظة ')===b.startsWith('محفظة ')?a.localeCompare(b,'ar'):a.startsWith('محفظة ')?-1:1);
 function shownPages(){const q=$('tgSearch').value.trim(),ig=$('tgIg').checked;
@@ -1208,6 +1215,8 @@ $('publishBtn').onclick=()=>{const later=segVal('when')!=='now';
 $('confirmNo').onclick=()=>{$('confirmBox').hidden=true;$('publishBtn').disabled=false;};
 $('confirmYes').onclick=()=>doSave(false);
 async function upload(canvas,path){const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.92));const up=await sb.storage.from('post-images').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw new Error('رفع الصورة: '+up.error.message);return sb.storage.from('post-images').getPublicUrl(path).data.publicUrl;}
+// نص إعادة النشر: نص المنشور الأصلي، وأسماء الصفحات الأصلية تتبدل باسم الصفحة الجديدة
+function repostCaption(pg){const it=comp.items[0];let t=String(it.origin?.message||'');for(const o of (it.origin?.pages||[]))if(o.name&&o.name.trim().length>2)t=t.split(o.name.trim()).join(pg.name);return t;}
 async function doSave(later){
   ['confirmYes','confirmNo','publishBtn'].forEach(id=>$(id).disabled=true);
   const batch=crypto.randomUUID();const results=[];const partialP=[];
@@ -1220,15 +1229,15 @@ async function doSave(later){
       if(busy.size)partialP.push(`${pg.name} (بدون ${busy.size})`);
       const fb=[],ig=[],fbP=[],igP=[],perProd=comp.items.map(()=>({fb:[],ig:[]}));
       // إعادة نشر منشورات الصفحات: ترتيب الصور يتغير لكل صفحة (لا يطابق الأصل)
-      const ord=comp.sel.map((_,i)=>i);if(comp.items.some(it=>it.raw)&&ord.length>1){do{for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}}while(ord.every((v,i)=>v===i));}
+      const ord=comp.sel.map((_,i)=>i);if(comp.repost&&ti>0&&$('shufPer').checked&&ord.length>1){do{for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}}while(ord.every((v,i)=>v===i));}
       for(const k of ord){const s=comp.sel[k];if(busy.has(comp.items[s.pi].product_key))continue;$('saveMsg').textContent=`${pg.name}: تجهيز الصورة ${k+1} من ${comp.sel.length}...`;
         const c=await renderEncoded(s.u,comp.items[s.pi],pg);const base=`${pg.id}/${batch}_${k+1}`;
         const fu=await upload(c,base+'.jpg');const iu=await upload(buildInstagramCanvas(c),base+'_ig.jpg');
         fb.push(fu);ig.push(iu);fbP.push(base+'.jpg');igP.push(base+'_ig.jpg');perProd[s.pi].fb.push(fu);perProd[s.pi].ig.push(iu);}
       const first=its[0];
       const ins=await sb.from('posts').insert({page_id:pg.id,product_key:its.length===1?first.product_key:null,seq:its.map(x=>x.seq).join(' + '),seqs:its.flatMap(x=>x.seqs),
-        category:[...new Set(its.map(x=>x.category))].join('، '),sizes:fillVars('{القياسات}',pg),price_text:first.text,caption:t.caption,
-        image_path:fbP[0],image_url:fb[0],image_paths:fbP,image_urls:fb,ig_image_paths:igP,ig_image_urls:ig,caption_template_id:t.capId,batch_id:batch,channels:chanOf(),
+        category:[...new Set(its.map(x=>x.category))].join('، '),sizes:fillVars('{القياسات}',pg),price_text:first.text,caption:comp.repost?repostCaption(pg):t.caption,
+        image_path:fbP[0],image_url:fb[0],image_paths:fbP,image_urls:fb,ig_image_paths:igP,ig_image_urls:ig,caption_template_id:comp.repost?null:t.capId,batch_id:batch,channels:chanOf(),
         status:later?'scheduled':'approved',scheduled_at:later?t.when.toISOString():null,approved_by:me.email,approved_at:new Date().toISOString(),created_by_email:me.email,created_by_name:me.name,source:SRC}).select('id').single();
       if(ins.error)throw new Error(pg.name+': '+ins.error.message);
       const pp=await sb.from('post_products').insert(comp.items.map((it,pi)=>({post_id:ins.data.id,page_id:pg.id,product_key:it.product_key,seq:it.seq,seqs:it.seqs,category:it.category,image_urls:perProd[pi].fb,ig_image_urls:perProd[pi].ig})).filter(r=>r.image_urls.length));
