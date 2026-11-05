@@ -61,6 +61,17 @@ input,select{background:var(--surface);border:1px solid var(--line);border-radiu
 .login{max-width:380px;margin:60px auto}
 .tip{background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-size:14px}
 @media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{background:var(--surface);color:var(--fg);border:1px solid var(--line)}
+.tabs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.bar{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap}
+.thumbs a{display:flex;flex-direction:column;gap:2px;width:92px;font-size:11px;color:var(--muted);text-decoration:none}
+.thumbs img{width:92px;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--surface2)}
+.grp{border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:6px}
+.grp.bad{border-color:var(--red);background:var(--red-soft)}
+details>summary{cursor:pointer;font-weight:700}
+.pchips{max-height:180px;overflow:auto}
 </style>
 </head>
 <body>
@@ -80,6 +91,25 @@ input,select{background:var(--surface);border:1px solid var(--line);border-radiu
 </div>
 
 <main id="app" class="wrap stack" hidden>
+  <div class="tabs" id="tabs"><button data-tab="reply" class="on">💬 الرد على الزبائن</button><button data-tab="dup">🔁 المنشورات المكررة</button><button data-tab="brand">™ العلامات التجارية</button></div>
+  <section id="tab_audit" class="stack" hidden>
+    <div class="tip" id="auditTip"></div>
+    <div class="box stack" style="gap:10px">
+      <div class="row"><span class="muted" style="font-size:13px">اختر كروب</span><div class="chips" id="aGrp"></div></div>
+      <div class="chips pchips" id="aPages"></div>
+      <div class="row">
+        <span class="muted" style="font-size:13px">من</span><input type="date" id="aFrom">
+        <span class="muted" style="font-size:13px">إلى</span><input type="date" id="aTo">
+        <span id="gapBox" class="row muted" style="font-size:13px;gap:4px">تكرار أقرب من <input id="aGap" type="number" min="1" max="60" value="10" style="width:60px"> يوم = مخالف</span>
+        <span class="sp" style="flex:1"></span>
+        <button id="aStart">▶ ابدأ الفحص</button>
+      </div>
+      <div id="aNote" class="muted" style="font-size:13px"></div>
+    </div>
+    <div id="aCross"></div>
+    <div id="aRuns" class="stack"></div>
+  </section>
+  <section id="tab_reply" class="stack">
   <div class="tip">التعليقات والرسائل اللي تنتظر رد بكل الصفحات الشغالة (آخر 48 ساعة). الخادم يفحص كل صفحة تلقائياً تقريباً كل 20 دقيقة، و«فحص الآن» يحدّث صفحة فوراً. تنبيه الواتساب يرسل المتأخرة بس (الحمرة، أكثر من <span class="rmin">60</span> دقيقة). ما ينحسب: رد الصفحة تحت التعليق أو الرد الخاص عليه، وعبارات الختام («شكراً»، «تمام»، 👍، ستيكر)، والتعليقات اللي بيها بس تاك لصديق، والمخفية. اللون حسب أقدم واحد ينتظر: 🟢 أقل من <span class="ymin">15</span> دقيقة • 🟡 أكثر • 🔴 أكثر من <span class="rmin">60</span> دقيقة.</div>
   <div class="kpis" id="kpis"></div>
   <div class="box stack" style="gap:10px">
@@ -93,6 +123,7 @@ input,select{background:var(--surface);border:1px solid var(--line);border-radiu
     <div class="row muted" style="font-size:13px">أصفر بعد <input id="ymin" type="number" min="1" style="width:64px"> دقيقة • أحمر بعد <input id="rmin" type="number" min="1" style="width:64px"> دقيقة</div>
   </div>
   <div id="grid" class="grid"></div>
+  </section>
 </main>
 <div id="toast" class="toast" hidden></div>
 
@@ -125,7 +156,7 @@ async function start(){
   const{data:adm}=await sb.from('admins').select('email').limit(1);
   if(!adm||!adm.length){$('loginBox').hidden=false;$('loginMsg').textContent='هذا الحساب ليس مسؤولاً.';return;}
   $('loginBox').hidden=true;$('app').hidden=false;
-  $('ymin').value=YMIN;$('rmin').value=RMIN;await load();setInterval(load,60000);
+  $('ymin').value=YMIN;$('rmin').value=RMIN;await load();setInterval(load,60000);setTab(tab);
 }
 $('loginBtn').onclick=async()=>{$('loginMsg').textContent='...';const{error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});$('loginMsg').textContent=error?('خطأ: '+error.message):'';if(!error)start();};
 
@@ -221,6 +252,98 @@ $('waGroup').onclick=()=>{const rows=pageRows().filter(r=>redOf(r).length);if(!r
 $('q').addEventListener('input',render);$('onlyWait').addEventListener('change',render);
 ['ymin','rmin'].forEach(id=>$(id).addEventListener('change',()=>{YMIN=Math.max(1,+$('ymin').value||15);RMIN=Math.max(YMIN+1,+$('rmin').value||60);lsSet('ymin',YMIN);lsSet('rmin',RMIN);document.querySelectorAll('.ymin').forEach(x=>x.textContent=YMIN);document.querySelectorAll('.rmin').forEach(x=>x.textContent=RMIN);render();}));
 document.querySelectorAll('.ymin').forEach(x=>x.textContent=YMIN);document.querySelectorAll('.rmin').forEach(x=>x.textContent=RMIN);
+
+// ================= audits: repeated posts / brand logos (started by hand, on chosen pages and dates) =================
+let tab=lsGet('tab','reply'),aSel=new Set(JSON.parse(lsGet('aSel','[]')||'[]')),aGrpSel='__all',runs=[],aTimer=null;
+const dISO=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const dAr=t=>new Date(t).toLocaleDateString('ar-IQ',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'});
+function setTab(t){tab=t;lsSet('tab',t);document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  $('tab_reply').hidden=t!=='reply';$('tab_audit').hidden=t==='reply';if(t!=='reply'){auditInit();loadRuns();}}
+function auditInit(){
+  const brand=tab==='brand';
+  $('auditTip').innerHTML=brand
+    ?'يفحص صور منشورات الصفحات اللي تختارها بالذكاء الصناعي، ويطلع الصور اللي بيها لوكو أو اسم براند حقيقي معروف (Nike، Chanel، SHEIN…). رموز التسعير الداخلية مثل AAC أو (0XL-4XL) ما تنحسب. <b>كل صورة جديدة = طلب ذكاء صناعي واحد</b>، والصورة اللي انفحصت قبل بأي صفحة ما تنفحص مرة ثانية (مجاناً). يفحص أول 4 صور من كل منشور. فلهذا اختار صفحات وفترة قصيرة.'
+    :'يجيب منشورات الصفحات اللي تختارها بالفترة، ويكشف: <b>1) نفس الصور انعادت</b> (حتى لو انرفعت من جديد أو تغير ترتيبها) — إذا الإعادة أقرب من عدد الأيام المحدد تنحسب مخالفة، <b>2) نفس الكليشة</b> (نص متشابه 85% أو أكثر)، و<b>3) نفس الصور بأكثر من صفحة</b> بين الصفحات المفحوصة. بدون ذكاء صناعي — مجاني.';
+  $('gapBox').hidden=brand;
+  if(!$('aFrom').value){const to=new Date(),fr=new Date(Date.now()-(brand?7:30)*864e5);$('aTo').value=dISO(to);$('aFrom').value=dISO(fr);}
+  renderPicker();
+}
+function renderPicker(){
+  const groups=[...new Set(pages.map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  $('aGrp').innerHTML=[['__all','كل الصفحات'],...groups.map(g=>[g,g]),['__clear','✕ إلغاء الاختيار']].map(([v,l])=>`<button class="chip" data-ag="${esc(v)}">${esc(l)}</button>`).join('');
+  $('aPages').innerHTML=pages.map(p=>`<button class="chip ${aSel.has(p.id)?'on':''}" data-ap="${p.id}">${esc(p.name)}</button>`).join('');
+  const n=[...aSel].filter(id=>pages.some(p=>p.id===id)).length;
+  $('aStart').textContent=`▶ ابدأ الفحص (${n} صفحة)`;$('aStart').disabled=!n;
+  const days=Math.round((new Date($('aTo').value)-new Date($('aFrom').value))/864e5)+1;
+  $('aNote').textContent=tab==='brand'?`${n} صفحة × ${days||0} يوم. الكلفة تعتمد على عدد الصور الجديدة — تنعرض بعد ما يبدي الفحص.`:`${n} صفحة × ${days||0} يوم.`;
+}
+async function loadRuns(){
+  const k=tab==='brand'?'brand':'dup';
+  const{data,error}=await sb.from('audit_runs').select('id,page_id,since,until,gap_days,status,error,created_at,updated_at,result,done:progress->done,total:progress->total,failed:progress->failed').eq('kind',k).order('created_at',{ascending:false}).limit(60);
+  if(error){$('aRuns').innerHTML=`<div class="box">خطأ: ${esc(error.message)}</div>`;return;}
+  runs=data||[];renderRuns();
+  clearTimeout(aTimer);if(tab!=='reply'&&runs.some(r=>r.status==='queued'||r.status==='working')){pump();aTimer=setTimeout(loadRuns,6000);}
+}
+// while this page is open it pushes the work along (one small step at a time); closed, the server does a step a minute
+let pumping=false;async function pump(){if(pumping||document.hidden)return;pumping=true;try{for(let i=0;i<3;i++){const j=await callAudit({});if(j.idle||j.busy)break;}}catch(_){}pumping=false;}
+const pname=id=>(pages.find(p=>p.id===id)||{}).name||'صفحة';
+const ST={queued:'⏳ بالانتظار',working:'⚙️ يشتغل',done:'✅ خلص',failed:'❌ فشل',cancelled:'⏹ ملغي'};
+function thumbs(list){return`<div class="thumbs">${list.map(p=>`<a href="${esc(p.link)}" target="_blank" rel="noopener">${p.thumb||p.img?`<img loading="lazy" src="${esc(p.thumb||p.img)}" alt="" onerror="this.style.visibility='hidden'">`:''}<span>${dAr(p.at)}${p.page?' • '+esc(p.page):''}</span></a>`).join('')}</div>`;}
+function renderRuns(){
+  // latest run per page first
+  const seen=new Set();const latest=runs.filter(r=>{if(seen.has(r.page_id))return false;seen.add(r.page_id);return true;});
+  $('aRuns').innerHTML=latest.length?latest.map(r=>{
+    const res=r.result||{};const pct=r.total?Math.round((r.done||0)/r.total*100):0;
+    let body='';
+    if(r.status==='working'||r.status==='queued')body=`<div class="bar"><i style="width:${pct}%"></i></div><div class="muted" style="font-size:13px">${r.total?`${r.done||0} / ${r.total} صورة`:'يجيب المنشورات...'}</div><button class="sm line" data-acancel="${r.id}">⏹ إلغاء</button>`;
+    else if(r.status==='failed')body=`<div style="color:var(--red)">${esc(r.error||'')}</div>`;
+    else if(r.status==='done'&&tab==='dup'){
+      const g=res.groups||[],t=res.texts||[];
+      body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span>${res.violations?`<span class="pill red">${res.violations} تكرار مخالف</span>`:'<span class="pill grn">ماكو تكرار مخالف</span>'}${g.length-res.violations>0?`<span class="pill yel">${g.length-res.violations} إعادة بعد ${r.gap_days} يوم أو أكثر</span>`:''}${t.length?`<span class="pill">${t.length} كليشة متكررة</span>`:''}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
+        ${g.length?`<details ${res.violations?'open':''}><summary>🔁 نفس الصور (${g.length})</summary>${g.map(x=>`<div class="grp ${x.violation?'bad':''}"><div style="font-size:13px">${x.n} مرات • أقصر فرق ${x.min_gap} يوم ${x.violation?'<b style="color:var(--red)">— مخالف</b>':''}</div>${thumbs(x.posts)}</div>`).join('')}</details>`:''}
+        ${t.length?`<details><summary>📝 كليشات متكررة (${t.length})</summary>${t.map(x=>`<div class="grp"><div style="font-size:13px"><b>${x.n} مرات</b> — ${esc(x.sample)}</div><div class="row" style="gap:6px;font-size:12px">${x.posts.map(p=>`<a href="${esc(p.link)}" target="_blank" rel="noopener">${dAr(p.at)}</a>`).join('')}</div></div>`).join('')}</details>`:''}`;
+    } else if(r.status==='done'){
+      const f=res.flags||[];
+      body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span><span class="pill">${res.checked} فحص جديد</span>${res.reused?`<span class="pill grn">${res.reused} مفحوصة من قبل (مجاناً)</span>`:''}${f.length?`<span class="pill red">${f.length} صورة بيها براند</span>`:'<span class="pill grn">ماكو براندات</span>'}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
+        ${f.length?`<div class="thumbs" style="margin-top:6px">${f.map(x=>`<a href="${esc(x.link)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(x.img)}" alt="" onerror="this.style.visibility='hidden'"><span><b style="color:var(--red)">${esc(x.brand||'براند')}</b> • ${x.conf==='high'?'ثقة عالية':x.conf==='medium'?'ثقة متوسطة':'ثقة قليلة'}</span><span>${dAr(x.at)} • صورة ${x.n}</span></a>`).join('')}</div>`:''}`;
+    }
+    return`<div class="box stack" style="gap:6px"><div class="row" style="justify-content:space-between"><b>${esc(pname(r.page_id))}</b><span class="muted" style="font-size:13px">${ST[r.status]||r.status} • ${r.since} ← ${r.until}</span></div>${body}</div>`;
+  }).join(''):'<div class="box muted">ما سويت فحص بعد. اختار صفحات وفترة واضغط «ابدأ الفحص».</div>';
+  // the same pictures on several pages (from the latest finished check of each page)
+  if(tab==='dup'){
+    const done=latest.filter(r=>r.status==='done'&&r.result?.sigs?.length);
+    const items=done.flatMap(r=>r.result.sigs.map(s=>({...s,page:pname(r.page_id),pid:r.page_id})));
+    const ham=(a,b)=>{let x=BigInt('0x'+a)^BigInt('0x'+b),n=0;while(x){n+=Number(x&1n);x>>=1n;}return n;};
+    const same=(a,b)=>{const sm=a.length<=b.length?a:b,bg=sm===a?b:a;return sm.filter(x=>bg.some(y=>ham(x,y)<=6)).length>=Math.max(1,Math.ceil(sm.length*.6));};
+    const par=items.map((_,i)=>i),f=x=>par[x]===x?x:(par[x]=f(par[x]));
+    for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++)if(items[i].pid!==items[j].pid&&same(items[i].h,items[j].h))par[f(i)]=f(j);
+    const gm=new Map();items.forEach((it,i)=>{const r=f(i);gm.set(r,[...(gm.get(r)||[]),it]);});
+    const cross=[...gm.values()].filter(g=>new Set(g.map(x=>x.pid)).size>1).sort((a,b)=>b.length-a.length);
+    $('aCross').innerHTML=done.length>1?`<div class="box"><details ${cross.length?'open':''}><summary>🧩 نفس الصور بأكثر من صفحة (${cross.length}) — بين ${done.length} صفحة مفحوصة</summary>${cross.length?cross.slice(0,40).map(g=>`<div class="grp"><div style="font-size:13px">${new Set(g.map(x=>x.pid)).size} صفحات: ${[...new Set(g.map(x=>x.page))].map(esc).join('، ')}</div>${thumbs(g.sort((a,b)=>a.at.localeCompare(b.at)))}</div>`).join(''):'<div class="muted">ماكو صور مشتركة بين الصفحات المفحوصة.</div>'}</details></div>`:'';
+  } else $('aCross').innerHTML='';
+}
+document.addEventListener('click',async e=>{
+  const tb=e.target.closest('[data-tab]'),ag=e.target.closest('[data-ag]'),ap=e.target.closest('[data-ap]'),ac=e.target.closest('[data-acancel]');
+  if(tb){setTab(tb.dataset.tab);return;}
+  if(ag){const v=ag.dataset.ag;if(v==='__clear')aSel.clear();else pages.filter(p=>v==='__all'||p.wa_group===v).forEach(p=>aSel.add(p.id));lsSet('aSel',JSON.stringify([...aSel]));renderPicker();return;}
+  if(ap){const id=ap.dataset.ap;aSel.has(id)?aSel.delete(id):aSel.add(id);lsSet('aSel',JSON.stringify([...aSel]));renderPicker();return;}
+  if(ac){await callAudit({action:'cancel',id:ac.dataset.acancel});loadRuns();}
+});
+['aFrom','aTo'].forEach(id=>$(id).addEventListener('change',renderPicker));
+async function callAudit(body){const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SB_URL}/functions/v1/post-audit`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify(body)});const j=await r.json();if(j.error)throw new Error(j.error);return j;}
+$('aStart').onclick=async()=>{
+  const ids=[...aSel].filter(id=>pages.some(p=>p.id===id));if(!ids.length)return;
+  const brand=tab==='brand';
+  if(brand&&!confirmBrand(ids.length))return;
+  $('aStart').disabled=true;
+  try{const j=await callAudit({action:'start',kind:brand?'brand':'dup',page_ids:ids,since:$('aFrom').value,until:$('aTo').value,gap_days:+$('aGap').value||10});
+    toast(`بدأ فحص ${j.started} صفحة. يشتغل بالخادم، تكدر تسكّر الصفحة وترجع.`);loadRuns();}
+  catch(er){toast('خطأ: '+(er.message==='max_92_days'?'أقصى فترة 92 يوم':er.message==='bad_dates'?'التواريخ غلط':er.message),6000);}
+  renderPicker();
+};
+// a light confirmation inside the page (no browser dialogs): second press within 6 s starts the brand check
+let brandArm=0;function confirmBrand(n){if(Date.now()-brandArm<6000){brandArm=0;return true;}brandArm=Date.now();toast(`فحص البراند يصرف ذكاء صناعي على الصور الجديدة (${n} صفحة). اضغط «ابدأ» مرة ثانية للتأكيد.`,6000);return false;}
+
 start();
 </script>
 </body>
