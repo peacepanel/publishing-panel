@@ -541,14 +541,14 @@ let TAX={};
 async function loadTypes(){try{
   if(!Object.keys(TAX).length){const{data}=await sb.from('type_taxonomy').select('*');(data||[]).forEach(t=>TAX[t.category]=t);}
   const cats=[...new Set(candidates.map(it=>it.src_category||it.category))].filter(c=>TAX[c]);if(!cats.length)return;
-  const map=new Map();for(let from=0;;from+=1000){const{data,error}=await sb.from('product_types').select('product_key,type,gender,season,confidence,source').in('category',cats).range(from,from+999);if(error||!data)break;data.forEach(d=>map.set(d.product_key,d));if(data.length<1000)break;}
+  const map=new Map();for(let from=0;;from+=1000){const{data,error}=await sb.from('product_types').select('product_key,type,gender,season,confidence,source').in('category',cats).order('product_key').range(from,from+999);if(error||!data)break;data.forEach(d=>map.set(d.product_key,d));if(data.length<1000)break;}
   candidates.forEach(it=>{const d=map.get(it.product_key);it.ptype=d?.type||null;it.pgender=d?.gender||null;it.pconf=d?.confidence;it.psrc=d?.source;it.season=d?.season||it.season||null;});}catch(e){console.warn('types',e);}}
 function fillTypeF(){const c=$('catF').value,sub=$('subF').value;const set=new Map();let none=0;
   const its=candidates.filter(it=>(!c||it.category===c)&&(!sub||it.sub===sub)&&stOf(it)==='fresh'&&TAX[it.src_category||it.category]);
   its.forEach(it=>{if(!it.ptype){none++;return;}const k=it.pgender?it.ptype+' · '+it.pgender:it.ptype;set.set(it.ptype,(set.get(it.ptype)||0)+1);});
   const cur=$('typeF').value;const keys=[...set.keys()].sort((a,b)=>set.get(b)-set.get(a));
   $('typeF').innerHTML='<option value="">كل الأنواع</option>'+keys.map(k=>`<option value="${esc(k)}">${esc(k)} (${set.get(k)})</option>`).join('')+(none?`<option value="__none">غير مصنّف بعد (${none})</option>`:'');
-  if([...$('typeF').options].some(o=>o.value===cur))$('typeF').value=cur;$('typeF').hidden=!its.length;}
+  if([...$('typeF').options].some(o=>o.value===cur))$('typeF').value=cur;$('typeF').hidden=!candidates.some(it=>TAX[it.src_category||it.category]);}
 window.editType=async(i,ev)=>{ev&&ev.stopPropagation();const it=candidates[i];const t=TAX[it.src_category||it.category];if(!t)return;
   const box=document.getElementById('ty'+i);if(!box)return;
   box.innerHTML=`<select onchange="saveType(${i},this.value,null)" onclick="event.stopPropagation()"><option value="">— اختر النوع —</option>${t.types.map(x=>`<option ${x===it.ptype?'selected':''}>${esc(x)}</option>`).join('')}</select>${t.genders?`<select onchange="saveType(${i},null,this.value)" onclick="event.stopPropagation()"><option value="">لمن؟</option>${t.genders.map(x=>`<option ${x===it.pgender?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}${t.seasonal?`<select onchange="saveType(${i},null,null,this.value)" onclick="event.stopPropagation()"><option value="">الموسم</option>${['شتوي','صيفي','كل المواسم'].map(x=>`<option ${x===it.season?'selected':''}>${x}</option>`).join('')}</select>`:''}`;};
@@ -811,7 +811,7 @@ $('toLibBtn').onclick=()=>{$('modal').hidden=true;showTab('lib');};
 $('saveCapFromComposer').onclick=async()=>{const t=comp.targets[comp.active];const txt=$('cCaption').value.trim();if(!txt)return;await saveCaption(txt,'من المحرر',t.page.id);renderCaps();};
 $('capAllBtn').onclick=()=>{const txt=$('cCaption').value;comp.targets.forEach(t=>{t.caption=txt;t.capId=comp.targets[comp.active].capId;});toast('النص نفسه لكل الصفحات المختارة');};
 
-async function loadCaptions(){const{data}=await sb.from('caption_templates').select('*').order('use_count',{ascending:false}).order('created_at',{ascending:false});captions=data||[];renderMyCaps();fillCapSelect();}
+async function loadCaptions(){const all=[];for(let from=0;;from+=1000){const{data,error}=await sb.from('caption_templates').select('*').order('use_count',{ascending:false}).order('created_at',{ascending:false}).order('id').range(from,from+999);if(error||!data)break;all.push(...data);if(data.length<1000)break;}captions=all;renderMyCaps();fillCapSelect();}
 async function saveCaption(text,source,pageId){const{error}=await sb.from('caption_templates').insert({text,source,page_id:pageId||null,created_by:me.email});
   if(error){toast(error.code==='23505'?'هذا النص محفوظ مسبقاً':'خطأ: '+error.message);return false;}toast('حُفظ النص');await loadCaptions();return true;}
 function fillCapPageSelect(){$('newCapPage').innerHTML='<option value="">نص عام لكل الصفحات</option>'+pages.map(p=>`<option value="${p.id}" ${p.id===page?.id?'selected':''}>${esc(p.name)}</option>`).join('');
