@@ -219,7 +219,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
     </div>
 
     <div id="tab-cand" class="stack">
-      <div class="tip only-posts">«🔁 منشورات الصفحات» = منشورات الشحن اللي نزلت فعلاً على صفحاتك بآخر 3 أيام (من المندوبات أو غيرهن). النظام يقرأ رمز السعر على الصور: يأخذ منشورات الشحن بس ويترك المباشر، ويجمع النسخ المتشابهة 90% على عدة صفحات بمنشور واحد. فوك تطلع الأسرع تفاعلاً: التفاعل بالنسبة لعمر المنشور، يعني منشور عمره ساعات وتفاعله عالي يسبق منشور قديم. لما تختار صفحة تطلع بس المنشورات اللي من نفس فئاتها. زر «🔁 إعادة نشر» بالبطاقة يفتح خيارات بسيطة: الصفحات (فلتر «المناسبة للمنتج» يطلع الصفحات اللي بنفس الفئة ويترك اللي نازل عليها المنشور)، ووقت النشر أو الجدولة، وترتيب الصور بالسحب والإفلات لأي موقع. أول صفحة تاخذ ترتيبك، والصفحات الإضافية تاخذ ترتيباً مختلفاً تلقائياً إذا الخيار مفعّل. الصور تنعاد بجودتها الأصلية بدون رمز جديد، والنص هو نص المنشور الأصلي مع تبديل اسم الصفحة.<button class="tx">✕</button></div>
+      <div class="tip only-posts">«🔁 منشورات الصفحات» = منشورات الشحن اللي نزلت فعلاً على صفحاتك بآخر 3 أيام (من المندوبات أو غيرهن). النظام يقرأ رمز السعر على الصور: يأخذ منشورات الشحن بس ويترك المباشر، ويجمع النسخ المتشابهة 90% على عدة صفحات بمنشور واحد. فوك تطلع الأسرع تفاعلاً: التفاعل بالنسبة لعمر المنشور، يعني منشور عمره ساعات وتفاعله عالي يسبق منشور قديم. لما تختار صفحة تطلع بس المنشورات اللي من نفس فئاتها. زر «🔁 إعادة نشر» بالبطاقة يفتح خيارات بسيطة: الصفحات (فلتر «المناسبة للمنتج» يطلع الصفحات اللي بنفس الفئة ويترك اللي نازل عليها المنشور)، ووقت النشر أو الجدولة، وترتيب الصور بالسحب والإفلات لأي موقع. أول صفحة تاخذ ترتيبك، والصفحات الإضافية تاخذ ترتيباً مختلفاً تلقائياً إذا الخيار مفعّل. الصور تنعاد بجودتها الأصلية بدون رمز جديد، والنص هو نص المنشور الأصلي مع تبديل اسم الصفحة. «نشر الآن» ما يخليك تنتظر: النافذة تنسد فوراً والنشر يكمل بالخلفية (فيسبوك خلال دقيقة وانستكرام بعده)، وتتابع الحالة بتبويب «جدول النشر».<button class="tx">✕</button></div>
       <div class="tip">زر <b>📦 المخزن / ✈️ الشحن</b> بالأعلى يبدّل مصدر المنتجات للوحة كلها. «الشحن» = المنتجات اللي يقرأها المندوبين من تطبيق شي ان بفاحص السلة: تنسحب تلقائياً كل 5 دقائق، وتتسعّر بنفس قواعد وإعدادات فاحص السلة (سعر الدولار وإضافة كل فئة)، والرمز ينكتب على الصورة مع مدى القياسات للملابس والأطفال. الذكاء الاصطناعي يحدد فئتها ونوعها وموسمها حتى تروح للصفحات المناسبة، وتقدر تصحّح الفئة والنوع بضغطة على النوع. النشر الدوري والخطة والنسخ لكل مصدر منفصلة.<button class="tx">✕</button></div>
       <div class="tip">ابدأ بـ«جلب المنتجات». فلتر بالقياس أو الموديل (مثلاً 3XL أو A54)، وبـ«النوع» (فساتين، محابس، سلبر…) وبـ«الموسم» (❄ شتوي، ☀ صيفي، ↔ للموسمين، ↩ منقول من الموسم الآخر). على كل بطاقة نوعها وموسمها، واضغط النوع لتصحيحه. شريط «التصنيف» يبيّن ما ينتظر الذكاء الاصطناعي وما يحتاجك: فعّل «وضع التصنيف السريع» لتصنّف بضغطة. ثم «اختيار كل المعروض» و«إرسال للزبون» أو «تجهيز منشور». المنتجات المنشورة تنزل للأسفل باهتة، وعلامة «نُشر قبل X يوم» تعني أن دورة التكرار أعادته.<button class="tx">✕</button></div>
       <div class="box toolbar">
@@ -1219,7 +1219,7 @@ async function upload(canvas,path){const blob=await new Promise(r=>canvas.toBlob
 function repostCaption(pg){const it=comp.items[0];let t=String(it.origin?.message||'');for(const o of (it.origin?.pages||[]))if(o.name&&o.name.trim().length>2)t=t.split(o.name.trim()).join(pg.name);return t;}
 async function doSave(later){
   ['confirmYes','confirmNo','publishBtn'].forEach(id=>$(id).disabled=true);
-  const batch=crypto.randomUUID();const results=[];const partialP=[];
+  const batch=crypto.randomUUID();let results=[];const partialP=[];
   try{
     for(let ti=0;ti<comp.targets.length;ti++){const t=comp.targets[ti];const pg=t.page;
       // منتج منشور أو مجدول مسبقاً على هذه الصفحة: يُترك من منشور هذه الصفحة فقط (الباقي ينشر)، وإذا كلها مكررة تُترك الصفحة
@@ -1243,14 +1243,16 @@ async function doSave(later){
       const pp=await sb.from('post_products').insert(comp.items.map((it,pi)=>({post_id:ins.data.id,page_id:pg.id,product_key:it.product_key,seq:it.seq,seqs:it.seqs,category:it.category,image_urls:perProd[pi].fb,ig_image_urls:perProd[pi].ig})).filter(r=>r.image_urls.length));
       if(pp.error){await sb.from('posts').delete().eq('id',ins.data.id);throw new Error(pp.error.code==='23505'?`${pg.name}: أحد المنتجات منشور أو مجدول مسبقاً على هذه الصفحة`:pp.error.message);}
       if(t.capId){const c=captions.find(x=>x.id===t.capId);if(c)await sb.from('caption_templates').update({use_count:(c.use_count||0)+1,last_used_at:new Date().toISOString()}).eq('id',c.id);}
-      if(!later){$('saveMsg').textContent=`${pg.name}: جارٍ النشر على ${chanLabel(pg)}${chanLabel(pg).includes('انستكرام')?' (انستكرام قد يأخذ دقيقة)':''}...`;const res=await callFn('publish',{post_id:ins.data.id});results.push({pg,res,dropped:busy.size});}
+      if(!later){$('saveMsg').textContent=`${pg.name}: يُرسل للنشر...`;const res=await callFn('publish',{post_id:ins.data.id,bg:true});results.push({pg,res,dropped:busy.size});}
       else results.push({pg,when:t.when});
-      if(pg.id===page.id){comp.items.forEach(it=>{it.post=later?{id:ins.data.id,status:'scheduled',scheduled_at:t.when.toISOString()}:{id:ins.data.id,status:results[results.length-1].res?.ok?'published':'failed',published_at:new Date().toISOString(),fb_post_id:results[results.length-1].res?.fb_post_id};});}
+      if(pg.id===page.id){comp.items.forEach(it=>{it.post=later?{id:ins.data.id,status:'scheduled',scheduled_at:t.when.toISOString()}:{id:ins.data.id,status:results[results.length-1].res?.ok?'publishing':'failed',published_at:new Date().toISOString(),fb_post_id:null};});}
     }
     // تذكّر آخر عدد صور للصفحة (منشور منتج واحد)
     if(comp.items.length===1){const n=comp.sel.length;for(const t of comp.targets){t.page.settings.last_images=n;await sb.from('pages').update({settings:t.page.settings}).eq('id',t.page.id);}}
     const skippedP=results.filter(r=>r.res&&r.res.skipped);const okN=results.length-skippedP.length;
     if(later){toast(`أُضيف للجدول على ${okN} صفحة${skippedP.length?` • تُركت ${skippedP.length} صفحة لأن منتجاتها منشورة مسبقاً عليها (${skippedP.map(r=>r.pg.name).join('، ')})`:''}${partialP.length?` • تُرك المنتج المكرر فقط في: ${partialP.join('، ')}`:''}`,8000);$('modal').hidden=true;}
+    else if(results.every(r=>r.res&&(r.res.queued||r.res.skipped))&&results.some(r=>r.res.queued)){const sk=results.filter(r=>r.res.skipped);results=results.filter(r=>r.res.queued);/*shown*/$('confirmBox').hidden=true;$('saveMsg').textContent='';$('modal').hidden=true;
+      toast(`🚀 أُرسل للنشر على ${results.length} صفحة (${results.map(r=>r.pg.name).join('، ')}) — يكمل بالخلفية: فيسبوك خلال دقيقة وانستكرام بعده. تابع الحالة بتبويب «جدول النشر».${sk.length?` • تُركت ${sk.length} صفحة منشور عليها مسبقاً`:''}`,9000);}
     else{$('confirmBox').hidden=true;$('saveMsg').innerHTML=results.map(r=>r.res.ok?`<div>${r.res.fb_post_id?`<span class="pill ok">فيسبوك ✓</span>`:''} ${esc(r.pg.name)}${r.res.fb_post_id?` — <a target="_blank" href="${esc(fbLink({fb_post_id:r.res.fb_post_id}))}">فتح</a>`:''} ${igResult(r)}</div>`:`<div><span class="pill bad">لم يُنشر</span> ${esc(r.pg.name)}: ${esc(r.res.error)}</div>`).join('');}
     comp.items.forEach(it=>{const i=candidates.indexOf(it);selected.delete(i);});
     renderCounts();renderGrid();renderSelBar();loadBusy();loadCaptions();
@@ -1263,7 +1265,7 @@ window.editWhen=(id,btn)=>{const box=btn.closest('.acts');if(box.querySelector('
     const{error}=await sb.from('posts').update({scheduled_at:v.toISOString()}).eq('id',id).in('status',['scheduled','planned']);if(error)return toast('خطأ: '+error.message);toast('تغيّر الوقت إلى '+fmtT(v));loadSchedule();};};
 window.cancelPost=async id=>{const{error}=await sb.from('posts').update({status:'cancelled',cancel_reason:'أُلغي يدوياً'}).eq('id',id).in('status',['scheduled','planned']);if(error)return toast('خطأ: '+error.message);
   candidates.forEach(it=>{if(it.post?.id===id)it.post=null;});toast('أُلغيت الجدولة وعاد المنتج إلى غير المنشور');renderCounts();renderGrid();loadBusy();if(!$('tab-sched').hidden)loadSchedule();};
-window.publishNow=async id=>{try{const res=await callFn('publish',{post_id:id});if(!res.ok)throw new Error(res.error);toast('نُشر المنشور');}catch(e){toast('لم يُنشر: '+e.message,5000);}loadSchedule();loadBusy();};
+window.publishNow=async id=>{try{const res=await callFn('publish',{post_id:id,bg:true});if(!res.ok)throw new Error(res.error);toast('🚀 أُرسل للنشر — يكمل بالخلفية');}catch(e){toast('لم يُنشر: '+e.message,5000);}loadSchedule();loadBusy();setTimeout(()=>{if(!$('tab-sched').hidden)loadSchedule();},60000);};
 
 // ───────── جدول النشر والسجل ─────────
 const ST={planned:['','مخطط — تُجهّز صوره قبل موعده بساعتين'],rendering:['warn','قيد التجهيز'],published:['ok','نُشر'],failed:['bad','فشل'],publishing:['warn','قيد النشر'],approved:['warn','معتمد'],scheduled:['warn','مجدول'],rejected:['','مرفوض'],cancelled:['','ملغى'],pending_review:['','بانتظار المراجعة']};
