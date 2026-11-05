@@ -184,11 +184,18 @@ function render(){
 const redOf=r=>r.its.filter(x=>mins(x.at)>RMIN);
 function waText(rows){
   const out=[];const shown=rows.map(r=>({r,late:redOf(r)})).filter(o=>o.late.length);
-  out.push(`🔴 *تنبيه: متأخرة بدون رد* (أكثر من ${ago(RMIN)}) — ${shown.length} صفحة`);
+  shown.sort((a,b)=>b.late.length-a.late.length);
+  const total=shown.reduce((t,o)=>t+o.late.length,0);
+  const cnt=(late,k)=>late.filter(x=>x.kind===k).length;
+  const short=late=>[cnt(late,'fb_comment')&&`💬${cnt(late,'fb_comment')}`,cnt(late,'ig_comment')&&`📷${cnt(late,'ig_comment')}`,cnt(late,'fb_dm')&&`✉️${cnt(late,'fb_dm')}`,cnt(late,'ig_dm')&&`📩${cnt(late,'ig_dm')}`].filter(Boolean).join(' ');
+  // summary first: each rep finds her page at the top; details follow below for whoever needs them
+  out.push(`🔴 *تنبيه: متأخرة بدون رد* (أكثر من ${ago(RMIN)})`,`*${shown.length} صفحة • ${total} متأخرة*`,'',`📋 *الملخص:*`);
+  shown.forEach(({r,late})=>out.push(`📌 *${r.p.name}* ← *${late.length}*  (${short(late)})`));
+  out.push('',`💬 تعليق فيسبوك • 📷 تعليق انستا • ✉️ رسالة مسنجر • 📩 رسالة انستا`,'',`⬇️ *التفاصيل تحت* ⬇️`);
   for(const {r,late} of shown){
-    const c=k=>late.filter(x=>x.kind===k).length;
+    const c=k=>cnt(late,k);
     const parts=[c('fb_comment')&&`💬 ${c('fb_comment')} تعليق فيسبوك`,c('ig_comment')&&`📷 ${c('ig_comment')} تعليق انستا`,c('fb_dm')&&`✉️ ${c('fb_dm')} رسالة مسنجر`,c('ig_dm')&&`📩 ${c('ig_dm')} رسالة انستا`].filter(Boolean);
-    out.push('','━━━━━━━━━━',`🔴 *${r.p.name}*${r.p.wa_group?` — كروب ${r.p.wa_group}`:''}`,`أقدم واحد ينتظر: ${ago(mins(late[0].at))}`,parts.join(' • '));
+    out.push('','━━━━━━━━━━━━━━',`📌 *${r.p.name}*  (${late.length})${r.p.wa_group?` — كروب ${r.p.wa_group}`:''}`,'━━━━━━━━━━━━━━',`أقدم واحد ينتظر: ${ago(mins(late[0].at))}`,parts.join(' • '));
     late.slice(0,15).forEach((x,n)=>{
       out.push('',`${n+1}) ${KIND[x.kind][0]} ${x.customer||'زبون'} — ${KIND[x.kind][1]} — ${ago(mins(x.at))}`,`«${String(x.body||'').replace(/\s+/g,' ').slice(0,90)}»`);
       // a message has no link that opens on the phone: the rep finds it in the page's inbox by the customer's name
