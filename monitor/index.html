@@ -295,7 +295,7 @@ function renderPicker(){
   const days=Math.round((new Date($('aTo').value)-new Date($('aFrom').value))/864e5)+1;
   $('aNote').textContent=tab==='brand'?`${n} صفحة × ${days||0} يوم. الكلفة تعتمد على عدد الصور الجديدة — تنعرض بعد ما يبدي الفحص.`:`${n} صفحة × ${days||0} يوم.`;
 }
-const ALLOWED=/shein|شي\s*ان|emery\s*rose|romwe|dazy|motf|cuccoo|glowmode|sheglam|maczilot/i;
+const ALLOWED=/shein|شي\s*ان|emery\s*rose|romwe|dazy|motf|cuccoo|glowmode|sheglam/i;
 async function loadRuns(){
   const k=tab==='brand'?'brand':'dup';
   const{data,error}=await sb.from('audit_runs').select('id,page_id,since,until,gap_days,status,error,created_at,updated_at,result,done:progress->done,total:progress->total,failed:progress->failed').eq('kind',k).order('created_at',{ascending:false}).limit(300);
