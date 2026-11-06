@@ -322,6 +322,7 @@ function auditInit(){
   $('auditTip').innerHTML=brand
     ?'يفحص صور منشورات الصفحات اللي تختارها بالذكاء الصناعي، ويطلع الصور اللي بيها لوكو أو اسم براند حقيقي معروف (Nike، Chanel، SHEIN…). رموز التسعير الداخلية مثل AAC أو (0XL-4XL) ما تنحسب. <b>كل صورة جديدة = طلب ذكاء صناعي واحد</b>، والصورة اللي انفحصت قبل بأي صفحة ما تنفحص مرة ثانية (مجاناً). يفحص أول 4 صور من كل منشور. فلهذا اختار صفحات وفترة قصيرة.'
     :'يجيب منشورات الصفحات اللي تختارها بالفترة، ويكشف: <b>1) نفس الصور انعادت</b> (حتى لو انرفعت من جديد أو تغير ترتيبها) — إذا الإعادة أقرب من عدد الأيام المحدد تنحسب مخالفة، <b>2) نفس الكليشة</b> (نص متشابه 85% أو أكثر)، و<b>3) نفس الصور بأكثر من صفحة</b> بين الصفحات المفحوصة. بدون ذكاء صناعي — مجاني.';
+  $('auditTip').innerHTML+=' <b>🤖 منشورات منظومة النشر ما تنحسب على المندوبين</b> (تطلع بالنتائج للعلم بس، وما تأثر على اللون ولا التقرير).';
   $('gapBox').hidden=brand;
   if(!$('aFrom').value){const to=new Date(),fr=new Date(Date.now()-(brand?7:30)*864e5);$('aTo').value=dISO(to);$('aFrom').value=dISO(fr);}
   renderPicker();
@@ -343,9 +344,17 @@ async function loadRuns(){
   runs=data||[];
   const{data:dl}=await sb.from('audit_deletions').select('img_key').eq('ok',true).limit(5000);DEL=new Set((dl||[]).map(x=>x.img_key));
   for(const r of runs){const res=r.result;if(!res)continue;
-    for(const f of res.flags||[])f.gone=DEL.has(ikey(f.img));
+    for(const f of res.flags||[]){f.gone=DEL.has(ikey(f.img));f.sys=isSys(f.by);}
     // a repeat with only one post left on Facebook is no longer a violation
-    if(res.groups){for(const g of res.groups){g.posts.forEach(p=>p.gone=DEL.has(ikey(p.thumb)));if(g.v0===undefined)g.v0=g.violation;g.violation=g.v0&&g.posts.filter(p=>!p.gone).length>1;}res.violations=res.groups.filter(g=>g.violation).length;}}
+    // publishing-system posts never count against a rep: a repeat is a violation only between hand-made posts still on Facebook,
+    // closer than the run's gap; repeated captions count hand-made posts only
+    if(res.groups){for(const g of res.groups){g.posts.forEach(p=>{p.gone=DEL.has(ikey(p.thumb));p.sys=isSys(p.by);});
+      const man=g.posts.filter(p=>!p.gone&&!p.sys).sort((a,b)=>a.at.localeCompare(b.at));let mg=Infinity;
+      for(let i=1;i<man.length;i++)mg=Math.min(mg,(new Date(man[i].at)-new Date(man[i-1].at))/864e5);
+      g.sysOnly=man.length<2;g.violation=!g.sysOnly&&mg<(r.gap_days||10);if(!g.sysOnly)g.min_gap=Math.round(mg*10)/10;}
+      res.violations=res.groups.filter(g=>g.violation).length;}
+    if(res.texts){for(const t of res.texts){t.posts.forEach(p=>p.sys=isSys(p.by));t.nAll=t.nAll||t.n;t.n=t.posts.filter(p=>!p.sys).length;}res.texts=res.texts.filter(t=>t.n>1);}
+    if(res.sigs)res.sigs.forEach(x=>x.sys=isSys(x.by));}
   // SHEIN and its own labels are allowed (everyone here sells SHEIN): kept in the data, left out of the results and the colours
   for(const r of runs)if(k==='brand'&&r.result?.flags){const all=r.result.flags;r.result.flags=all.filter(f=>!ALLOWED.test(f.brand||''));r.result.allowed=all.length-r.result.flags.length;}
   renderRuns();renderPicker();
@@ -356,11 +365,12 @@ let pumping=false;async function pump(){if(pumping||document.hidden)return;pumpi
 const pname=id=>(pages.find(p=>p.id===id)||{}).name||'صفحة';
 const ST={queued:'⏳ بالانتظار',working:'⚙️ يشتغل',done:'✅ خلص',failed:'❌ فشل',cancelled:'⏹ ملغي'};
 // pictures removed from posts (from audit_deletions): their cards show «انحذفت» and stop counting
+const isSys=by=>/^منظومة النشر/.test(by||'');
 let DEL=new Set();const ikey=src=>(String(src||'').split('?')[0].split('/').pop()||'').toLowerCase();
 const RM=[];function rmBtn(o){if(!o.pid||!o.src||!o.link)return'';RM.push(o);return`<div data-rmbox="${RM.length-1}"><button class="rm" data-rm="${RM.length-1}">🗑 حذف هالصورة</button></div>`;}
 const ORD=['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر'];
 // one card per post: the picture that repeats, its number, date and time, page, who published it, and a link to open it
-function pcards(list){return`<div class="pcards">${list.map((p,i)=>{const im=p.thumb||p.img;return`<div class="pcard ${p.gone?'gone':''}">${im?`<a href="${esc(im)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(im)}" alt="" onerror="this.style.visibility='hidden'"></a>`:''}<span class="n">المنشور ${ORD[i]||(i+1)}</span><span>📅 ${dAr(p.at)}</span>${p.page?`<span>📄 ${esc(p.page)}</span>`:''}<span class="by">👤 ${p.by?esc(p.by):'الناشر غير معروف'}</span><a class="open" href="${esc(p.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${p.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':(im?rmBtn({pid:p.pid,link:p.link,id:p.id,src:im,by:p.by}):'')}</div>`;}).join('')}</div>`;}
+function pcards(list){return`<div class="pcards">${list.map((p,i)=>{const im=p.thumb||p.img;return`<div class="pcard ${p.gone?'gone':''}">${im?`<a href="${esc(im)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(im)}" alt="" onerror="this.style.visibility='hidden'"></a>`:''}<span class="n">المنشور ${ORD[i]||(i+1)}</span><span>📅 ${dAr(p.at)}</span>${p.page?`<span>📄 ${esc(p.page)}</span>`:''}<span class="by">${p.sys?'🤖 ':'👤 '}${p.by?esc(p.by):'الناشر غير معروف'}${p.sys?' — ما ينحسب':''}</span><a class="open" href="${esc(p.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${p.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':(im?rmBtn({pid:p.pid,link:p.link,id:p.id,src:im,by:p.by}):'')}</div>`;}).join('')}</div>`;}
 const thumbs=pcards;
 const hamG=(a,b)=>{let x=BigInt('0x'+a)^BigInt('0x'+b),n=0;while(x){n+=Number(x&1n);x>>=1n;}return n;};
 // fingerprints of every checked post (from all loaded reports), to show how many pictures match
@@ -375,7 +385,7 @@ const LV={g:['🟢','سليمة'],o:['🟠','تحتاج انتباه'],r:['🔴'
 function health(pid){
   const done=runs.filter(r=>r.page_id===pid&&r.status==='done'&&r.result);if(!done.length)return null;
   const lim=dISO(new Date(Date.now()-30*864e5));let use=done.filter(r=>r.until>=lim);if(!use.length)use=[done[0]];
-  if(tab==='brand'){const f=use.flatMap(r=>r.result.flags||[]).filter(x=>!x.gone),strong=f.filter(x=>x.conf!=='low').length;
+  if(tab==='brand'){const f=use.flatMap(r=>r.result.flags||[]).filter(x=>!x.gone&&!x.sys),strong=f.filter(x=>x.conf!=='low').length;
     return{lv:strong>=3?'r':f.length?'o':'g',flags:f.length,strong,posts:use.reduce((a,r)=>a+(r.result.posts||0),0),use};}
   const viol=use.reduce((a,r)=>a+(r.result.violations||0),0),posts=use.reduce((a,r)=>a+(r.result.posts||0),0);
   const caps=use.flatMap(r=>r.result.texts||[]).filter(t=>t.n>=5);
@@ -399,7 +409,7 @@ function reportText(grp){
   const bad=ps.filter(x=>x.h.lv!=='g');
   if(bad.length){L.push('','━━━━━━━━━━','*التفاصيل*');
     for(const{p,h}of bad){L.push('',`*${p.name}*`);
-      if(brand){for(const f of h.use.flatMap(r=>r.result.flags||[]).filter(x=>!x.gone).slice(0,6))L.push(`• ${f.brand||'براند'} — ${dAr(f.at)}`,`  ${f.link}`);continue;}
+      if(brand){for(const f of h.use.flatMap(r=>r.result.flags||[]).filter(x=>!x.gone&&!x.sys).slice(0,6))L.push(`• ${f.brand||'براند'} — ${dAr(f.at)}`,`  ${f.link}`);continue;}
       const gs=h.use.flatMap(r=>(r.result.groups||[]).filter(g=>g.violation).map(g=>({...g,gap:r.gap_days})));
       for(const g of gs.slice(0,5)){L.push(`• نفس الصور انعادت بعد ${g.min_gap} يوم:`);g.posts.forEach((x,i)=>L.push(`  ${i+1}) ${dAr(x.at)}: ${x.link}`));}
       if(gs.length>5)L.push(`  … و${gs.length-5} غيرها`);
@@ -435,13 +445,13 @@ function runBody(r){
     else if(r.status==='cancelled')body='';
     else if(r.status==='done'&&tab==='dup'){
       const g=res.groups||[],t=res.texts||[];
-      body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span>${res.violations?`<span class="pill red">${res.violations} تكرار مخالف</span>`:'<span class="pill grn">ماكو تكرار مخالف</span>'}${g.length-res.violations>0?`<span class="pill yel">${g.length-res.violations} إعادة بعد ${r.gap_days} يوم أو أكثر</span>`:''}${t.length?`<span class="pill">${t.length} كليشة متكررة</span>`:''}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
-        ${g.length?`<details ${res.violations?'open':''}><summary>🔁 نفس الصور (${g.length})</summary>${g.map(x=>{const m=matchOf(x.posts,SM);return`<div class="grp ${x.violation?'bad':''}"><div style="font-size:13px">${x.n} مرات • أقصر فرق ${x.min_gap} يوم ${x.violation?'<b style="color:var(--red)">— مخالف</b>':''}</div>${m?`<div class="match ${m.hit===m.of?'full':''}">🎯 ${m.hit} من ${m.of} ${m.of===1?'صورة':'صور'} متطابقة${m.hit===m.of?' — تطابق 100%':` (${Math.round(m.hit/m.of*100)}%)`}</div>`:''}${pcards(x.posts.map(p=>({...p,pid:r.page_id})))}</div>`;}).join('')}</details>`:''}
+      body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span>${res.violations?`<span class="pill red">${res.violations} تكرار مخالف</span>`:'<span class="pill grn">ماكو تكرار مخالف</span>'}${g.filter(x=>!x.violation&&!x.sysOnly).length?`<span class="pill yel">${g.filter(x=>!x.violation&&!x.sysOnly).length} إعادة بعد ${r.gap_days} يوم أو أكثر</span>`:''}${g.filter(x=>x.sysOnly).length?`<span class="pill">🤖 ${g.filter(x=>x.sysOnly).length} من المنظومة (ما تنحسب)</span>`:''}${t.length?`<span class="pill">${t.length} كليشة متكررة</span>`:''}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
+        ${g.length?`<details ${res.violations?'open':''}><summary>🔁 نفس الصور (${g.length})</summary>${g.map(x=>{const m=matchOf(x.posts,SM);return`<div class="grp ${x.violation?'bad':''}"><div style="font-size:13px">${x.n} مرات • أقصر فرق ${x.min_gap} يوم ${x.violation?'<b style="color:var(--red)">— مخالف</b>':''}${x.sysOnly?' <span class="pill">🤖 بيه منشورات منظومة — ما ينحسب على المندوب</span>':''}</div>${m?`<div class="match ${m.hit===m.of?'full':''}">🎯 ${m.hit} من ${m.of} ${m.of===1?'صورة':'صور'} متطابقة${m.hit===m.of?' — تطابق 100%':` (${Math.round(m.hit/m.of*100)}%)`}</div>`:''}${pcards(x.posts.map(p=>({...p,pid:r.page_id})))}</div>`;}).join('')}</details>`:''}
         ${t.length?`<details><summary>📝 كليشات متكررة (${t.length})</summary>${t.map(x=>`<div class="grp"><div style="font-size:13px"><b>${x.n} مرات</b> — ${esc(x.sample)}</div>${pcards(x.posts.map(p=>({...p,page:pname(r.page_id)})))}</div>`).join('')}</details>`:''}`;
     } else if(r.status==='done'){
       const f=res.flags||[];
       body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span><span class="pill">${res.checked} فحص جديد</span>${res.reused?`<span class="pill grn">${res.reused} مفحوصة من قبل (مجاناً)</span>`:''}${f.filter(x=>!x.gone).length?`<span class="pill red">${f.filter(x=>!x.gone).length} صورة بيها براند</span>`:'<span class="pill grn">ماكو براندات ممنوعة</span>'}${res.allowed?`<span class="pill">${res.allowed} صورة شي ان (مسموحة)</span>`:''}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
-        ${f.length?`<div class="pcards">${f.map(x=>`<div class="pcard ${x.gone?'gone':''}"><a href="${esc(x.img)}" target="_blank" rel="noopener" title="فتح الصورة بحجمها"><img loading="lazy" src="${esc(x.img)}" alt="" onerror="this.style.visibility='hidden'"></a><span class="n" style="color:var(--red)">🏷️ ${esc(x.brand||'براند')}</span><span>${x.conf==='high'?'ثقة عالية':x.conf==='medium'?'ثقة متوسطة':'ثقة قليلة'} • صورة ${x.n} بالمنشور</span>${x.desc?`<span class="by">${esc(x.desc)}</span>`:''}<span>📅 ${dAr(x.at)}</span><span>📄 ${esc(pname(r.page_id))}</span><span class="by">👤 ${x.by?esc(x.by):'الناشر غير معروف'}</span><a class="open" href="${esc(x.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${x.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':rmBtn({pid:r.page_id,link:x.link,id:x.id,src:x.img,n:x.n,by:x.by})}</div>`).join('')}</div>`:''}`;
+        ${f.length?`<div class="pcards">${f.map(x=>`<div class="pcard ${x.gone?'gone':''}"><a href="${esc(x.img)}" target="_blank" rel="noopener" title="فتح الصورة بحجمها"><img loading="lazy" src="${esc(x.img)}" alt="" onerror="this.style.visibility='hidden'"></a><span class="n" style="color:var(--red)">🏷️ ${esc(x.brand||'براند')}</span><span>${x.conf==='high'?'ثقة عالية':x.conf==='medium'?'ثقة متوسطة':'ثقة قليلة'} • صورة ${x.n} بالمنشور</span>${x.desc?`<span class="by">${esc(x.desc)}</span>`:''}<span>📅 ${dAr(x.at)}</span><span>📄 ${esc(pname(r.page_id))}</span><span class="by">${x.sys?'🤖 ':'👤 '}${x.by?esc(x.by):'الناشر غير معروف'}${x.sys?' — ما ينحسب على المندوب':''}</span><a class="open" href="${esc(x.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${x.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':rmBtn({pid:r.page_id,link:x.link,id:x.id,src:x.img,n:x.n,by:x.by})}</div>`).join('')}</div>`:''}`;
     }
     return body;
 }
@@ -470,14 +480,14 @@ function renderRuns(){
   // the same pictures on several pages (from the latest finished check of each page)
   if(tab==='dup'){
     const done=runs.filter(r=>r.status==='done'&&r.result?.sigs?.length);
-    const seenX=new Set();const items=done.flatMap(r=>r.result.sigs.map(s=>({...s,page:pname(r.page_id),pid:r.page_id}))).filter(x=>!seenX.has(x.link)&&seenX.add(x.link));
+    const seenX=new Set();const items=done.flatMap(r=>r.result.sigs.map(s=>({...s,page:pname(r.page_id),pid:r.page_id}))).filter(x=>!x.sys&&!seenX.has(x.link)&&seenX.add(x.link));
     const ham=(a,b)=>{let x=BigInt('0x'+a)^BigInt('0x'+b),n=0;while(x){n+=Number(x&1n);x>>=1n;}return n;};
     const same=(a,b)=>{const sm=a.length<=b.length?a:b,bg=sm===a?b:a;return sm.filter(x=>bg.some(y=>ham(x,y)<=6)).length>=Math.max(1,Math.ceil(sm.length*.6));};
     const par=items.map((_,i)=>i),f=x=>par[x]===x?x:(par[x]=f(par[x]));
     for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++)if(items[i].pid!==items[j].pid&&same(items[i].h,items[j].h))par[f(i)]=f(j);
     const gm=new Map();items.forEach((it,i)=>{const r=f(i);gm.set(r,[...(gm.get(r)||[]),it]);});
     const cross=[...gm.values()].filter(g=>new Set(g.map(x=>x.pid)).size>1).sort((a,b)=>b.length-a.length);
-    $('aCross').innerHTML=new Set(done.map(r=>r.page_id)).size>1?`<div class="box"><details ${cross.length?'open':''}><summary>🧩 نفس الصور بأكثر من صفحة (${cross.length}) — بين ${new Set(done.map(r=>r.page_id)).size} صفحة مفحوصة</summary>${cross.length?cross.slice(0,40).map(g=>`<div class="grp"><div style="font-size:13px">${new Set(g.map(x=>x.pid)).size} صفحات: ${[...new Set(g.map(x=>x.page))].map(esc).join('، ')}</div>${pcards(g.sort((a,b)=>a.at.localeCompare(b.at)).map(p=>({...p,thumb:(p.imgs||[]).find(im=>g.some(q=>q!==p&&q.h.some(h=>ham(h,im.h)<=6)))?.src||p.thumb})))}</div>`).join(''):'<div class="muted">ماكو صور مشتركة بين الصفحات المفحوصة.</div>'}</details></div>`:'';
+    $('aCross').innerHTML=new Set(done.map(r=>r.page_id)).size>1?`<div class="box"><details ${cross.length?'open':''}><summary>🧩 نفس الصور بأكثر من صفحة (${cross.length}) — بين ${new Set(done.map(r=>r.page_id)).size} صفحة مفحوصة</summary>${cross.length?cross.slice(0,40).map(g=>`<div class="grp"><div style="font-size:13px">${new Set(g.map(x=>x.pid)).size} صفحات: ${[...new Set(g.map(x=>x.page))].map(esc).join('، ')}</div>${pcards(g.sort((a,b)=>a.at.localeCompare(b.at)).map(p=>({...p,thumb:(p.imgs||[]).find(im=>g.some(q=>q!==p&&q.h.some(h=>ham(h,im.h)<=6)))?.src||p.thumb})))}</div>`).join(''):'<div class="muted">ماكو صور مشتركة بين الصفحات المفحوصة (منشورات المنظومة ما تنحسب).</div>'}</details></div>`:'';
   } else $('aCross').innerHTML='';
 }
 document.addEventListener('click',async e=>{
