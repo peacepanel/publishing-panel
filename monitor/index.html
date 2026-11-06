@@ -77,6 +77,18 @@ input,select{background:var(--surface);border:1px solid var(--line);border-radiu
 .grp.bad{border-color:var(--red);background:var(--red-soft)}
 details>summary{cursor:pointer;font-weight:700}
 .pchips{max-height:180px;overflow:auto}
+/* page health after a check: green clean, orange needs action, red needs deleting */
+:root{--org:#c2410c;--org-soft:#ffedd5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--org:#ff9f5a;--org-soft:#3a2414}}
+:root[data-theme="dark"]{--org:#ff9f5a;--org-soft:#3a2414}
+.chip.lv-g{border-color:var(--grn);background:var(--grn-soft);color:var(--grn)}
+.chip.lv-o{border-color:var(--org);background:var(--org-soft);color:var(--org)}
+.chip.lv-r{border-color:var(--red);background:var(--red-soft);color:var(--red);font-weight:700}
+.chip.on.lv-g,.chip.on.lv-o,.chip.on.lv-r{background:var(--accent);color:var(--accent-ink);box-shadow:inset 0 0 0 2px currentColor}
+.box.lv-g{border-inline-start:5px solid var(--grn)}.box.lv-o{border-inline-start:5px solid var(--org)}.box.lv-r{border-inline-start:5px solid var(--red)}
+.pill.org{background:var(--org-soft);color:var(--org)}
+.match{font-size:12px}.match.full{color:var(--red);font-weight:800;font-size:13px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:4px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -111,6 +123,7 @@ details>summary{cursor:pointer;font-weight:700}
       </div>
       <div id="aNote" class="muted" style="font-size:13px"></div>
     </div>
+    <div id="aReport"></div>
     <div id="aCross"></div>
     <div id="aRuns" class="stack"></div>
   </section>
@@ -276,7 +289,7 @@ function auditInit(){
 function renderPicker(){
   const groups=[...new Set(pages.map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
   $('aGrp').innerHTML=[['__all','كل الصفحات'],...groups.map(g=>[g,g]),['__clear','✕ إلغاء الاختيار']].map(([v,l])=>`<button class="chip" data-ag="${esc(v)}">${esc(l)}</button>`).join('');
-  $('aPages').innerHTML=pages.map(p=>{const c=covered(p.id),l=c[c.length-1];return`<button class="chip ${aSel.has(p.id)?'on':''}" data-ap="${p.id}" ${l?`title="مفحوصة: ${c.map(([a,b])=>a+' ← '+b).join('، ')}"`:''}>${esc(p.name)}${l?` <small style="opacity:.75">✔️ لغاية ${dS(l[1])}</small>`:''}</button>`;}).join('');
+  $('aPages').innerHTML=pages.map(p=>{const c=covered(p.id),l=c[c.length-1];const hl=health(p.id);return`<button class="chip ${aSel.has(p.id)?'on':''} ${hl?'lv-'+hl.lv:''}" data-ap="${p.id}" ${l?`title="مفحوصة: ${c.map(([a,b])=>a+' ← '+b).join('، ')}"`:''}>${esc(p.name)}${l?` <small style="opacity:.75">✔️ لغاية ${dS(l[1])}</small>`:''}</button>`;}).join('');
   const n=[...aSel].filter(id=>pages.some(p=>p.id===id)).length;
   $('aStart').textContent=`▶ ابدأ الفحص (${n} صفحة)`;$('aStart').disabled=!n;
   const days=Math.round((new Date($('aTo').value)-new Date($('aFrom').value))/864e5)+1;
@@ -297,6 +310,71 @@ const ORD=['الأول','الثاني','الثالث','الرابع','الخام
 // one card per post: the picture that repeats, its number, date and time, page, who published it, and a link to open it
 function pcards(list){return`<div class="pcards">${list.map((p,i)=>{const im=p.thumb||p.img;return`<div class="pcard">${im?`<a href="${esc(im)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(im)}" alt="" onerror="this.style.visibility='hidden'"></a>`:''}<span class="n">المنشور ${ORD[i]||(i+1)}</span><span>📅 ${dAr(p.at)}</span>${p.page?`<span>📄 ${esc(p.page)}</span>`:''}<span class="by">👤 ${p.by?esc(p.by):'الناشر غير معروف'}</span><a class="open" href="${esc(p.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a></div>`;}).join('')}</div>`;}
 const thumbs=pcards;
+const hamG=(a,b)=>{let x=BigInt('0x'+a)^BigInt('0x'+b),n=0;while(x){n+=Number(x&1n);x>>=1n;}return n;};
+// fingerprints of every checked post (from all loaded reports), to show how many pictures match
+function sigMap(){const m=new Map();for(const r of runs)for(const x of r.result?.sigs||[])if(!m.has(x.link))m.set(x.link,x.h||[]);return m;}
+function matchOf(posts,sm){
+  const hs=posts.map(p=>sm.get(p.link)||[]).filter(h=>h.length);if(hs.length<2)return null;
+  const small=hs.reduce((a,b)=>b.length<a.length?b:a),others=hs.filter(h=>h!==small).flat();
+  return{hit:small.filter(x=>others.some(y=>hamG(x,y)<=6)).length,of:small.length};
+}
+// a page's health from its reports of the last 30 days (or its latest report)
+const LV={g:['🟢','سليمة'],o:['🟠','تحتاج انتباه'],r:['🔴','تحتاج حذف منشورات']};
+function health(pid){
+  const done=runs.filter(r=>r.page_id===pid&&r.status==='done'&&r.result);if(!done.length)return null;
+  const lim=dISO(new Date(Date.now()-30*864e5));let use=done.filter(r=>r.until>=lim);if(!use.length)use=[done[0]];
+  if(tab==='brand'){const f=use.flatMap(r=>r.result.flags||[]),strong=f.filter(x=>x.conf!=='low').length;
+    return{lv:strong>=3?'r':f.length?'o':'g',flags:f.length,strong,posts:use.reduce((a,r)=>a+(r.result.posts||0),0),use};}
+  const viol=use.reduce((a,r)=>a+(r.result.violations||0),0),posts=use.reduce((a,r)=>a+(r.result.posts||0),0);
+  const caps=use.flatMap(r=>r.result.texts||[]).filter(t=>t.n>=5);
+  const lv=(viol>=3||(posts&&viol/posts>=.05))?'r':(viol||caps.length)?'o':'g';
+  return{lv,viol,caps,posts,use};
+}
+// short report for the reps (WhatsApp formatting: *bold*)
+function reportText(grp){
+  const ps=pages.filter(p=>grp==='__all'||p.wa_group===grp).map(p=>({p,h:health(p.id)})).filter(x=>x.h);
+  if(!ps.length)return'';
+  const rank={r:0,o:1,g:2};ps.sort((a,b)=>rank[a.h.lv]-rank[b.h.lv]||a.p.name.localeCompare(b.p.name,'ar'));
+  const brand=tab==='brand';const L=[];
+  L.push(brand?'*📋 تقرير فحص البراندات بالصور*':'*📋 تقرير فحص تكرار المنشورات*');
+  if(grp!=='__all')L.push('الكروب: '+grp);
+  L.push('');
+  for(const{p,h}of ps){
+    const why=brand?(h.flags?`${h.flags} صورة بيها براند`:'ماكو براندات')
+      :[h.viol?(h.viol===1?'منشور انعاد بوقت قريب':`${h.viol} منشورات انعادت بوقت قريب`):'',h.caps.length?(h.caps.length===1?`كليشة انعادت ${h.caps[0].n} مرة`:`${h.caps.length} كليشات متكررة (أكثرها ${Math.max(...h.caps.map(c=>c.n))} مرة)`):''].filter(Boolean).join(' + ')||'ماكو تكرار';
+    L.push(`${LV[h.lv][0]} *${p.name}* — ${LV[h.lv][1]}: ${why}`);
+  }
+  const bad=ps.filter(x=>x.h.lv!=='g');
+  if(bad.length){L.push('','━━━━━━━━━━','*التفاصيل*');
+    for(const{p,h}of bad){L.push('',`*${p.name}*`);
+      if(brand){for(const f of h.use.flatMap(r=>r.result.flags||[]).slice(0,6))L.push(`• ${f.brand||'براند'} — ${dAr(f.at)}`,`  ${f.link}`);continue;}
+      const gs=h.use.flatMap(r=>(r.result.groups||[]).filter(g=>g.violation).map(g=>({...g,gap:r.gap_days})));
+      for(const g of gs.slice(0,5)){L.push(`• نفس الصور انعادت بعد ${g.min_gap} يوم:`);g.posts.forEach((x,i)=>L.push(`  ${i+1}) ${dAr(x.at)}: ${x.link}`));}
+      if(gs.length>5)L.push(`  … و${gs.length-5} غيرها`);
+      for(const c of h.caps.slice(0,3))L.push(`• كليشة انعادت ${c.n} مرة: «${c.sample.replace(/\s+/g,' ').slice(0,70)}…»`);
+    }}
+  L.push('','━━━━━━━━━━',brand
+    ?'⚠️ *المطلوب:* المنشورات اللي بيها براند تنحذف، وما ننزل صور بيها لوكو أو اسم ماركة.'
+    :`⚠️ *المطلوب:* ما نعيد نفس الصور قبل ${ps[0].h.use[0].gap_days||10} أيام، ولا نكرر نفس الكليشة — كل منشور بكليشة جديدة. الصفحات الحمرة: المنشورات المكررة تنحذف حتى ترجع جودة الصفحة.`);
+  return L.join('\n');
+}
+function renderReport(){
+  const any=pages.some(p=>health(p.id));
+  if(!any){$('aReport').innerHTML='';return;}
+  const groups=[...new Set(pages.filter(p=>health(p.id)).map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cnt={g:0,o:0,r:0};pages.forEach(p=>{const h=health(p.id);if(h)cnt[h.lv]++;});
+  $('aReport').innerHTML=`<div class="box stack" style="gap:8px">
+    <div class="row" style="gap:6px"><b>📋 تقرير للمندوبين</b><span class="pill grn">🟢 ${cnt.g} سليمة</span><span class="pill org">🟠 ${cnt.o} تحتاج انتباه</span><span class="pill red">🔴 ${cnt.r} تحتاج حذف</span></div>
+    <div class="legend muted"><span><i style="background:var(--grn)"></i>سليمة</span><span><i style="background:var(--org)"></i>${tab==='brand'?'صورة أو صورتين بيها براند':'تكرار أو كليشة منعادة 5 مرات أو أكثر'}</span><span><i style="background:var(--red)"></i>${tab==='brand'?'3 صور أو أكثر بيها براند':'3 تكرارات مخالفة أو أكثر (أو 5% من المنشورات)'} — آخر 30 يوم</span></div>
+    <div class="row" style="gap:6px"><select id="rGrp"><option value="__all">كل الصفحات المفحوصة</option>${groups.map(g=>`<option>${esc(g)}</option>`).join('')}</select>
+    <button class="sm" id="rCopy">📋 نسخ التقرير</button><button class="sm line" id="rWa">واتساب</button><button class="sm line" id="rShow">👁 عرض</button></div>
+    <pre id="rPre" hidden style="white-space:pre-wrap;font:13px/1.7 inherit;background:var(--surface2);border-radius:10px;padding:10px;margin:0;max-height:420px;overflow:auto"></pre></div>`;
+  const txt=()=>reportText($('rGrp').value);
+  $('rCopy').onclick=async()=>{try{await navigator.clipboard.writeText(txt());toast('انسخ التقرير — الصقه بكروب الواتساب');}catch(_){$('rPre').hidden=false;$('rPre').textContent=txt();toast('ما انسخ تلقائياً، حدده من المربع وانسخه');}};
+  $('rWa').onclick=()=>openWa(txt());
+  $('rShow').onclick=()=>{const pr=$('rPre');pr.hidden=!pr.hidden;pr.textContent=txt();};
+  $('rGrp').onchange=()=>{if(!$('rPre').hidden)$('rPre').textContent=txt();};
+}
 function runBody(r){
     const res=r.result||{};const pct=r.total?Math.round((r.done||0)/r.total*100):0;
     let body='';
@@ -306,7 +384,7 @@ function runBody(r){
     else if(r.status==='done'&&tab==='dup'){
       const g=res.groups||[],t=res.texts||[];
       body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span>${res.violations?`<span class="pill red">${res.violations} تكرار مخالف</span>`:'<span class="pill grn">ماكو تكرار مخالف</span>'}${g.length-res.violations>0?`<span class="pill yel">${g.length-res.violations} إعادة بعد ${r.gap_days} يوم أو أكثر</span>`:''}${t.length?`<span class="pill">${t.length} كليشة متكررة</span>`:''}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
-        ${g.length?`<details ${res.violations?'open':''}><summary>🔁 نفس الصور (${g.length})</summary>${g.map(x=>`<div class="grp ${x.violation?'bad':''}"><div style="font-size:13px">${x.n} مرات • أقصر فرق ${x.min_gap} يوم ${x.violation?'<b style="color:var(--red)">— مخالف</b>':''}</div>${pcards(x.posts)}</div>`).join('')}</details>`:''}
+        ${g.length?`<details ${res.violations?'open':''}><summary>🔁 نفس الصور (${g.length})</summary>${g.map(x=>{const m=matchOf(x.posts,SM);return`<div class="grp ${x.violation?'bad':''}"><div style="font-size:13px">${x.n} مرات • أقصر فرق ${x.min_gap} يوم ${x.violation?'<b style="color:var(--red)">— مخالف</b>':''}</div>${m?`<div class="match ${m.hit===m.of?'full':''}">🎯 ${m.hit} من ${m.of} ${m.of===1?'صورة':'صور'} متطابقة${m.hit===m.of?' — تطابق 100%':` (${Math.round(m.hit/m.of*100)}%)`}</div>`:''}${pcards(x.posts)}</div>`;}).join('')}</details>`:''}
         ${t.length?`<details><summary>📝 كليشات متكررة (${t.length})</summary>${t.map(x=>`<div class="grp"><div style="font-size:13px"><b>${x.n} مرات</b> — ${esc(x.sample)}</div>${pcards(x.posts.map(p=>({...p,page:pname(r.page_id)})))}</div>`).join('')}</details>`:''}`;
     } else if(r.status==='done'){
       const f=res.flags||[];
@@ -322,14 +400,17 @@ function covered(pid){
   for(const [a,b] of iv){const l=out[out.length-1];const nx=l&&new Date(new Date(l[1]).getTime()+864e5).toISOString().slice(0,10);if(l&&a<=nx){if(b>l[1])l[1]=b;}else out.push([a,b]);}
   return out;
 }
+let SM=new Map();
 function renderRuns(){
+  SM=sigMap();renderReport();
   // one card per page: its latest check, the periods checked so far, and the earlier reports folded below
   const order=[],by=new Map();for(const r of runs){if(!by.has(r.page_id)){by.set(r.page_id,[]);order.push(r.page_id);}by.get(r.page_id).push(r);}
   const latest=order.map(id=>by.get(id)[0]);
   $('aRuns').innerHTML=order.length?order.map(id=>{
     const list=by.get(id),r=list[0],older=list.slice(1).filter(x=>x.status==='done');
     const cov=covered(id);
-    return`<div class="box stack" style="gap:6px"><div class="row" style="justify-content:space-between"><b>${esc(pname(id))}</b><span class="muted" style="font-size:13px">${ST[r.status]||r.status} • ${r.since} ← ${r.until}</span></div>
+    const hl=health(id);
+    return`<div class="box stack ${hl?'lv-'+hl.lv:''}" style="gap:6px"><div class="row" style="justify-content:space-between"><b>${hl?LV[hl.lv][0]+' ':''}${esc(pname(id))}${hl?` <span class="pill ${hl.lv==='g'?'grn':hl.lv==='o'?'org':'red'}">${LV[hl.lv][1]}</span>`:''}</b><span class="muted" style="font-size:13px">${ST[r.status]||r.status} • ${r.since} ← ${r.until}</span></div>
       ${cov.length?`<div class="muted" style="font-size:12px">✔️ الفترات المفحوصة: ${cov.map(([a,b])=>`${dS(a)} ← ${dS(b)}`).join(' • ')}</div>`:''}
       ${runBody(r)}
       ${older.length?`<details><summary>📚 تقارير سابقة (${older.length})</summary>${older.map(o=>`<div class="grp"><div class="muted" style="font-size:13px">${o.since} ← ${o.until}</div>${runBody(o)}</div>`).join('')}</details>`:''}</div>`;
