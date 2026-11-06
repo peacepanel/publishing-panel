@@ -109,7 +109,7 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
   <h1>👁 مراقبة الصفحات</h1>
   <span id="upd" class="muted" style="font-size:13px"></span>
   <span class="sp"></span>
-  <a href="../" class="muted" style="font-size:13px">↩ منظومة النشر</a>
+  <a href="../" id="pubLink" class="muted" style="font-size:13px">↩ منظومة النشر</a>
   <button id="themeBtn" class="line sm" title="الوضع الفاتح / الداكن">◐</button>
 </header>
 
@@ -203,11 +203,16 @@ const mins=t=>Math.max(0,Math.round((Date.now()-new Date(t).getTime())/60000));
 const ago=m=>m<60?`${m} دقيقة`:m<1440?`${Math.floor(m/60)} ساعة${m%60?` و${m%60} د`:''}`:`${Math.floor(m/1440)} يوم`;
 const colorOf=m=>m==null?'grn':m>RMIN?'red':m>YMIN?'yel':'grn';
 
+const STANDALONE=/\/watch\//.test(location.pathname);
+if(STANDALONE)document.title='نظام مراقبة الصفحات';
 async function start(){
   const{data:{session}}=await sb.auth.getSession();
   if(!session){$('loginBox').hidden=false;$('app').hidden=true;return;}
-  const{data:adm}=await sb.from('admins').select('email').limit(1);
-  if(!adm||!adm.length){$('loginBox').hidden=false;$('loginMsg').textContent='هذا الحساب ليس مسؤولاً.';return;}
+  // an admin, or a supervisor who may use the monitor only (monitor_users)
+  const{data:okMon}=await sb.rpc('am_monitor');
+  if(!okMon){$('loginBox').hidden=false;$('loginMsg').textContent='هذا الحساب ما عنده صلاحية على نظام المراقبة.';return;}
+  // the link back to the publishing panel only for its admins
+  const{data:adm}=await sb.from('admins').select('email').limit(1);if(STANDALONE||!adm||!adm.length)$('pubLink').hidden=true;
   $('loginBox').hidden=true;$('app').hidden=false;
   $('ymin').value=YMIN;$('rmin').value=RMIN;await load();setInterval(load,60000);setTab(tab);
 }

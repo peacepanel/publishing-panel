@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مراقبة الصفحات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#f4f6f5; --surface:#ffffff; --surface2:#eef2f0; --line:#dfe6e2;
+  --fg:#17211c; --muted:#66746c; --accent:#0f6b5f; --accent-ink:#ffffff; --accent-soft:#e0f3ef;
+  --red:#c62828; --red-soft:#fdecea; --yel:#a86b00; --yel-soft:#fff4d6; --grn:#23804e; --grn-soft:#e3f4ea;
+  --display:'Noto Kufi Arabic','Tajawal',Tahoma,sans-serif; --body:'Tajawal',Tahoma,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111816; --surface:#19221f; --surface2:#212c28; --line:#2f3c37;
+  --fg:#e9f1ed; --muted:#9eb0a7; --accent:#5fd0bd; --accent-ink:#0f1a17; --accent-soft:#16332e;
+  --red:#ff8a80; --red-soft:#3d1f1d; --yel:#f0c050; --yel-soft:#3a3016; --grn:#6fd59a; --grn-soft:#1b3427; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111816;--surface:#19221f;--surface2:#212c28;--line:#2f3c37;--fg:#e9f1ed;--muted:#9eb0a7;--accent:#5fd0bd;--accent-ink:#0f1a17;--accent-soft:#16332e;--red:#ff8a80;--red-soft:#3d1f1d;--yel:#f0c050;--yel-soft:#3a3016;--grn:#6fd59a;--grn-soft:#1b3427;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0}
+body{font-family:var(--body);background:var(--bg);color:var(--fg);font-size:15px;line-height:1.55}
+header{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+header h1{font-family:var(--display);font-size:17px;margin:0}
+header .sp{flex:1}
+.wrap{max-width:1320px;margin:0 auto;padding:16px 16px 80px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:700}
+button.line{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button.sm{padding:5px 10px;font-size:13px;border-radius:8px}
+button:disabled{opacity:.5;cursor:default}
+input,select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.kpi b{display:block;font-family:var(--display);font-size:26px;line-height:1.2}
+.kpi.red b{color:var(--red)}.kpi.yel b{color:var(--yel)}.kpi.grn b{color:var(--grn)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:500;cursor:pointer}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip small{opacity:.75;margin-inline-start:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;border-inline-start:5px solid var(--grn)}
+.card.red{border-inline-start-color:var(--red)}.card.yel{border-inline-start-color:var(--yel)}
+.card h3{margin:0;font-size:15px}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;background:var(--surface2);color:var(--fg)}
+.pill.red{background:var(--red-soft);color:var(--red)}.pill.yel{background:var(--yel-soft);color:var(--yel)}.pill.grn{background:var(--grn-soft);color:var(--grn)}
+.pill.wa{background:var(--grn-soft);color:var(--grn)}
+.cnts{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.items{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:340px;overflow:auto}
+.it{border:1px solid var(--line);border-radius:10px;padding:8px;font-size:14px}
+.it .top{display:flex;gap:6px;align-items:center;justify-content:space-between}
+.it .body{margin-top:2px;word-break:break-word}
+.it a{color:var(--accent);font-weight:700;text-decoration:none}
+.toast{position:fixed;bottom:16px;inset-inline-start:16px;background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:10px;z-index:9;max-width:90vw}
+.login{max-width:380px;margin:60px auto}
+.tip{background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-size:14px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{background:var(--surface);color:var(--fg);border:1px solid var(--line)}
+.tabs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.bar{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap}
+.thumbs a{display:flex;flex-direction:column;gap:2px;width:92px;font-size:11px;color:var(--muted);text-decoration:none}
+.thumbs img{width:92px;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--surface2)}
+.pcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:6px}
+.pcard{border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:3px;font-size:12px;background:var(--surface)}
+.pcard img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:var(--surface2);cursor:zoom-in}
+.pcard .n{font-weight:700;font-size:13px}.pcard .by{color:var(--muted)}
+.pcard a.open{display:block;text-align:center;border:1px solid var(--line);border-radius:8px;padding:4px;text-decoration:none;font-weight:600;margin-top:2px}
+.grp{border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:6px}
+.grp.bad{border-color:var(--red);background:var(--red-soft)}
+details>summary{cursor:pointer;font-weight:700}
+.pchips{max-height:180px;overflow:auto}
+/* page health after a check: green clean, orange needs action, red needs deleting */
+:root{--org:#c2410c;--org-soft:#ffedd5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--org:#ff9f5a;--org-soft:#3a2414}}
+:root[data-theme="dark"]{--org:#ff9f5a;--org-soft:#3a2414}
+.chip.lv-g{border-color:var(--grn);background:var(--grn-soft);color:var(--grn)}
+.chip.lv-o{border-color:var(--org);background:var(--org-soft);color:var(--org)}
+.chip.lv-r{border-color:var(--red);background:var(--red-soft);color:var(--red);font-weight:700}
+.chip.on.lv-g,.chip.on.lv-o,.chip.on.lv-r{background:var(--accent);color:var(--accent-ink);box-shadow:inset 0 0 0 2px currentColor}
+.box.lv-g{border-inline-start:5px solid var(--grn)}.box.lv-o{border-inline-start:5px solid var(--org)}.box.lv-r{border-inline-start:5px solid var(--red)}
+.pill.org{background:var(--org-soft);color:var(--org)}
+.match{font-size:12px}.match.full{color:var(--red);font-weight:800;font-size:13px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:4px;vertical-align:middle}
+
+.pcard.gone{opacity:.55}.pcard.gone img{filter:grayscale(1)}
+.pcard .gonetag{color:var(--muted);font-weight:700;text-align:center}
+button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red);border-radius:8px;padding:4px;font-weight:700;font-size:12px;cursor:pointer;width:100%}
+.rmask{border:1px dashed var(--red);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:12px}
+.rmask .row{gap:4px}.rmask button{flex:1;font-size:12px;padding:4px}
+
+.xt{border-collapse:collapse;width:100%;font-size:13px}.xt th,.xt td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:center;white-space:nowrap}
+.xt th:first-child,.xt td:first-child{text-align:start;position:sticky;inset-inline-start:0;background:var(--surface)}
+.xt td.r{background:var(--red-soft);color:var(--red);font-weight:700}.xt td.o{background:var(--org-soft);color:var(--org);font-weight:700}.xt td.g{color:var(--grn);font-weight:700}
+.xt tr.rowbad td{background:var(--red-soft)}.xt tr.rowbad td:first-child{color:var(--red);font-weight:700}.xt td.cl{color:var(--red);font-weight:800}
+.tl{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:340px;margin:auto}.tl span{border-radius:6px;padding:1px 5px;font-size:12px;background:var(--surface2);white-space:nowrap}.tl .o{background:var(--red);color:#fff;font-weight:700}.tl .c{background:var(--org);color:#fff;font-weight:700}.tl .s{opacity:.6}
+.xt small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <h1>👁 مراقبة الصفحات</h1>
+  <span id="upd" class="muted" style="font-size:13px"></span>
+  <span class="sp"></span>
+  <a href="../" id="pubLink" class="muted" style="font-size:13px">↩ منظومة النشر</a>
+  <button id="themeBtn" class="line sm" title="الوضع الفاتح / الداكن">◐</button>
+</header>
+
+<div id="loginBox" class="box login stack" hidden>
+  <h2 style="margin:0;font-family:var(--display)">تسجيل الدخول</h2>
+  <input id="email" type="email" placeholder="البريد" autocomplete="username">
+  <input id="pass" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+  <button id="loginBtn">دخول</button><div id="loginMsg" class="muted"></div>
+</div>
+
+<main id="app" class="wrap stack" hidden>
+  <div class="tabs" id="tabs"><button data-tab="reply" class="on">💬 الرد على الزبائن</button><button data-tab="dup">🔁 المنشورات المكررة</button><button data-tab="brand">™ العلامات التجارية</button><button data-tab="act">📊 نشاط النشر</button></div>
+  <section id="tab_audit" class="stack" hidden>
+    <div class="tip" id="auditTip"></div>
+    <div class="box stack" style="gap:10px">
+      <div class="row"><span class="muted" style="font-size:13px">اختر كروب</span><div class="chips" id="aGrp"></div></div>
+      <div class="chips pchips" id="aPages"></div>
+      <div class="row">
+        <span class="muted" style="font-size:13px">من</span><input type="date" id="aFrom">
+        <span class="muted" style="font-size:13px">إلى</span><input type="date" id="aTo">
+        <span id="gapBox" class="row muted" style="font-size:13px;gap:4px">تكرار أقرب من <input id="aGap" type="number" min="1" max="60" value="10" style="width:60px"> يوم = مخالف</span>
+        <span class="sp" style="flex:1"></span>
+        <button id="aStart">▶ ابدأ الفحص</button>
+      </div>
+      <div id="aNote" class="muted" style="font-size:13px"></div>
+    </div>
+    <div id="aReport"></div>
+    <div id="aCross"></div>
+    <div id="aRuns" class="stack"></div>
+  </section>
+  <section id="tab_act" class="stack" hidden>
+    <div class="tip">كم منشور نزلت كل صفحة باليوم خلال الدوام (8 الصبح ← 1 بالليل). كل صفحة إلها <b>العدد المطلوب</b> باليوم (تكدر تغيره من الجدول، و0 = الصفحة ما مطلوب منها نشر). 🔴 ما نزلت شي، أو منشورين نزلوا متقاربين (أقل من الفرق المسموح)، أو نزل منشور خارج الدوام 🌙 (هذا ما ينحسب ضمن العدد) • 🟠 أقل من المطلوب • 🟢 تمام. زر الكروب يرسل للواتساب الصفحات اللي بيها مشكلة بس، ويطلب بيان السبب. <b>منشورات منظومة النشر 🤖 تنحسب ضمن العدد، بس ما تسبب مخالفة أبداً</b> (التقارب وخارج الدوام يتحسبون على المنشورات اليدوية بس). بعمود الأوقات: <span style="background:var(--red);color:#fff;border-radius:5px;padding:0 4px">أحمر</span> خارج الدوام • <span style="background:var(--org);color:#fff;border-radius:5px;padding:0 4px">برتقالي</span> نزل ورا منشور ثاني • 🤖 المنظومة.</div>
+    <div class="box stack" style="gap:10px">
+      <div class="row">
+        <span class="muted" style="font-size:13px">من</span><input type="date" id="xFrom">
+        <span class="muted" style="font-size:13px">إلى</span><input type="date" id="xTo">
+        <button class="sm line" id="xYest">أمس</button>
+        <span class="row muted" style="font-size:13px;gap:4px">المطلوب الافتراضي <input id="xMin" type="number" min="0" max="50" style="width:60px"> منشور</span>
+        <span class="row muted" style="font-size:13px;gap:4px">أقل فرق بين منشورين <input id="xGapM" type="number" min="0" max="240" style="width:60px"> دقيقة</span>
+        <span class="sp" style="flex:1"></span>
+        <button id="xGo">🔄 عرض</button>
+      </div>
+      <div class="row" style="gap:6px">
+        <select id="xGrp"></select>
+        <span id="xFilt" class="row" style="gap:6px"></span>
+        <input id="xQ" placeholder="🔎 اسم الصفحة" style="width:150px">
+        <select id="xSort"><option value="bad">الأسوأ أول</option><option value="name">الاسم</option><option value="most">الأكثر نشر</option><option value="manual">الأقل يدوي</option></select>
+      </div>
+      <div class="row" style="gap:6px;align-items:center"><b style="font-size:13px">📤 إرسال للكروب:</b><span id="xSend" class="row" style="gap:6px"></span><span id="xSend2" class="row" style="gap:6px"></span><span class="sp" style="flex:1"></span><button class="sm line" id="xCopy">📋 نسخ</button></div>
+    </div>
+    <div id="xOut" class="box" style="overflow-x:auto"><div class="muted">اختار الفترة واضغط «عرض».</div></div>
+  </section>
+  <section id="tab_reply" class="stack">
+  <div class="tip">التعليقات والرسائل اللي تنتظر رد بكل الصفحات الشغالة (آخر 48 ساعة). الخادم يفحص كل صفحة تلقائياً تقريباً كل 20 دقيقة، و«فحص الآن» يحدّث صفحة فوراً. تنبيه الواتساب يرسل المتأخرة بس (الحمرة، أكثر من <span class="rmin">60</span> دقيقة). ما ينحسب: رد الصفحة تحت التعليق أو الرد الخاص عليه، وعبارات الختام («شكراً»، «تمام»، 👍، ستيكر)، والتعليقات اللي بيها بس تاك لصديق، والمخفية. اللون حسب أقدم واحد ينتظر: 🟢 أقل من <span class="ymin">15</span> دقيقة • 🟡 أكثر • 🔴 أكثر من <span class="rmin">60</span> دقيقة.</div>
+  <div class="kpis" id="kpis"></div>
+  <div class="box stack" style="gap:10px">
+    <div class="row"><span class="muted" style="font-size:13px">كروب الواتساب</span><div class="chips" id="grpChips"></div></div>
+    <div class="row">
+      <div class="chips" id="kindChips"></div>
+      <input id="q" placeholder="بحث صفحة أو زبون أو نص" style="flex:1;min-width:180px">
+      <label class="row muted" style="gap:4px;font-size:13px"><input type="checkbox" id="onlyWait" checked> الصفحات اللي عليها انتظار بس</label>
+      <button id="waGroup" class="sm" style="background:#25D366;color:#fff">📱 تنبيه واتساب بالمتأخرة</button>
+    </div>
+    <div class="row muted" style="font-size:13px">أصفر بعد <input id="ymin" type="number" min="1" style="width:64px"> دقيقة • أحمر بعد <input id="rmin" type="number" min="1" style="width:64px"> دقيقة</div>
+  </div>
+  <div id="grid" class="grid"></div>
+  </section>
+</main>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const SB_URL='https://lxikqgjfjnfkhvuckihx.supabase.co';
+const SB_KEY='sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lsGet=(k,d)=>{try{const v=localStorage.getItem('mon_'+k);return v==null?d:v;}catch(_){return d;}};
+const lsSet=(k,v)=>{try{localStorage.setItem('mon_'+k,v);}catch(_){}};
+let tT;function toast(m,ms=3500){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(tT);tT=setTimeout(()=>t.hidden=true,ms);}
+// theme
+const applyTheme=()=>{const t=lsGet('theme','');if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme;};applyTheme();
+$('themeBtn').onclick=()=>{const dark=matchMedia('(prefers-color-scheme: dark)').matches;const cur=lsGet('theme','')||(dark?'dark':'light');lsSet('theme',cur==='dark'?'light':'dark');applyTheme();};
+
+const GO=new URL('go.html',location.href).href.split('?')[0];
+// Business Suite finds a thread reliably by words of the message (search in conversations), not by the name Meta gives apps
+const srch=x=>{const w=String(x.body||'').replace(/[^\p{L}\p{M}\p{N}\s]/gu,' ').trim().split(/\s+/).filter(Boolean).slice(0,3).join(' ');return w&&!/^\(/.test(x.body||'')?w:(x.customer||'');};
+const KIND={fb_comment:['💬','تعليق فيسبوك'],ig_comment:['📷','تعليق انستكرام'],fb_dm:['✉️','رسالة مسنجر'],ig_dm:['📩','رسالة انستكرام']};
+let pages=[],items=[],state=new Map(),grp=lsGet('grp','__all'),kind=lsGet('kind','all');
+let YMIN=+lsGet('ymin',15),RMIN=+lsGet('rmin',60);
+const mins=t=>Math.max(0,Math.round((Date.now()-new Date(t).getTime())/60000));
+const ago=m=>m<60?`${m} دقيقة`:m<1440?`${Math.floor(m/60)} ساعة${m%60?` و${m%60} د`:''}`:`${Math.floor(m/1440)} يوم`;
+const colorOf=m=>m==null?'grn':m>RMIN?'red':m>YMIN?'yel':'grn';
+
+const STANDALONE=/\/watch\//.test(location.pathname);
+if(STANDALONE)document.title='نظام مراقبة الصفحات';
+async function start(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){$('loginBox').hidden=false;$('app').hidden=true;return;}
+  // an admin, or a supervisor who may use the monitor only (monitor_users)
+  const{data:okMon}=await sb.rpc('am_monitor');
+  if(!okMon){$('loginBox').hidden=false;$('loginMsg').textContent='هذا الحساب ما عنده صلاحية على نظام المراقبة.';return;}
+  // the link back to the publishing panel only for its admins
+  const{data:adm}=await sb.from('admins').select('email').limit(1);if(STANDALONE||!adm||!adm.length)$('pubLink').hidden=true;
+  $('loginBox').hidden=true;$('app').hidden=false;
+  $('ymin').value=YMIN;$('rmin').value=RMIN;await load();setInterval(load,60000);setTab(tab);
+}
+$('loginBtn').onclick=async()=>{$('loginMsg').textContent='...';const{error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});$('loginMsg').textContent=error?('خطأ: '+error.message):'';if(!error)start();};
+
+async function load(){
+  const since=new Date(Date.now()-48*3600e3).toISOString();
+  const [p,i,s]=await Promise.all([
+    sb.from('pages').select('id,name,fb_page_id,ig_user_id,wa_group').eq('active',true).order('name'),
+    sb.from('monitor_inbox').select('id,kind,page_id,customer,body,at,link,cust_id').eq('status','waiting').gte('at',since).order('at',{ascending:true}).limit(3000),
+    sb.from('monitor_state').select('page_id,last_run,errors')]);
+  if(p.error||i.error){toast('خطأ: '+(p.error||i.error).message,6000);return;}
+  pages=p.data||[];items=i.data||[];state=new Map((s.data||[]).map(x=>[x.page_id,x]));
+  $('upd').textContent='آخر تحديث للواجهة: '+new Date().toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'});
+  render();
+}
+function kindOk(k){return kind==='all'||(kind==='comments'?k.endsWith('comment'):k.endsWith('dm'));}
+function pageRows(){
+  const q=$('q').value.trim().toLowerCase();
+  return pages.filter(p=>grp==='__all'||(grp==='__none'?!p.wa_group:p.wa_group===grp)).map(p=>{
+    const its=items.filter(x=>x.page_id===p.id&&kindOk(x.kind)&&(!q||p.name.toLowerCase().includes(q)||(x.customer||'').toLowerCase().includes(q)||(x.body||'').toLowerCase().includes(q)));
+    const oldest=its.length?mins(its[0].at):null;
+    return{p,its,oldest,color:colorOf(oldest),st:state.get(p.id)};})
+   .filter(r=>!q||r.its.length||r.p.name.toLowerCase().includes(q))
+   .sort((a,b)=>(b.oldest??-1)-(a.oldest??-1)||b.its.length-a.its.length||a.p.name.localeCompare(b.p.name,'ar'));
+}
+function render(){
+  const groups=[...new Set(pages.map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cnt=g=>items.filter(x=>{const p=pages.find(y=>y.id===x.page_id);return p&&(g==='__all'||p.wa_group===g)&&kindOk(x.kind);}).length;
+  $('grpChips').innerHTML=[['__all','الكل'],...groups.map(g=>[g,g])].map(([v,l])=>`<button class="chip ${grp===v?'on':''}" data-g="${esc(v)}">${esc(l)}<small>${cnt(v)}</small></button>`).join('');
+  $('kindChips').innerHTML=[['all','الكل'],['comments','💬 تعليقات'],['dms','✉️ رسائل']].map(([v,l])=>`<button class="chip ${kind===v?'on':''}" data-k="${v}">${l}</button>`).join('');
+  const rows=pageRows();
+  const shownItems=rows.flatMap(r=>r.its);
+  const red=rows.filter(r=>r.color==='red'&&r.its.length).length,yel=rows.filter(r=>r.color==='yel'&&r.its.length).length;
+  const checked=pages.filter(p=>state.get(p.id)?.last_run).length;
+  $('kpis').innerHTML=`
+    <div class="kpi red"><span class="muted">صفحات حمرة</span><b>${red}</b></div>
+    <div class="kpi yel"><span class="muted">صفحات صفرة</span><b>${yel}</b></div>
+    <div class="kpi"><span class="muted">تعليقات تنتظر</span><b>${shownItems.filter(x=>x.kind.endsWith('comment')).length}</b></div>
+    <div class="kpi"><span class="muted">رسائل تنتظر</span><b>${shownItems.filter(x=>x.kind.endsWith('dm')).length}</b></div>
+    <div class="kpi grn"><span class="muted">صفحات انفحصت</span><b>${checked}<span class="muted" style="font-size:14px"> / ${pages.length}</span></b></div>`;
+  const list=$('onlyWait').checked?rows.filter(r=>r.its.length):rows;
+  $('grid').innerHTML=list.map(r=>{const c=k=>r.its.filter(x=>x.kind===k).length;const st=r.st;
+    return`<div class="card ${r.its.length?r.color:''}" data-pid="${r.p.id}">
+      <div class="row" style="justify-content:space-between"><h3>${esc(r.p.name)}</h3>${r.p.wa_group?`<span class="pill wa">💬 ${esc(r.p.wa_group)}</span>`:''}</div>
+      <div class="cnts">
+        ${r.its.length?`<span class="pill ${r.color}">أقدم واحد: ${ago(r.oldest)}</span>`:'<span class="pill grn">✓ ماكو انتظار</span>'}
+        ${c('fb_comment')?`<span class="pill">💬 ${c('fb_comment')} فيسبوك</span>`:''}${c('ig_comment')?`<span class="pill">📷 ${c('ig_comment')} انستا</span>`:''}
+        ${c('fb_dm')?`<span class="pill">✉️ ${c('fb_dm')} مسنجر</span>`:''}${c('ig_dm')?`<span class="pill">📩 ${c('ig_dm')} انستا</span>`:''}
+      </div>
+      <div class="muted" style="font-size:12px">${st?.last_run?`آخر فحص قبل ${ago(mins(st.last_run))}`:'بعد ما انفحصت'}${st?.errors?` • <span title="${esc(st.errors)}" style="color:var(--yel)">⚠ جزء ما انقرا</span>`:''}${!r.p.ig_user_id?' • بدون انستكرام':''}</div>
+      ${r.its.length?`<div class="items">${r.its.map(x=>{const m=mins(x.at);return`<div class="it"><div class="top"><span>${KIND[x.kind][0]} <b>${esc(x.customer||'زبون')}</b> <span class="muted" style="font-size:12px">${KIND[x.kind][1]}</span></span><span class="pill ${colorOf(m)}">${ago(m)}</span></div>
+        <div class="body">${esc(x.body||'')}</div>${x.kind.endsWith('dm')?`<a href="${esc(GO+'?p='+r.p.fb_page_id+(x.kind==='ig_dm'?'&t=ig':''))}" target="_blank" rel="noopener">فتح الصندوق ← ابحث «${esc(srch(x))}»</a>`:x.link?`<a href="${esc(x.link)}" target="_blank" rel="noopener">فتح ←</a>`:''}</div>`;}).join('')}</div>`:''}
+      <div class="row" style="margin-top:8px"><button class="sm line" data-chk="${r.p.id}">🔄 فحص الآن</button>${redOf(r).length?`<button class="sm" data-wa="${r.p.id}" style="background:#25D366;color:#fff" title="يرسل المتأخرة (الحمرة) بس">📱 تنبيه واتساب (${redOf(r).length} متأخرة)</button>`:''}</div>
+    </div>`;}).join('')||'<div class="box muted">ماكو صفحات بهذا الفلتر.</div>';
+}
+// the WhatsApp alert carries only what is late (red: waiting longer than the red limit), laid out like the card
+const redOf=r=>r.its.filter(x=>mins(x.at)>RMIN);
+function waText(rows){
+  const out=[];const shown=rows.map(r=>({r,late:redOf(r)})).filter(o=>o.late.length);
+  shown.sort((a,b)=>b.late.length-a.late.length);
+  const total=shown.reduce((t,o)=>t+o.late.length,0);
+  const cnt=(late,k)=>late.filter(x=>x.kind===k).length;
+  const short=late=>[cnt(late,'fb_comment')&&`💬${cnt(late,'fb_comment')}`,cnt(late,'ig_comment')&&`📷${cnt(late,'ig_comment')}`,cnt(late,'fb_dm')&&`✉️${cnt(late,'fb_dm')}`,cnt(late,'ig_dm')&&`📩${cnt(late,'ig_dm')}`].filter(Boolean).join(' ');
+  // summary first: each rep finds her page at the top; details follow below for whoever needs them
+  out.push(`🔴 *تنبيه: متأخرة بدون رد* (أكثر من ${ago(RMIN)})`,`*${shown.length} صفحة • ${total} متأخرة*`,'',`📋 *الملخص:*`);
+  shown.forEach(({r,late})=>out.push(`📌 *${r.p.name}* ← *${late.length}*  (${short(late)})`));
+  out.push('',`💬 تعليق فيسبوك • 📷 تعليق انستا • ✉️ رسالة مسنجر • 📩 رسالة انستا`,'',`⬇️ *التفاصيل تحت* ⬇️`);
+  for(const {r,late} of shown){
+    const c=k=>cnt(late,k);
+    const parts=[c('fb_comment')&&`💬 ${c('fb_comment')} تعليق فيسبوك`,c('ig_comment')&&`📷 ${c('ig_comment')} تعليق انستا`,c('fb_dm')&&`✉️ ${c('fb_dm')} رسالة مسنجر`,c('ig_dm')&&`📩 ${c('ig_dm')} رسالة انستا`].filter(Boolean);
+    out.push('','━━━━━━━━━━━━━━',`📌 *${r.p.name}*  (${late.length})${r.p.wa_group?` — كروب ${r.p.wa_group}`:''}`,'━━━━━━━━━━━━━━',`أقدم واحد ينتظر: ${ago(mins(late[0].at))}`,parts.join(' • '));
+    late.slice(0,15).forEach((x,n)=>{
+      out.push('',`${n+1}) ${KIND[x.kind][0]} ${x.customer||'زبون'} — ${KIND[x.kind][1]} — ${ago(mins(x.at))}`,`«${String(x.body||'').replace(/\s+/g,' ').slice(0,90)}»`);
+      // a message has no link that opens on the phone: the rep finds it in the page's inbox by the customer's name
+      if(x.kind.endsWith('dm'))out.push(`↩ افتحي صندوق رسائل الصفحة واكتبي بالبحث «${srch(x)}» ثم اختاري «Search in conversations»: ${GO}?p=${r.p.fb_page_id}${x.kind==='ig_dm'?'&t=ig':''}`);
+      else if(x.link)out.push(`↩ التعليق: ${x.link}`);});
+    if(late.length>15)out.push('',`… و${late.length-15} غيرها (افتح المراقبة)`);
+  }
+  return out.join('\n');
+}
+// wa.me's redirect breaks emojis (shows �) on some devices; go straight to WhatsApp Web on a computer and to api.whatsapp.com on phones
+const openWa=t=>{const mob=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');window.open((mob?'https://api.whatsapp.com/send?text=':'https://web.whatsapp.com/send?text=')+encodeURIComponent(t),'_blank');};
+document.addEventListener('click',async e=>{
+  const g=e.target.closest('[data-g]'),k=e.target.closest('[data-k]'),ck=e.target.closest('[data-chk]'),wa=e.target.closest('[data-wa]');
+  if(g){grp=g.dataset.g;lsSet('grp',grp);render();}
+  else if(k){kind=k.dataset.k;lsSet('kind',kind);render();}
+  else if(wa){const r=pageRows().find(x=>x.p.id===wa.dataset.wa);if(r)openWa(waText([r]));}
+  else if(ck){ck.disabled=true;ck.textContent='⏳ جارٍ الفحص...';
+    try{const{data:{session}}=await sb.auth.getSession();const res=await fetch(`${SB_URL}/functions/v1/monitor`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({page_id:ck.dataset.chk})});
+      const j=await res.json();if(j.error)throw new Error(j.error);toast(`${j.page}: انفحصت${j.errors?' (جزء ما انقرا)':''}`);await load();}
+    catch(er){toast('خطأ: '+er.message,6000);ck.disabled=false;ck.textContent='🔄 فحص الآن';}}
+});
+$('waGroup').onclick=()=>{const rows=pageRows().filter(r=>redOf(r).length);if(!rows.length)return toast('ماكو متأخرة (حمرة) بالمعروض');openWa(waText(rows));};
+$('q').addEventListener('input',render);$('onlyWait').addEventListener('change',render);
+['ymin','rmin'].forEach(id=>$(id).addEventListener('change',()=>{YMIN=Math.max(1,+$('ymin').value||15);RMIN=Math.max(YMIN+1,+$('rmin').value||60);lsSet('ymin',YMIN);lsSet('rmin',RMIN);document.querySelectorAll('.ymin').forEach(x=>x.textContent=YMIN);document.querySelectorAll('.rmin').forEach(x=>x.textContent=RMIN);render();}));
+document.querySelectorAll('.ymin').forEach(x=>x.textContent=YMIN);document.querySelectorAll('.rmin').forEach(x=>x.textContent=RMIN);
+
+// ================= audits: repeated posts / brand logos (started by hand, on chosen pages and dates) =================
+let tab=lsGet('tab','reply'),aSel=new Set(JSON.parse(lsGet('aSel','[]')||'[]')),aGrpSel='__all',runs=[],aTimer=null;
+const dISO=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const dAr=t=>new Date(t).toLocaleDateString('ar-IQ',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'});
+function setTab(t){tab=t;lsSet('tab',t);document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  $('tab_reply').hidden=t!=='reply';$('tab_audit').hidden=!(t==='dup'||t==='brand');$('tab_act').hidden=t!=='act';if(t==='dup'||t==='brand'){auditInit();loadRuns();}if(t==='act')actInit();}
+function auditInit(){
+  const brand=tab==='brand';
+  $('auditTip').innerHTML=brand
+    ?'يفحص صور منشورات الصفحات اللي تختارها بالذكاء الصناعي، ويطلع الصور اللي بيها لوكو أو اسم براند حقيقي معروف (Nike، Chanel، SHEIN…). رموز التسعير الداخلية مثل AAC أو (0XL-4XL) ما تنحسب. <b>كل صورة جديدة = طلب ذكاء صناعي واحد</b>، والصورة اللي انفحصت قبل بأي صفحة ما تنفحص مرة ثانية (مجاناً). يفحص أول 4 صور من كل منشور. فلهذا اختار صفحات وفترة قصيرة.'
+    :'يجيب منشورات الصفحات اللي تختارها بالفترة، ويكشف: <b>1) نفس الصور انعادت</b> (حتى لو انرفعت من جديد أو تغير ترتيبها) — إذا الإعادة أقرب من عدد الأيام المحدد تنحسب مخالفة، <b>2) نفس الكليشة</b> (نص متشابه 85% أو أكثر)، و<b>3) نفس الصور بأكثر من صفحة</b> بين الصفحات المفحوصة. بدون ذكاء صناعي — مجاني.';
+  $('gapBox').hidden=brand;
+  if(!$('aFrom').value){const to=new Date(),fr=new Date(Date.now()-(brand?7:30)*864e5);$('aTo').value=dISO(to);$('aFrom').value=dISO(fr);}
+  renderPicker();
+}
+function renderPicker(){
+  const groups=[...new Set(pages.map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  $('aGrp').innerHTML=[['__all','كل الصفحات'],...groups.map(g=>[g,g]),['__clear','✕ إلغاء الاختيار']].map(([v,l])=>`<button class="chip" data-ag="${esc(v)}">${esc(l)}</button>`).join('');
+  $('aPages').innerHTML=pages.map(p=>{const c=covered(p.id),l=c[c.length-1];const hl=health(p.id);return`<button class="chip ${aSel.has(p.id)?'on':''} ${hl?'lv-'+hl.lv:''}" data-ap="${p.id}" ${l?`title="مفحوصة: ${c.map(([a,b])=>a+' ← '+b).join('، ')}"`:''}>${esc(p.name)}${l?` <small style="opacity:.75">✔️ لغاية ${dS(l[1])}</small>`:''}</button>`;}).join('');
+  const n=[...aSel].filter(id=>pages.some(p=>p.id===id)).length;
+  $('aStart').textContent=`▶ ابدأ الفحص (${n} صفحة)`;$('aStart').disabled=!n;
+  const days=Math.round((new Date($('aTo').value)-new Date($('aFrom').value))/864e5)+1;
+  $('aNote').textContent=tab==='brand'?`${n} صفحة × ${days||0} يوم. الكلفة تعتمد على عدد الصور الجديدة — تنعرض بعد ما يبدي الفحص.`:`${n} صفحة × ${days||0} يوم.`;
+}
+const ALLOWED=/shein|شي\s*ان|emery\s*rose|romwe|dazy|motf|cuccoo|glowmode|sheglam/i;
+async function loadRuns(){
+  const k=tab==='brand'?'brand':'dup';
+  const{data,error}=await sb.from('audit_runs').select('id,page_id,since,until,gap_days,status,error,created_at,updated_at,result,done:progress->done,total:progress->total,failed:progress->failed').eq('kind',k).order('created_at',{ascending:false}).limit(300);
+  if(error){$('aRuns').innerHTML=`<div class="box">خطأ: ${esc(error.message)}</div>`;return;}
+  runs=data||[];
+  const{data:dl}=await sb.from('audit_deletions').select('img_key').eq('ok',true).limit(5000);DEL=new Set((dl||[]).map(x=>x.img_key));
+  for(const r of runs){const res=r.result;if(!res)continue;
+    for(const f of res.flags||[])f.gone=DEL.has(ikey(f.img));
+    // a repeat with only one post left on Facebook is no longer a violation
+    if(res.groups){for(const g of res.groups){g.posts.forEach(p=>p.gone=DEL.has(ikey(p.thumb)));if(g.v0===undefined)g.v0=g.violation;g.violation=g.v0&&g.posts.filter(p=>!p.gone).length>1;}res.violations=res.groups.filter(g=>g.violation).length;}}
+  // SHEIN and its own labels are allowed (everyone here sells SHEIN): kept in the data, left out of the results and the colours
+  for(const r of runs)if(k==='brand'&&r.result?.flags){const all=r.result.flags;r.result.flags=all.filter(f=>!ALLOWED.test(f.brand||''));r.result.allowed=all.length-r.result.flags.length;}
+  renderRuns();renderPicker();
+  clearTimeout(aTimer);if(tab!=='reply'&&runs.some(r=>r.status==='queued'||r.status==='working')){pump();aTimer=setTimeout(loadRuns,6000);}
+}
+// while this page is open it pushes the work along (one small step at a time); closed, the server does a step a minute
+let pumping=false;async function pump(){if(pumping||document.hidden)return;pumping=true;try{for(let i=0;i<3;i++){const j=await callAudit({});if(j.idle||j.busy)break;}}catch(_){}pumping=false;}
+const pname=id=>(pages.find(p=>p.id===id)||{}).name||'صفحة';
+const ST={queued:'⏳ بالانتظار',working:'⚙️ يشتغل',done:'✅ خلص',failed:'❌ فشل',cancelled:'⏹ ملغي'};
+// pictures removed from posts (from audit_deletions): their cards show «انحذفت» and stop counting
+let DEL=new Set();const ikey=src=>(String(src||'').split('?')[0].split('/').pop()||'').toLowerCase();
+const RM=[];function rmBtn(o){if(!o.pid||!o.src||!o.link)return'';RM.push(o);return`<div data-rmbox="${RM.length-1}"><button class="rm" data-rm="${RM.length-1}">🗑 حذف هالصورة</button></div>`;}
+const ORD=['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر'];
+// one card per post: the picture that repeats, its number, date and time, page, who published it, and a link to open it
+function pcards(list){return`<div class="pcards">${list.map((p,i)=>{const im=p.thumb||p.img;return`<div class="pcard ${p.gone?'gone':''}">${im?`<a href="${esc(im)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(im)}" alt="" onerror="this.style.visibility='hidden'"></a>`:''}<span class="n">المنشور ${ORD[i]||(i+1)}</span><span>📅 ${dAr(p.at)}</span>${p.page?`<span>📄 ${esc(p.page)}</span>`:''}<span class="by">👤 ${p.by?esc(p.by):'الناشر غير معروف'}</span><a class="open" href="${esc(p.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${p.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':(im?rmBtn({pid:p.pid,link:p.link,id:p.id,src:im,by:p.by}):'')}</div>`;}).join('')}</div>`;}
+const thumbs=pcards;
+const hamG=(a,b)=>{let x=BigInt('0x'+a)^BigInt('0x'+b),n=0;while(x){n+=Number(x&1n);x>>=1n;}return n;};
+// fingerprints of every checked post (from all loaded reports), to show how many pictures match
+function sigMap(){const m=new Map();for(const r of runs)for(const x of r.result?.sigs||[])if(!m.has(x.link))m.set(x.link,x.h||[]);return m;}
+function matchOf(posts,sm){
+  const hs=posts.map(p=>sm.get(p.link)||[]).filter(h=>h.length);if(hs.length<2)return null;
+  const small=hs.reduce((a,b)=>b.length<a.length?b:a),others=hs.filter(h=>h!==small).flat();
+  return{hit:small.filter(x=>others.some(y=>hamG(x,y)<=6)).length,of:small.length};
+}
+// a page's health from its reports of the last 30 days (or its latest report)
+const LV={g:['🟢','سليمة'],o:['🟠','تحتاج انتباه'],r:['🔴','تحتاج حذف منشورات']};
+function health(pid){
+  const done=runs.filter(r=>r.page_id===pid&&r.status==='done'&&r.result);if(!done.length)return null;
+  const lim=dISO(new Date(Date.now()-30*864e5));let use=done.filter(r=>r.until>=lim);if(!use.length)use=[done[0]];
+  if(tab==='brand'){const f=use.flatMap(r=>r.result.flags||[]).filter(x=>!x.gone),strong=f.filter(x=>x.conf!=='low').length;
+    return{lv:strong>=3?'r':f.length?'o':'g',flags:f.length,strong,posts:use.reduce((a,r)=>a+(r.result.posts||0),0),use};}
+  const viol=use.reduce((a,r)=>a+(r.result.violations||0),0),posts=use.reduce((a,r)=>a+(r.result.posts||0),0);
+  const caps=use.flatMap(r=>r.result.texts||[]).filter(t=>t.n>=5);
+  const lv=(viol>=3||(posts&&viol/posts>=.05))?'r':(viol||caps.length)?'o':'g';
+  return{lv,viol,caps,posts,use};
+}
+// short report for the reps (WhatsApp formatting: *bold*)
+function reportText(grp){
+  const ps=pages.filter(p=>grp==='__all'||p.wa_group===grp).map(p=>({p,h:health(p.id)})).filter(x=>x.h);
+  if(!ps.length)return'';
+  const rank={r:0,o:1,g:2};ps.sort((a,b)=>rank[a.h.lv]-rank[b.h.lv]||a.p.name.localeCompare(b.p.name,'ar'));
+  const brand=tab==='brand';const L=[];
+  L.push(brand?'*📋 تقرير فحص البراندات بالصور*':'*📋 تقرير فحص تكرار المنشورات*');
+  if(grp!=='__all')L.push('الكروب: '+grp);
+  L.push('');
+  for(const{p,h}of ps){
+    const why=brand?(h.flags?`${h.flags} صورة بيها براند`:'ماكو براندات')
+      :[h.viol?(h.viol===1?'منشور انعاد بوقت قريب':`${h.viol} منشورات انعادت بوقت قريب`):'',h.caps.length?(h.caps.length===1?`كليشة انعادت ${h.caps[0].n} مرة`:`${h.caps.length} كليشات متكررة (أكثرها ${Math.max(...h.caps.map(c=>c.n))} مرة)`):''].filter(Boolean).join(' + ')||'ماكو تكرار';
+    L.push(`${LV[h.lv][0]} *${p.name}* — ${LV[h.lv][1]}: ${why}`);
+  }
+  const bad=ps.filter(x=>x.h.lv!=='g');
+  if(bad.length){L.push('','━━━━━━━━━━','*التفاصيل*');
+    for(const{p,h}of bad){L.push('',`*${p.name}*`);
+      if(brand){for(const f of h.use.flatMap(r=>r.result.flags||[]).filter(x=>!x.gone).slice(0,6))L.push(`• ${f.brand||'براند'} — ${dAr(f.at)}`,`  ${f.link}`);continue;}
+      const gs=h.use.flatMap(r=>(r.result.groups||[]).filter(g=>g.violation).map(g=>({...g,gap:r.gap_days})));
+      for(const g of gs.slice(0,5)){L.push(`• نفس الصور انعادت بعد ${g.min_gap} يوم:`);g.posts.forEach((x,i)=>L.push(`  ${i+1}) ${dAr(x.at)}: ${x.link}`));}
+      if(gs.length>5)L.push(`  … و${gs.length-5} غيرها`);
+      for(const c of h.caps.slice(0,3))L.push(`• كليشة انعادت ${c.n} مرة: «${c.sample.replace(/\s+/g,' ').slice(0,70)}…»`);
+    }}
+  L.push('','━━━━━━━━━━',brand
+    ?'⚠️ *المطلوب:* المنشورات اللي بيها براند تنحذف، وما ننزل صور بيها لوكو أو اسم ماركة.'
+    :`⚠️ *المطلوب:* ما نعيد نفس الصور قبل ${ps[0].h.use[0].gap_days||10} أيام، ولا نكرر نفس الكليشة — كل منشور بكليشة جديدة. الصفحات الحمرة: المنشورات المكررة تنحذف حتى ترجع جودة الصفحة.`);
+  return L.join('\n');
+}
+function renderReport(){
+  const any=pages.some(p=>health(p.id));
+  if(!any){$('aReport').innerHTML='';return;}
+  const groups=[...new Set(pages.filter(p=>health(p.id)).map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cnt={g:0,o:0,r:0};pages.forEach(p=>{const h=health(p.id);if(h)cnt[h.lv]++;});
+  $('aReport').innerHTML=`<div class="box stack" style="gap:8px">
+    <div class="row" style="gap:6px"><b>📋 تقرير للمندوبين</b><span class="pill grn">🟢 ${cnt.g} سليمة</span><span class="pill org">🟠 ${cnt.o} تحتاج انتباه</span><span class="pill red">🔴 ${cnt.r} تحتاج حذف</span></div>
+    <div class="legend muted"><span><i style="background:var(--grn)"></i>سليمة</span><span><i style="background:var(--org)"></i>${tab==='brand'?'صورة أو صورتين بيها براند':'تكرار أو كليشة منعادة 5 مرات أو أكثر'}</span><span><i style="background:var(--red)"></i>${tab==='brand'?'3 صور أو أكثر بيها براند':'3 تكرارات مخالفة أو أكثر (أو 5% من المنشورات)'} — آخر 30 يوم</span></div>
+    <div class="row" style="gap:6px"><select id="rGrp"><option value="__all">كل الصفحات المفحوصة</option>${groups.map(g=>`<option>${esc(g)}</option>`).join('')}</select>
+    <button class="sm" id="rCopy">📋 نسخ التقرير</button><button class="sm line" id="rWa">واتساب</button><button class="sm line" id="rShow">👁 عرض</button></div>
+    <pre id="rPre" hidden style="white-space:pre-wrap;font:13px/1.7 inherit;background:var(--surface2);border-radius:10px;padding:10px;margin:0;max-height:420px;overflow:auto"></pre></div>`;
+  const txt=()=>reportText($('rGrp').value);
+  $('rCopy').onclick=async()=>{try{await navigator.clipboard.writeText(txt());toast('انسخ التقرير — الصقه بكروب الواتساب');}catch(_){$('rPre').hidden=false;$('rPre').textContent=txt();toast('ما انسخ تلقائياً، حدده من المربع وانسخه');}};
+  $('rWa').onclick=()=>openWa(txt());
+  $('rShow').onclick=()=>{const pr=$('rPre');pr.hidden=!pr.hidden;pr.textContent=txt();};
+  $('rGrp').onchange=()=>{if(!$('rPre').hidden)$('rPre').textContent=txt();};
+}
+function runBody(r){
+    const res=r.result||{};const pct=r.total?Math.round((r.done||0)/r.total*100):0;
+    let body='';
+    if(r.status==='working'||r.status==='queued')body=`<div class="bar"><i style="width:${pct}%"></i></div><div class="muted" style="font-size:13px">${r.total?`${r.done||0} / ${r.total} صورة`:'يجيب المنشورات...'}</div><div class="row"><button class="sm line" data-acancel="${r.id}">⏹ إلغاء</button></div>`;
+    else if(r.status==='failed')body=`<div style="color:var(--red)">${esc(r.error||'')}</div>`;
+    else if(r.status==='cancelled')body='';
+    else if(r.status==='done'&&tab==='dup'){
+      const g=res.groups||[],t=res.texts||[];
+      body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span>${res.violations?`<span class="pill red">${res.violations} تكرار مخالف</span>`:'<span class="pill grn">ماكو تكرار مخالف</span>'}${g.length-res.violations>0?`<span class="pill yel">${g.length-res.violations} إعادة بعد ${r.gap_days} يوم أو أكثر</span>`:''}${t.length?`<span class="pill">${t.length} كليشة متكررة</span>`:''}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
+        ${g.length?`<details ${res.violations?'open':''}><summary>🔁 نفس الصور (${g.length})</summary>${g.map(x=>{const m=matchOf(x.posts,SM);return`<div class="grp ${x.violation?'bad':''}"><div style="font-size:13px">${x.n} مرات • أقصر فرق ${x.min_gap} يوم ${x.violation?'<b style="color:var(--red)">— مخالف</b>':''}</div>${m?`<div class="match ${m.hit===m.of?'full':''}">🎯 ${m.hit} من ${m.of} ${m.of===1?'صورة':'صور'} متطابقة${m.hit===m.of?' — تطابق 100%':` (${Math.round(m.hit/m.of*100)}%)`}</div>`:''}${pcards(x.posts.map(p=>({...p,pid:r.page_id})))}</div>`;}).join('')}</details>`:''}
+        ${t.length?`<details><summary>📝 كليشات متكررة (${t.length})</summary>${t.map(x=>`<div class="grp"><div style="font-size:13px"><b>${x.n} مرات</b> — ${esc(x.sample)}</div>${pcards(x.posts.map(p=>({...p,page:pname(r.page_id)})))}</div>`).join('')}</details>`:''}`;
+    } else if(r.status==='done'){
+      const f=res.flags||[];
+      body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span><span class="pill">${res.checked} فحص جديد</span>${res.reused?`<span class="pill grn">${res.reused} مفحوصة من قبل (مجاناً)</span>`:''}${f.filter(x=>!x.gone).length?`<span class="pill red">${f.filter(x=>!x.gone).length} صورة بيها براند</span>`:'<span class="pill grn">ماكو براندات ممنوعة</span>'}${res.allowed?`<span class="pill">${res.allowed} صورة شي ان (مسموحة)</span>`:''}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
+        ${f.length?`<div class="pcards">${f.map(x=>`<div class="pcard ${x.gone?'gone':''}"><a href="${esc(x.img)}" target="_blank" rel="noopener" title="فتح الصورة بحجمها"><img loading="lazy" src="${esc(x.img)}" alt="" onerror="this.style.visibility='hidden'"></a><span class="n" style="color:var(--red)">🏷️ ${esc(x.brand||'براند')}</span><span>${x.conf==='high'?'ثقة عالية':x.conf==='medium'?'ثقة متوسطة':'ثقة قليلة'} • صورة ${x.n} بالمنشور</span>${x.desc?`<span class="by">${esc(x.desc)}</span>`:''}<span>📅 ${dAr(x.at)}</span><span>📄 ${esc(pname(r.page_id))}</span><span class="by">👤 ${x.by?esc(x.by):'الناشر غير معروف'}</span><a class="open" href="${esc(x.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${x.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':rmBtn({pid:r.page_id,link:x.link,id:x.id,src:x.img,n:x.n,by:x.by})}</div>`).join('')}</div>`:''}`;
+    }
+    return body;
+}
+// the periods of a page already checked, merged ("1 تشرين الأول ← 5 تشرين الثاني")
+const dS=d=>new Date(d+'T12:00:00').toLocaleDateString('ar-IQ',{day:'numeric',month:'short'});
+function covered(pid){
+  const iv=runs.filter(r=>r.page_id===pid&&r.status==='done').map(r=>[r.since,r.until]).sort((a,b)=>a[0].localeCompare(b[0]));const out=[];
+  for(const [a,b] of iv){const l=out[out.length-1];const nx=l&&new Date(new Date(l[1]).getTime()+864e5).toISOString().slice(0,10);if(l&&a<=nx){if(b>l[1])l[1]=b;}else out.push([a,b]);}
+  return out;
+}
+let SM=new Map();
+function renderRuns(){
+  RM.length=0;SM=sigMap();renderReport();
+  // one card per page: its latest check, the periods checked so far, and the earlier reports folded below
+  const order=[],by=new Map();for(const r of runs){if(!by.has(r.page_id)){by.set(r.page_id,[]);order.push(r.page_id);}by.get(r.page_id).push(r);}
+  const latest=order.map(id=>by.get(id)[0]);
+  $('aRuns').innerHTML=order.length?order.map(id=>{
+    const list=by.get(id),r=list[0],older=list.slice(1).filter(x=>x.status==='done');
+    const cov=covered(id);
+    const hl=health(id);
+    return`<div class="box stack ${hl?'lv-'+hl.lv:''}" style="gap:6px"><div class="row" style="justify-content:space-between"><b>${hl?LV[hl.lv][0]+' ':''}${esc(pname(id))}${hl?` <span class="pill ${hl.lv==='g'?'grn':hl.lv==='o'?'org':'red'}">${LV[hl.lv][1]}</span>`:''}</b><span class="muted" style="font-size:13px">${ST[r.status]||r.status} • ${r.since} ← ${r.until}</span></div>
+      ${cov.length?`<div class="muted" style="font-size:12px">✔️ الفترات المفحوصة: ${cov.map(([a,b])=>`${dS(a)} ← ${dS(b)}`).join(' • ')}</div>`:''}
+      ${runBody(r)}
+      ${older.length?`<details><summary>📚 تقارير سابقة (${older.length})</summary>${older.map(o=>`<div class="grp"><div class="muted" style="font-size:13px">${o.since} ← ${o.until}</div>${runBody(o)}</div>`).join('')}</details>`:''}</div>`;
+  }).join(''):'<div class="box muted">ما سويت فحص بعد. اختار صفحات وفترة واضغط «ابدأ الفحص».</div>';
+  // the same pictures on several pages (from the latest finished check of each page)
+  if(tab==='dup'){
+    const done=runs.filter(r=>r.status==='done'&&r.result?.sigs?.length);
+    const seenX=new Set();const items=done.flatMap(r=>r.result.sigs.map(s=>({...s,page:pname(r.page_id),pid:r.page_id}))).filter(x=>!seenX.has(x.link)&&seenX.add(x.link));
+    const ham=(a,b)=>{let x=BigInt('0x'+a)^BigInt('0x'+b),n=0;while(x){n+=Number(x&1n);x>>=1n;}return n;};
+    const same=(a,b)=>{const sm=a.length<=b.length?a:b,bg=sm===a?b:a;return sm.filter(x=>bg.some(y=>ham(x,y)<=6)).length>=Math.max(1,Math.ceil(sm.length*.6));};
+    const par=items.map((_,i)=>i),f=x=>par[x]===x?x:(par[x]=f(par[x]));
+    for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++)if(items[i].pid!==items[j].pid&&same(items[i].h,items[j].h))par[f(i)]=f(j);
+    const gm=new Map();items.forEach((it,i)=>{const r=f(i);gm.set(r,[...(gm.get(r)||[]),it]);});
+    const cross=[...gm.values()].filter(g=>new Set(g.map(x=>x.pid)).size>1).sort((a,b)=>b.length-a.length);
+    $('aCross').innerHTML=new Set(done.map(r=>r.page_id)).size>1?`<div class="box"><details ${cross.length?'open':''}><summary>🧩 نفس الصور بأكثر من صفحة (${cross.length}) — بين ${new Set(done.map(r=>r.page_id)).size} صفحة مفحوصة</summary>${cross.length?cross.slice(0,40).map(g=>`<div class="grp"><div style="font-size:13px">${new Set(g.map(x=>x.pid)).size} صفحات: ${[...new Set(g.map(x=>x.page))].map(esc).join('، ')}</div>${pcards(g.sort((a,b)=>a.at.localeCompare(b.at)).map(p=>({...p,thumb:(p.imgs||[]).find(im=>g.some(q=>q!==p&&q.h.some(h=>ham(h,im.h)<=6)))?.src||p.thumb})))}</div>`).join(''):'<div class="muted">ماكو صور مشتركة بين الصفحات المفحوصة.</div>'}</details></div>`:'';
+  } else $('aCross').innerHTML='';
+}
+document.addEventListener('click',async e=>{
+  const tb=e.target.closest('[data-tab]'),ag=e.target.closest('[data-ag]'),ap=e.target.closest('[data-ap]'),ac=e.target.closest('[data-acancel]');
+  if(tb){setTab(tb.dataset.tab);return;}
+  if(ag){const v=ag.dataset.ag;if(v==='__clear')aSel.clear();else pages.filter(p=>v==='__all'||p.wa_group===v).forEach(p=>aSel.add(p.id));lsSet('aSel',JSON.stringify([...aSel]));renderPicker();return;}
+  if(ap){const id=ap.dataset.ap;aSel.has(id)?aSel.delete(id):aSel.add(id);lsSet('aSel',JSON.stringify([...aSel]));renderPicker();return;}
+  if(ac){await callAudit({action:'cancel',id:ac.dataset.acancel});loadRuns();}
+  const rm=e.target.closest('[data-rm]'),rmok=e.target.closest('[data-rmok]'),rmno=e.target.closest('[data-rmno]');
+  if(rm){const i=+rm.dataset.rm,o=RM[i],box=document.querySelector(`[data-rmbox="${i}"]`);rm.disabled=true;rm.textContent='يتأكد من الصورة...';
+    try{const j=await callAudit({action:'photo',dry:true,page_id:o.pid,link:o.link,post_id:o.id,src:o.src,n:o.n});
+      // Facebook lets an app delete only the photos it uploaded itself: posts made by hand open on the exact photo instead
+      const sysPost=/^منظومة النشر/.test(o.by||''),photoUrl=`https://www.facebook.com/photo/?fbid=${j.photo_id}`;
+      box.innerHTML=sysPost
+        ?`<div class="rmask"><b style="color:var(--red)">تحذف الصورة ${j.n} من ${j.count} من المنشور؟</b>${j.only?'<span style="color:var(--red)">⚠️ هي الصورة الوحيدة بالمنشور — يبقى المنشور بدون صورة.</span>':'<span>بقية الصور والمنشور يبقون.</span>'}<span class="muted">الحذف من فيسبوك نهائي.</span><div class="row"><button class="rm" data-rmok="${i}">✔ احذف</button><button class="sm line" data-rmno="${i}">إلغاء</button></div></div>`
+        :`<div class="rmask"><a class="open" href="${photoUrl}" target="_blank" rel="noopener" style="background:var(--red-soft);color:var(--red);border-color:var(--red)">📷 افتح الصورة ${j.n} من ${j.count} مباشرة</a><span class="muted">بعدين من «…» فوگ الصورة ← «حذف الصورة». المنشور ينزل يدوي، فيسبوك ما يسمح نحذفه من هنا.</span><button class="sm line" data-rmdone="${i}">✔ حذفتها</button></div>`;}
+    catch(er){box.innerHTML=`<div class="rmask"><span style="color:var(--red)">ما گدرت ألگه: ${esc(er.message)}</span><span class="muted">افتح المنشور واحذفها يدوياً.</span></div>`;}
+    return;}
+  const rmdone=e.target.closest('[data-rmdone]');
+  if(rmdone){const i=+rmdone.dataset.rmdone,o=RM[i];rmdone.disabled=true;
+    try{await callAudit({action:'photo_done',page_id:o.pid,link:o.link,post_id:o.id,src:o.src});toast('انسجلت محذوفة ✔');loadRuns();}catch(er){toast(er.message==='still_there'?'الصورة بعدها موجودة بالمنشور — احذفها من فيسبوك أول':'خطأ: '+er.message,6000);rmdone.disabled=false;}
+    return;}
+  if(rmno){const i=+rmno.dataset.rmno;document.querySelector(`[data-rmbox="${i}"]`).innerHTML=`<button class="rm" data-rm="${i}">🗑 حذف هالصورة</button>`;return;}
+  if(rmok){const i=+rmok.dataset.rmok,o=RM[i],box=document.querySelector(`[data-rmbox="${i}"]`);rmok.disabled=true;rmok.textContent='يحذف...';
+    try{await callAudit({action:'photo',page_id:o.pid,link:o.link,post_id:o.id,src:o.src,n:o.n});toast('انحذفت الصورة من المنشور ✔');loadRuns();}
+    catch(er){box.innerHTML=`<div class="rmask"><span style="color:var(--red)">فيسبوك رفض الحذف: ${esc(er.message)}</span><span class="muted">افتح المنشور واحذفها يدوياً.</span></div>`;}
+    return;}
+});
+['aFrom','aTo'].forEach(id=>$(id).addEventListener('change',renderPicker));
+async function callAudit(body){const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SB_URL}/functions/v1/post-audit`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify(body)});const j=await r.json();if(j.error)throw new Error(j.error);return j;}
+$('aStart').onclick=async()=>{
+  const ids=[...aSel].filter(id=>pages.some(p=>p.id===id));if(!ids.length)return;
+  const brand=tab==='brand';
+  if(brand&&!confirmBrand(ids.length))return;
+  $('aStart').disabled=true;
+  try{const j=await callAudit({action:'start',kind:brand?'brand':'dup',page_ids:ids,since:$('aFrom').value,until:$('aTo').value,gap_days:+$('aGap').value||10});
+    const sk=(j.skipped||[]).map(pname),tr=(j.trimmed||[]).map(t=>`${pname(t.page_id)} (${dS(t.since)} ← ${dS(t.until)})`);
+    toast([j.started?`بدأ فحص ${j.started} صفحة. يشتغل بالخادم، تكدر تسكّر الصفحة وترجع.`:'ماكو شي جديد ينفحص.',sk.length?`مفحوصة سابقاً وما انعادت: ${sk.join('، ')}.`:'',tr.length?`انفحصت بس الأيام الجديدة: ${tr.join('، ')}.`:''].filter(Boolean).join(' '),j.started?6000:9000);loadRuns();}
+  catch(er){toast('خطأ: '+(er.message==='max_92_days'?'أقصى فترة 92 يوم':er.message==='bad_dates'?'التواريخ غلط':er.message),6000);}
+  renderPicker();
+};
+// a light confirmation inside the page (no browser dialogs): second press within 6 s starts the brand check
+let brandArm=0;function confirmBrand(n){if(Date.now()-brandArm<6000){brandArm=0;return true;}brandArm=Date.now();toast(`فحص البراند يصرف ذكاء صناعي على الصور الجديدة (${n} صفحة). اضغط «ابدأ» مرة ثانية للتأكيد.`,6000);return false;}
+
+start();
+// ---------- posting activity ----------
+let ACT=null,TGT=new Map(),xLv=lsGet('actLv','all');
+const xMin=()=>{const v=$('xMin').value;return v===''?4:Math.max(0,+v);};
+const tgtOf=id=>TGT.has(id)?TGT.get(id):xMin();
+const xGapM=()=>{const v=$('xGapM').value;return v===''?40:Math.max(0,+v);};
+// posts too close together in one day: how many pairs, and the smallest distance in minutes
+function closeOf(times){const lim=xGapM()*6e4;let n=0,min=null;const pairs=[];for(let i=1;i<(times||[]).length;i++){const d=times[i]-times[i-1];if(min===null||d<min)min=d;if(lim&&d<=lim){n++;pairs.push([times[i-1],times[i]]);}}return{n,min:min===null?null:Math.round(min/6e4),pairs};}
+// English digits for times and dates in the activity report (easier to read in WhatsApp)
+const tAr=t=>{if(!t)return'—';const d=new Date(t),h=d.getHours(),m=d.getMinutes();return`${h%12||12}${m?':'+String(m).padStart(2,'0'):''}${h<12?'ص':'م'}`;};
+const dayAr=d=>new Date(d+'T12:00:00').toLocaleDateString('ar-IQ-u-nu-latn',{weekday:'long',day:'numeric',month:'long'});
+// the last business day that has ended (a day runs 08:00 -> 01:00): at 04:00 or at 10:00 on the 6th it is the 5th
+const bizDay=(back=1)=>dISO(new Date(Date.now()-36e5-back*864e5));
+const LVI={r:'🔴',o:'🟠',g:'🟢',x:'⚪'};
+function actInit(){
+  if(!$('xFrom').value){$('xTo').value=bizDay(1);$('xFrom').value=bizDay(1);}
+  if($('xMin').value==='')$('xMin').value=lsGet('actMin','4');
+  if($('xGapM').value==='')$('xGapM').value=lsGet('actGap','40');
+  const groups=[...new Set(pages.map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cur=$('xGrp').value||lsGet('actGrp','__all');
+  $('xGrp').innerHTML=`<option value="__all">كل الكروبات</option>${groups.map(g=>`<option ${g===cur?'selected':''}>${esc(g)}</option>`).join('')}`;
+  if(!ACT)loadAct();else renderAct();
+}
+async function loadAct(){
+  $('xOut').innerHTML='<div class="muted">يجيب أوقات المنشورات من كل الصفحات... (نص دقيقة تقريباً)</div>';$('xGo').disabled=true;
+  try{const{data:{session}}=await sb.auth.getSession();
+    const[r,t]=await Promise.all([fetch(`${SB_URL}/functions/v1/page-activity`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({since:$('xFrom').value,until:$('xTo').value})}).then(x=>x.json()),
+      sb.from('activity_targets').select('page_id,daily_target')]);
+    if(r.error)throw new Error(r.error==='max_31_days'?'أقصى فترة 31 يوم':r.error);
+    TGT=new Map((t.data||[]).map(x=>[x.page_id,x.daily_target]));ACT=r;renderAct();}
+  catch(e){$('xOut').innerHTML=`<div style="color:var(--red)">خطأ: ${esc(e.message)}</div>`;}
+  $('xGo').disabled=false;
+}
+// one page over the chosen days: level, totals, days short of its target
+function evalPage(p){
+  const days=ACT.days,tg=tgtOf(p.id);
+  if(p.err)return{lv:'x',err:true,tg,n:0,sys:0,man:0,zero:0,low:0,close:0,closeDays:0,minM:null,out:0,outT:[],days:{},dc:{}};
+  let n=0,sys=0,zero=0,low=0,close=0,closeDays=0,minM=null,out=0;const outT=[];const dl={},dc={};
+  for(const d of days){const x=p.days[d];if(!x)continue;const c=x.fb.n;n+=c;sys+=Math.min(c,x.sys||0);
+    const cl=closeOf(x.fb.times);dc[d]=cl;if(cl.n){close+=cl.n;closeDays++;}if(cl.min!==null&&(minM===null||cl.min<minM))minM=cl.min;
+    const o=x.fb.out||0;out+=o;outT.push(...(x.fb.out_times||[]));
+    const l=tg===0?'x':(!x.fb.open?'x':(c===0||cl.n||o)?'r':c<tg?'o':'g');dl[d]=l;if(c===0&&tg&&x.fb.open)zero++;else if(l==='o')low++;}
+  const lv=tg===0?'x':(zero||close||out)?'r':low?'o':'g';
+  return{lv,tg,n,sys,man:n-sys,zero,low,close,closeDays,minM,out,outT,days:dl,dc};
+}
+function actList(){
+  if(!ACT)return[];const g=$('xGrp').value,q=$('xQ').value.trim();
+  let list=ACT.pages.filter(p=>(g==='__all'||p.wa_group===g)&&(!q||p.name.includes(q))).map(p=>({p,e:evalPage(p)}));
+  const rank={r:0,o:1,g:2,x:3},srt=$('xSort').value;
+  list.sort((a,b)=>srt==='name'?a.p.name.localeCompare(b.p.name,'ar'):srt==='most'?b.e.n-a.e.n:srt==='manual'?a.e.man-b.e.man:(rank[a.e.lv]-rank[b.e.lv]||a.e.n-b.e.n));
+  return list;
+}
+function renderAct(){
+  if(!ACT)return;const days=ACT.days,one=days.length===1;
+  const all=actList(),cnt={r:0,o:0,g:0,x:0};all.forEach(x=>cnt[x.e.lv]++);
+  $('xFilt').innerHTML=[['all',`الكل ${all.length}`,''],['bad',`⚠️ بيها مشكلة ${cnt.r+cnt.o}`,'red'],['r',`🔴 ${cnt.r}`,'red'],['o',`🟠 ${cnt.o}`,'org'],['g',`🟢 ${cnt.g}`,'grn']]
+    .map(([v,l,c])=>`<button class="chip ${xLv===v?'on':''}" data-xlv="${v}">${l}</button>`).join('');
+  const list=all.filter(x=>xLv==='all'||(xLv==='bad'?(x.e.lv==='r'||x.e.lv==='o'):x.e.lv===xLv));
+  // send buttons: one per group that has a problem in this period
+  const byG=new Map();for(const x of all)if(x.e.lv==='r'||x.e.lv==='o'){const k=x.p.wa_group||'بدون كروب';byG.set(k,(byG.get(k)||0)+1);}
+  $('xSend').innerHTML=byG.size?[...byG].sort((a,b)=>b[1]-a[1]).map(([g,n])=>`<button class="sm" data-xsend="${esc(g)}">${esc(g)} <span class="pill red">${n}</span></button>`).join(''):'<span class="pill grn">✅ ماكو مشاكل بالمعروض</span>';
+  const nClose=all.filter(x=>x.e.close&&x.e.lv!=='x').length,nOut=all.filter(x=>x.e.out&&x.e.lv!=='x').length;
+  $('xSend2').innerHTML=(nClose?`<button class="sm" data-xclose="1" style="background:var(--red-soft);color:var(--red);border-color:var(--red)">⏱️ تنبيه المنشورات المتقاربة <span class="pill red">${nClose}</span></button>`:'')+(nOut?`<button class="sm" data-xout="1" style="background:var(--red-soft);color:var(--red);border-color:var(--red)">🌙 تنبيه خارج الدوام <span class="pill red">${nOut}</span></button>`:'');
+  const tgIn=(x)=>`<input type="number" min="0" max="50" value="${x.e.tg}" data-xtgt="${x.p.id}" style="width:56px" title="المطلوب باليوم لهالصفحة">`;
+  let html;
+  if(one){const d=days[0];
+    html=`<table class="xt"><tr><th>الصفحة</th><th>الكروب</th><th>المطلوب</th><th>فيسبوك</th><th>🤖 المنظومة</th><th>✋ يدوي</th><th>انستكرام</th><th>أقل فرق بين المنشورات اليدوية</th><th>🌙 خارج الدوام (يدوي)</th><th>أوقات المنشورات</th><th>أطول فترة بدون نشر</th><th>تنبيه</th></tr>${list.map(x=>{
+      const p=x.p;if(p.err)return`<tr><td>⚠️ ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td colspan="9" style="color:var(--red);text-align:start">${esc(p.err)}</td></tr>`;
+      const y=p.days[d],l=x.e.days[d]||'x',cl=x.e.dc[d]||{n:0,min:null};
+      return`<tr class="${cl.n||y.fb.out?'rowbad':''}"><td>${LVI[l]} ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td class="${l==='x'?'':l}">${y.fb.n}</td><td>${Math.min(y.fb.n,y.sys||0)}</td><td><b>${Math.max(0,y.fb.n-(y.sys||0))}</b></td><td>${y.ig?y.ig.n:'—'}</td><td class="${cl.n?'cl':''}">${cl.min===null?'—':cl.min+' د'}${cl.n?`<small>⏱️ ${cl.n} مرة أقل من ${xGapM()} د</small>`:''}</td><td class="${y.fb.out?'cl':''}">${y.fb.out?`${y.fb.out}<small>${(y.fb.out_times||[]).map(tAr).join('، ')}</small>`:'—'}${y.fb.sys_out?`<small>🤖 ${y.fb.sys_out} من المنظومة (ما تنحسب)</small>`:''}</td><td>${timeLine(y.fb)}</td><td>${y.fb.open?y.fb.gap_h+' س':'—'}</td><td>${alertBtn(x)}</td></tr>`;}).join('')}</table>`;
+  }else{
+    html=`<table class="xt"><tr><th>الصفحة</th><th>المطلوب</th>${days.map(d=>`<th>${dS(d)}</th>`).join('')}<th>المجموع</th><th>🤖 / ✋</th><th>أيام ناقصة</th><th>⏱️ متقاربة</th><th>🌙 خارج الدوام</th><th>تنبيه</th></tr>${list.map(x=>{const p=x.p;
+      return`<tr class="${x.e.close||x.e.out?'rowbad':''}"><td>${LVI[x.e.lv]} ${esc(p.name)}</td><td>${tgIn(x)}</td>${days.map(d=>{if(p.err)return'<td class="muted">⚠️</td>';const y=p.days[d],l=x.e.days[d]||'x',cl=x.e.dc[d]||{n:0};return y?`<td class="${l==='x'?'':l}">${y.fb.n}${cl.n?' ⏱️':''}${y.fb.out?' 🌙':''}${y.ig?`<small>انستا ${y.ig.n}</small>`:''}</td>`:'<td></td>';}).join('')}<td><b>${x.e.n}</b></td><td>${x.e.sys} / ${x.e.man}</td><td>${x.e.zero+x.e.low?`<b style="color:var(--red)">${x.e.zero+x.e.low}</b>`:'—'}</td><td class="${x.e.close?'cl':''}">${x.e.close?`${x.e.close} مرة (أقل فرق ${x.e.minM} د)`:'—'}</td><td class="${x.e.out?'cl':''}">${x.e.out||'—'}</td><td>${alertBtn(x)}</td></tr>`;}).join('')}</table>`;
+  }
+  $('xOut').innerHTML=list.length?html:'<div class="muted">ماكو صفحات بهالفلتر.</div>';
+}
+// ---------- alert messages (the threshold is never written: they get the purpose, not the rule) ----------
+const SIG='📊 _الصفحات صارت تحت نظام مراقبة يومي، والتقرير يوصل للإدارة كل يوم._';
+const WHY_CLOSE='المنشورات اللي تنزل ورا بعض فيسبوك يقلل وصولها، والزبونة تشوف وحدة وتفوتها البقية. النشر الموزع على اليوم يوصل لأكثر زبائن.';
+const WHY_OUT='المنشور اللي ينزل بالليل (بعد 1 بالليل وقبل 8 الصبح) محد يشوفه، الزبائن نايمين، فيروح بلاش وما ينحسب ضمن العدد اليومي.';
+const periodAr=()=>{const d=ACT.days;return d.length===1?dayAr(d[0]):dS(d[0])+' ← '+dS(d[d.length-1]);};
+const pairAr=pr=>`${tAr(pr[0])} و ${tAr(pr[1])}`;
+// every post of the day as a small chip: red = outside business hours, orange = went up right after another hand-made post, faded 🤖 = the publishing system
+function timeLine(fb){const L=fb.list||[];if(!L.length)return'—';const lim=xGapM()*6e4,man=L.filter(x=>!x.s&&!x.o).map(x=>x.t),close=new Set();
+  for(let i=1;i<man.length;i++)if(lim&&man[i]-man[i-1]<=lim){close.add(man[i-1]);close.add(man[i]);}
+  return`<div class="tl">${L.map(x=>`<span class="${x.o&&!x.s?'o':close.has(x.t)?'c':x.s?'s':''}" title="${x.s?'منظومة النشر':'يدوي'}${x.o?' • خارج الدوام':''}">${x.s?'🤖':''}${tAr(x.t)}</span>`).join('')}</div>`;}
+// runs of posts that went up one after another: «من ٢:٠٠ لـ ٤:٠٠ نزلت 9 منشورات»
+function bursts(times){const lim=xGapM()*6e4,out=[];let cur=null;
+  for(let i=1;i<(times||[]).length;i++){if(times[i]-times[i-1]<=lim){if(!cur){cur=[times[i-1]];out.push(cur);}cur.push(times[i]);}else cur=null;}
+  return out.map(b=>b.length===2?`${tAr(b[0])} و ${tAr(b[1])}`:`من ${tAr(b[0])} لـ ${tAr(b[b.length-1])} نزلت ${b.length} منشورات ورا بعض`);}
+function alertBtn(x){if(x.p.err||x.e.lv==='x'||x.e.lv==='g')return'';return`<button class="sm line" data-xalert="${x.p.id}" title="تنبيه لهالصفحة">📤</button>`;}
+function pageAlert(id){
+  const x=actList().find(y=>y.p.id===id);if(!x)return'';const p=x.p,e=x.e,days=ACT.days,one=days.length===1;
+  const L=['*📋 تنبيه من نظام مراقبة الصفحات*',`📄 *الصفحة:* ${p.name}`,`📅 *${one?'اليوم':'الفترة'}:* ${periodAr()}`,'','*الملاحظات:*'];
+  if(one){const y=p.days[days[0]].fb,cl=e.dc[days[0]]||{n:0,pairs:[]};
+    if(y.n===0)L.push(`🔻 ما نزل ولا منشور خلال الدوام (المطلوب ${e.tg} باليوم)`);else if(y.n<e.tg)L.push(`🔻 نزل ${y.n} منشور من أصل ${e.tg} مطلوبة`);
+    if(cl.n)L.push(`⏱️ منشورات نزلت ورا بعض: ${bursts(y.times).join(' • ')}`);
+    if(y.out)L.push(`🌙 ${y.out===1?'منشور نزل':y.out+' منشورات نزلت'} خارج الدوام الساعة ${(y.out_times||[]).map(tAr).join('، ')} — ما ينحسب`);
+  }else{
+    if(e.zero)L.push(`🔻 ${e.zero} يوم ما نزل بيه ولا منشور`);if(e.low)L.push(`🔻 ${e.low} يوم نزل بيه أقل من ${e.tg} منشورات`);
+    if(e.close)L.push(`⏱️ منشورات نزلت ورا بعض ${e.close} مرة خلال الفترة`);if(e.out)L.push(`🌙 ${e.out} منشور نزل خارج الدوام — ما ينحسب`);
+  }
+  L.push('','━━━━━━━━━━','💡 *ليش هذا مهم؟*');
+  if(e.close)L.push('• '+WHY_CLOSE);if(e.out)L.push('• '+WHY_OUT);if(e.zero||e.low)L.push('• العدد اليومي هو اللي يخلي الصفحة حية ويجيب طلبات كل يوم.');
+  L.push('',`✅ *المطلوب:* الالتزام بـ${e.tg} منشورات باليوم، موزعة على ساعات الدوام (8 الصبح ← 1 بالليل).`,'يرجى بيان السبب بالرد على هالرسالة 🌷','',SIG);
+  return L.join('\n');
+}
+function closeAlert(){
+  const list=actList().filter(x=>x.e.close&&x.e.lv!=='x'),one=ACT.days.length===1;
+  const L=['*⏱️ تنبيه من نظام مراقبة الصفحات*','*منشورات نازلة ورا بعض*',`📅 ${periodAr()}`,'','الصفحات التالية نزلت منشورات ورا بعض بدون فاصل كافي بيناتها:',''];
+  for(const x of list){const cl=one?(x.e.dc[ACT.days[0]]||{pairs:[]}):null;L.push(`🔴 *${x.p.name}* — ${x.e.close} ${x.e.close===1?'مرة':'مرات'}${one?`: ${bursts(x.p.days[ACT.days[0]].fb.times).slice(0,3).join(' • ')}`:''}`);}
+  L.push('','━━━━━━━━━━','💡 *ليش هذا مهم؟*',WHY_CLOSE,'','✅ *المطلوب:* ترك فاصل مناسب بين منشور ومنشور، وتوزيع المنشورات على كل ساعات الدوام بدل ما تنزل سوية.','يرجى من المسؤولة عن كل صفحة بيان السبب 🌷','',SIG);
+  return L.join('\n');
+}
+function outAlert(){
+  const list=actList().filter(x=>x.e.out&&x.e.lv!=='x'),one=ACT.days.length===1;
+  const L=['*🌙 تنبيه من نظام مراقبة الصفحات*','*منشورات خارج أوقات الدوام*',`📅 ${periodAr()}`,'','الصفحات التالية نزلت منشورات خارج الدوام:',''];
+  for(const x of list)L.push(`🔴 *${x.p.name}* — ${x.e.out} ${x.e.out===1?'منشور':'منشورات'}${one?` (الساعة ${x.e.outT.map(tAr).join('، ')})`:''}`);
+  L.push('','━━━━━━━━━━','💡 *ليش هذا مهم؟*',WHY_OUT,'','✅ *المطلوب:* النشر بس خلال الدوام من 8 الصبح لحد 1 بالليل. المنشورات خارج هالوقت ما تنحسب ضمن العدد اليومي.','يرجى من المسؤولة عن كل صفحة بيان السبب 🌷','',SIG);
+  return L.join('\n');
+}
+// the WhatsApp report of one group: only the pages with a problem, asking for the reason
+function actText(group){
+  if(!ACT)return'';const days=ACT.days,one=days.length===1;
+  const list=actList().filter(x=>(group==='__all'||(x.p.wa_group||'بدون كروب')===group)&&(x.e.lv==='r'||x.e.lv==='o'));
+  const L=['*📊 تقرير نظام مراقبة الصفحات*',`📅 ${one?dayAr(days[0]):dS(days[0])+' ← '+dS(days[days.length-1])}`];
+  if(group!=='__all')L.push(`*الكروب: ${group}*`);
+  L.push('الدوام: 8 الصبح ← 1 بالليل','');
+  if(!list.length){L.push('✅ كل الصفحات نزلت العدد المطلوب. عاشت ايدكم 🌷');return L.join('\n');}
+  for(const x of list){const p=x.p;
+    const clTxt=(x.e.close?` • ⏱️ منشورات ورا بعض: ${x.e.close} ${x.e.close===1?'مرة':'مرات'}`:'')+(x.e.out?` • 🌙 ${x.e.out} منشور خارج الدوام${one?` (${x.e.outT.map(tAr).join('، ')})`:''} — ما ينحسب`:'');
+    if(one){const y=p.days[days[0]].fb;L.push(`${LVI[x.e.lv]} *${p.name}* — ${y.n===0?`ما نزلت ولا منشور (المطلوب ${x.e.tg})`:(y.n>=x.e.tg?`${y.n} منشورات`:`${y.n} من ${x.e.tg} منشورات`)}${clTxt}${y.n&&y.gap_h>=5?` • ${y.gap_h} ساعة بدون نشر`:''}`);}
+    else L.push(`${LVI[x.e.lv]} *${p.name}* — ${x.e.n} منشور بالفترة • ${x.e.zero?`${x.e.zero} يوم بدون نشر`:''}${x.e.zero&&x.e.low?' + ':''}${x.e.low?`${x.e.low} يوم أقل من ${x.e.tg}`:''}${clTxt}`);
+  }
+  L.push('','━━━━━━━━━━','💡 *ليش هذا مهم؟*','• العدد اليومي هو اللي يخلي الصفحة حية ويجيب طلبات.','• '+WHY_CLOSE,'• '+WHY_OUT,'','✅ *المطلوب:* الالتزام بالعدد اليومي، وتوزيع المنشورات على ساعات الدوام (8 الصبح ← 1 بالليل).','*يرجى من المسؤولة عن كل صفحة بيان السبب بالرد على هالرسالة* 🌷','',SIG);
+  return L.join('\n');
+}
+$('xGo').onclick=loadAct;
+$('xYest').onclick=()=>{$('xFrom').value=bizDay(1);$('xTo').value=bizDay(1);loadAct();};
+$('xGrp').onchange=()=>{lsSet('actGrp',$('xGrp').value);renderAct();};
+$('xSort').onchange=renderAct;$('xQ').oninput=renderAct;
+$('xMin').onchange=()=>{lsSet('actMin',String(xMin()));renderAct();};
+$('xGapM').onchange=()=>{lsSet('actGap',String(xGapM()));renderAct();};
+$('xCopy').onclick=async()=>{if(!ACT)return toast('اضغط «عرض» أول');try{await navigator.clipboard.writeText(actText($('xGrp').value));toast('انسخ التقرير');}catch(_){toast('ما انسخ، استخدم زر الكروب');}};
+document.addEventListener('click',e=>{
+  const f=e.target.closest('[data-xlv]');if(f){xLv=f.dataset.xlv;lsSet('actLv',xLv);renderAct();return;}
+  const sd=e.target.closest('[data-xsend]');if(sd){openWa(actText(sd.dataset.xsend));return;}
+  const xa=e.target.closest('[data-xalert]');if(xa){openWa(pageAlert(xa.dataset.xalert));return;}
+  if(e.target.closest('[data-xclose]')){openWa(closeAlert());return;}
+  if(e.target.closest('[data-xout]')){openWa(outAlert());return;}
+});
+// a page's own daily target, saved for everyone
+document.addEventListener('change',async e=>{
+  const t=e.target.closest('[data-xtgt]');if(!t)return;const v=Math.max(0,Math.min(50,+t.value||0)),id=t.dataset.xtgt;
+  const{error}=await sb.from('activity_targets').upsert({page_id:id,daily_target:v,updated_at:new Date().toISOString()});
+  if(error)return toast('ما انحفظ: '+error.message,5000);TGT.set(id,v);toast(`المطلوب لـ${pname(id)}: ${v} باليوم`);renderAct();
+});
+</script>
+</body>
+</html>
