@@ -524,8 +524,9 @@ const tgtOf=id=>TGT.has(id)?TGT.get(id):xMin();
 const xGapM=()=>{const v=$('xGapM').value;return v===''?40:Math.max(0,+v);};
 // posts too close together in one day: how many pairs, and the smallest distance in minutes
 function closeOf(times){const lim=xGapM()*6e4;let n=0,min=null;const pairs=[];for(let i=1;i<(times||[]).length;i++){const d=times[i]-times[i-1];if(min===null||d<min)min=d;if(lim&&d<=lim){n++;pairs.push([times[i-1],times[i]]);}}return{n,min:min===null?null:Math.round(min/6e4),pairs};}
-const tAr=t=>t?new Date(t).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'}):'—';
-const dayAr=d=>new Date(d+'T12:00:00').toLocaleDateString('ar-IQ',{weekday:'long',day:'numeric',month:'long'});
+// English digits for times and dates in the activity report (easier to read in WhatsApp)
+const tAr=t=>t?new Date(t).toLocaleTimeString('ar-IQ-u-nu-latn',{hour:'numeric',minute:'2-digit'}):'—';
+const dayAr=d=>new Date(d+'T12:00:00').toLocaleDateString('ar-IQ-u-nu-latn',{weekday:'long',day:'numeric',month:'long'});
 // the last business day that has ended (a day runs 08:00 -> 01:00): at 04:00 or at 10:00 on the 6th it is the 5th
 const bizDay=(back=1)=>dISO(new Date(Date.now()-36e5-back*864e5));
 const LVI={r:'🔴',o:'🟠',g:'🟢',x:'⚪'};
