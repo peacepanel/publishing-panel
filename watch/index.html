@@ -115,9 +115,13 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
 
 <div id="loginBox" class="box login stack" hidden>
   <h2 style="margin:0;font-family:var(--display)">تسجيل الدخول</h2>
+  <button id="gBtn" type="button" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;color:#1f1f1f;border:1px solid #dadce0;font-weight:600"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" style="vertical-align:middle"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.2 5.6c4.2-3.9 7.1-9.6 7.1-16.9z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2 1.4-4.7 2.3-8.7 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg> الدخول بحساب Google</button>
+  <div id="loginMsg" class="muted"></div>
+  <button id="swBtn" class="line" hidden>دخول بحساب ثاني</button>
+  <details><summary class="muted" style="font-size:13px;cursor:pointer">الدخول بكلمة السر</summary><div class="stack" style="gap:8px;margin-top:8px">
   <input id="email" type="email" placeholder="البريد" autocomplete="username">
   <input id="pass" type="password" placeholder="كلمة المرور" autocomplete="current-password">
-  <button id="loginBtn">دخول</button><div id="loginMsg" class="muted"></div>
+  <button id="loginBtn">دخول</button></div></details>
 </div>
 
 <main id="app" class="wrap stack" hidden>
@@ -210,12 +214,15 @@ async function start(){
   if(!session){$('loginBox').hidden=false;$('app').hidden=true;return;}
   // an admin, or a supervisor who may use the monitor only (monitor_users)
   const{data:okMon}=await sb.rpc('am_monitor');
-  if(!okMon){$('loginBox').hidden=false;$('loginMsg').textContent='هذا الحساب ما عنده صلاحية على نظام المراقبة.';return;}
+  if(!okMon){$('loginBox').hidden=false;$('app').hidden=true;$('loginMsg').textContent=`الحساب ${session.user.email} ما عنده صلاحية (لازم يكون بعمود «ايميل الادمن» بالشيت).`;$('swBtn').hidden=false;return;}
   // the link back to the publishing panel only for its admins
   const{data:adm}=await sb.from('admins').select('email').limit(1);if(STANDALONE||!adm||!adm.length)$('pubLink').hidden=true;
   $('loginBox').hidden=true;$('app').hidden=false;
   $('ymin').value=YMIN;$('rmin').value=RMIN;await load();setInterval(load,60000);setTab(tab);
 }
+// Google sign-in: access itself comes from the management column of the team sheet (synced to admins every 5 minutes)
+$('gBtn').onclick=async()=>{$('loginMsg').textContent='...';const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,queryParams:{prompt:'select_account'}}});if(error)$('loginMsg').textContent='خطأ: '+error.message;};
+$('swBtn').onclick=async()=>{await sb.auth.signOut();location.reload();};
 $('loginBtn').onclick=async()=>{$('loginMsg').textContent='...';const{error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});$('loginMsg').textContent=error?('خطأ: '+error.message):'';if(!error)start();};
 
 async function load(){
