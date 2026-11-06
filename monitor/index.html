@@ -139,17 +139,23 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
     <div id="aRuns" class="stack"></div>
   </section>
   <section id="tab_act" class="stack" hidden>
-    <div class="tip">كم منشور نزلت كل صفحة باليوم خلال الدوام (8 الصبح ← 1 بالليل)، فيسبوك وانستكرام. المنشور بين 1 و8 الصبح ينحسب «خارج الدوام» على اليوم اللي قبله. «أطول فترة بدون نشر» = أطول وقت بالدوام ما نزل بيه شي. 🔴 ما نزلت شي • 🟠 أقل من المطلوب • 🟢 تمام.</div>
+    <div class="tip">كم منشور نزلت كل صفحة باليوم خلال الدوام (8 الصبح ← 1 بالليل). كل صفحة إلها <b>العدد المطلوب</b> باليوم (تكدر تغيره من الجدول، و0 = الصفحة ما مطلوب منها نشر). 🔴 ما نزلت شي • 🟠 أقل من المطلوب • 🟢 تمام. زر الكروب يرسل للواتساب الصفحات اللي بيها مشكلة بس، ويطلب بيان السبب.</div>
     <div class="box stack" style="gap:10px">
       <div class="row">
         <span class="muted" style="font-size:13px">من</span><input type="date" id="xFrom">
         <span class="muted" style="font-size:13px">إلى</span><input type="date" id="xTo">
-        <select id="xGrp"></select>
-        <span class="row muted" style="font-size:13px;gap:4px">المطلوب باليوم <input id="xMin" type="number" min="1" max="50" style="width:60px"> منشور</span>
+        <button class="sm line" id="xYest">أمس</button>
+        <span class="row muted" style="font-size:13px;gap:4px">المطلوب الافتراضي <input id="xMin" type="number" min="0" max="50" style="width:60px"> منشور</span>
         <span class="sp" style="flex:1"></span>
         <button id="xGo">🔄 عرض</button>
       </div>
-      <div class="row" style="gap:6px"><span id="xSum" class="row" style="gap:6px"></span><span class="sp" style="flex:1"></span><button class="sm" id="xCopy">📋 نسخ التقرير</button><button class="sm line" id="xWa">واتساب</button></div>
+      <div class="row" style="gap:6px">
+        <select id="xGrp"></select>
+        <span id="xFilt" class="row" style="gap:6px"></span>
+        <input id="xQ" placeholder="🔎 اسم الصفحة" style="width:150px">
+        <select id="xSort"><option value="bad">الأسوأ أول</option><option value="name">الاسم</option><option value="most">الأكثر نشر</option><option value="manual">الأقل يدوي</option></select>
+      </div>
+      <div class="row" style="gap:6px;align-items:center"><b style="font-size:13px">📤 إرسال للكروب:</b><span id="xSend" class="row" style="gap:6px"></span><span class="sp" style="flex:1"></span><button class="sm line" id="xCopy">📋 نسخ</button></div>
     </div>
     <div id="xOut" class="box" style="overflow-x:auto"><div class="muted">اختار الفترة واضغط «عرض».</div></div>
   </section>
@@ -510,68 +516,101 @@ let brandArm=0;function confirmBrand(n){if(Date.now()-brandArm<6000){brandArm=0;
 
 start();
 // ---------- posting activity ----------
-let ACT=null;const xMin=()=>Math.max(1,+$('xMin').value||3);
+let ACT=null,TGT=new Map(),xLv=lsGet('actLv','all');
+const xMin=()=>{const v=$('xMin').value;return v===''?4:Math.max(0,+v);};
+const tgtOf=id=>TGT.has(id)?TGT.get(id):xMin();
 const tAr=t=>t?new Date(t).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'}):'—';
 const dayAr=d=>new Date(d+'T12:00:00').toLocaleDateString('ar-IQ',{weekday:'long',day:'numeric',month:'long'});
+const bizDay=(back=0)=>dISO(new Date(Date.now()-8*36e5-back*864e5));
+const LVI={r:'🔴',o:'🟠',g:'🟢',x:'⚪'};
 function actInit(){
-  if(!$('xFrom').value){const bd=new Date(Date.now()-8*36e5);$('xTo').value=dISO(bd);$('xFrom').value=dISO(bd);}
-  if(!$('xMin').value)$('xMin').value=lsGet('actMin','3');
+  if(!$('xFrom').value){$('xTo').value=bizDay(1);$('xFrom').value=bizDay(1);}
+  if($('xMin').value==='')$('xMin').value=lsGet('actMin','4');
   const groups=[...new Set(pages.map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
   const cur=$('xGrp').value||lsGet('actGrp','__all');
-  $('xGrp').innerHTML=`<option value="__all">كل الصفحات</option>${groups.map(g=>`<option ${g===cur?'selected':''}>${esc(g)}</option>`).join('')}`;
+  $('xGrp').innerHTML=`<option value="__all">كل الكروبات</option>${groups.map(g=>`<option ${g===cur?'selected':''}>${esc(g)}</option>`).join('')}`;
   if(!ACT)loadAct();else renderAct();
 }
 async function loadAct(){
   $('xOut').innerHTML='<div class="muted">يجيب أوقات المنشورات من كل الصفحات... (نص دقيقة تقريباً)</div>';$('xGo').disabled=true;
   try{const{data:{session}}=await sb.auth.getSession();
-    const r=await fetch(`${SB_URL}/functions/v1/page-activity`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({since:$('xFrom').value,until:$('xTo').value})});
-    const j=await r.json();if(j.error)throw new Error(j.error==='max_31_days'?'أقصى فترة 31 يوم':j.error);ACT=j;renderAct();}
+    const[r,t]=await Promise.all([fetch(`${SB_URL}/functions/v1/page-activity`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({since:$('xFrom').value,until:$('xTo').value})}).then(x=>x.json()),
+      sb.from('activity_targets').select('page_id,daily_target')]);
+    if(r.error)throw new Error(r.error==='max_31_days'?'أقصى فترة 31 يوم':r.error);
+    TGT=new Map((t.data||[]).map(x=>[x.page_id,x.daily_target]));ACT=r;renderAct();}
   catch(e){$('xOut').innerHTML=`<div style="color:var(--red)">خطأ: ${esc(e.message)}</div>`;}
   $('xGo').disabled=false;
 }
-// level of one page-day (Facebook posts count; Instagram shown beside it)
-const lvOf=c=>!c||c.err?'':c.n===0?(c.open?'r':''):c.n<xMin()?'o':'g';
-function actRows(){const g=$('xGrp').value;return(ACT?.pages||[]).filter(p=>g==='__all'||p.wa_group===g);}
+// one page over the chosen days: level, totals, days short of its target
+function evalPage(p){
+  const days=ACT.days,tg=tgtOf(p.id);
+  if(p.err)return{lv:'x',err:true,tg,n:0,sys:0,man:0,zero:0,low:0,days:{}};
+  let n=0,sys=0,zero=0,low=0;const dl={};
+  for(const d of days){const x=p.days[d];if(!x)continue;const c=x.fb.n;n+=c;sys+=Math.min(c,x.sys||0);
+    const l=tg===0?'x':(!x.fb.open?'x':c===0?'r':c<tg?'o':'g');dl[d]=l;if(l==='r')zero++;if(l==='o')low++;}
+  const lv=tg===0?'x':zero?'r':low?'o':'g';
+  return{lv,tg,n,sys,man:n-sys,zero,low,days:dl};
+}
+function actList(){
+  if(!ACT)return[];const g=$('xGrp').value,q=$('xQ').value.trim();
+  let list=ACT.pages.filter(p=>(g==='__all'||p.wa_group===g)&&(!q||p.name.includes(q))).map(p=>({p,e:evalPage(p)}));
+  const rank={r:0,o:1,g:2,x:3},srt=$('xSort').value;
+  list.sort((a,b)=>srt==='name'?a.p.name.localeCompare(b.p.name,'ar'):srt==='most'?b.e.n-a.e.n:srt==='manual'?a.e.man-b.e.man:(rank[a.e.lv]-rank[b.e.lv]||a.e.n-b.e.n));
+  return list;
+}
 function renderAct(){
-  if(!ACT)return;const rows=actRows(),days=ACT.days,one=days.length===1;
-  const cnt={r:0,o:0,g:0};
-  const cell=(p,d)=>{if(p.err)return'<td class="muted">⚠️</td>';const x=p.days[d];if(!x)return'<td></td>';const l=lvOf(x.fb);if(l)cnt[l]++;
-    return`<td class="${l}">${x.fb.n}${x.ig?` <span style="font-weight:400">/ ${x.ig.n}</span>`:''}${x.sys?`<small>🤖 ${x.sys} • ✋ ${Math.max(0,x.fb.n-x.sys)}</small>`:''}${x.fb.out?`<small>+${x.fb.out} خارج الدوام</small>`:''}</td>`;};
+  if(!ACT)return;const days=ACT.days,one=days.length===1;
+  const all=actList(),cnt={r:0,o:0,g:0,x:0};all.forEach(x=>cnt[x.e.lv]++);
+  $('xFilt').innerHTML=[['all',`الكل ${all.length}`,''],['bad',`⚠️ بيها مشكلة ${cnt.r+cnt.o}`,'red'],['r',`🔴 ${cnt.r}`,'red'],['o',`🟠 ${cnt.o}`,'org'],['g',`🟢 ${cnt.g}`,'grn']]
+    .map(([v,l,c])=>`<button class="chip ${xLv===v?'on':''}" data-xlv="${v}">${l}</button>`).join('');
+  const list=all.filter(x=>xLv==='all'||(xLv==='bad'?(x.e.lv==='r'||x.e.lv==='o'):x.e.lv===xLv));
+  // send buttons: one per group that has a problem in this period
+  const byG=new Map();for(const x of all)if(x.e.lv==='r'||x.e.lv==='o'){const k=x.p.wa_group||'بدون كروب';byG.set(k,(byG.get(k)||0)+1);}
+  $('xSend').innerHTML=byG.size?[...byG].sort((a,b)=>b[1]-a[1]).map(([g,n])=>`<button class="sm" data-xsend="${esc(g)}">${esc(g)} <span class="pill red">${n}</span></button>`).join(''):'<span class="pill grn">✅ ماكو مشاكل بالمعروض</span>';
+  const tgIn=(x)=>`<input type="number" min="0" max="50" value="${x.e.tg}" data-xtgt="${x.p.id}" style="width:56px" title="المطلوب باليوم لهالصفحة">`;
   let html;
   if(one){const d=days[0];
-    html=`<table class="xt"><tr><th>الصفحة</th><th>فيسبوك</th><th>منها المنظومة 🤖</th><th>يدوي ✋</th><th>انستكرام</th><th>أول منشور</th><th>آخر منشور</th><th>أطول فترة بدون نشر</th><th>خارج الدوام</th></tr>${rows.map(p=>{
-      if(p.err)return`<tr><td>${esc(p.name)}</td><td colspan="8" style="color:var(--red);text-align:start">⚠️ ${esc(p.err)}</td></tr>`;
-      const x=p.days[d],l=lvOf(x.fb);if(l)cnt[l]++;
-      return`<tr><td>${l==='r'?'🔴':l==='o'?'🟠':'🟢'} ${esc(p.name)}</td><td class="${l}">${x.fb.n}</td><td>${x.sys||0}</td><td><b>${Math.max(0,x.fb.n-(x.sys||0))}</b></td><td>${x.ig?x.ig.n:'—'}</td><td>${tAr(x.fb.first)}</td><td>${tAr(x.fb.last)}</td><td>${x.fb.open?x.fb.gap_h+' ساعة':'—'}</td><td>${x.fb.out||''}</td></tr>`;}).join('')}</table>`;
+    html=`<table class="xt"><tr><th>الصفحة</th><th>الكروب</th><th>المطلوب</th><th>فيسبوك</th><th>🤖 المنظومة</th><th>✋ يدوي</th><th>انستكرام</th><th>أول منشور</th><th>آخر منشور</th><th>أطول فترة بدون نشر</th></tr>${list.map(x=>{
+      const p=x.p;if(p.err)return`<tr><td>⚠️ ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td colspan="7" style="color:var(--red);text-align:start">${esc(p.err)}</td></tr>`;
+      const y=p.days[d],l=x.e.days[d]||'x';
+      return`<tr><td>${LVI[l]} ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td class="${l==='x'?'':l}">${y.fb.n}</td><td>${Math.min(y.fb.n,y.sys||0)}</td><td><b>${Math.max(0,y.fb.n-(y.sys||0))}</b></td><td>${y.ig?y.ig.n:'—'}</td><td>${tAr(y.fb.first)}</td><td>${tAr(y.fb.last)}</td><td>${y.fb.open?y.fb.gap_h+' س':'—'}${y.fb.out?`<small>+${y.fb.out} خارج الدوام</small>`:''}</td></tr>`;}).join('')}</table>`;
   }else{
-    html=`<table class="xt"><tr><th>الصفحة</th>${days.map(d=>`<th>${dS(d)}</th>`).join('')}<th>المجموع</th></tr>${rows.map(p=>`<tr><td>${esc(p.name)}</td>${days.map(d=>cell(p,d)).join('')}<td><b>${p.err?'':days.reduce((a,d)=>a+(p.days[d]?.fb.n||0),0)}</b></td></tr>`).join('')}</table><div class="muted" style="font-size:12px;margin-top:6px">الرقم = منشورات فيسبوك / انستكرام خلال الدوام • 🤖 = نزلتها منظومة النشر • ✋ = يدوي.</div>`;
+    html=`<table class="xt"><tr><th>الصفحة</th><th>المطلوب</th>${days.map(d=>`<th>${dS(d)}</th>`).join('')}<th>المجموع</th><th>🤖 / ✋</th><th>أيام ناقصة</th></tr>${list.map(x=>{const p=x.p;
+      return`<tr><td>${LVI[x.e.lv]} ${esc(p.name)}</td><td>${tgIn(x)}</td>${days.map(d=>{if(p.err)return'<td class="muted">⚠️</td>';const y=p.days[d],l=x.e.days[d]||'x';return y?`<td class="${l==='x'?'':l}">${y.fb.n}${y.ig?`<small>انستا ${y.ig.n}</small>`:''}</td>`:'<td></td>';}).join('')}<td><b>${x.e.n}</b></td><td>${x.e.sys} / ${x.e.man}</td><td>${x.e.zero+x.e.low?`<b style="color:var(--red)">${x.e.zero+x.e.low}</b>`:'—'}</td></tr>`;}).join('')}</table>`;
   }
-  $('xOut').innerHTML=html;
-  $('xSum').innerHTML=`<span class="pill red">🔴 ${cnt.r}${one?' صفحة ما نزلت':' يوم بدون نشر'}</span><span class="pill org">🟠 ${cnt.o} أقل من ${xMin()}</span><span class="pill grn">🟢 ${cnt.g} تمام</span>`;
+  $('xOut').innerHTML=list.length?html:'<div class="muted">ماكو صفحات بهالفلتر.</div>';
 }
-function actText(){
-  if(!ACT)return'';const rows=actRows().filter(p=>!p.err),days=ACT.days,m=xMin(),L=[];
-  const g=$('xGrp').value;
-  L.push(`*📊 تقرير النشر — ${days.length===1?dayAr(days[0]):dS(days[0])+' ← '+dS(days[days.length-1])}*`);
-  if(g!=='__all')L.push('الكروب: '+g);
-  L.push(`المطلوب: ${m} منشورات باليوم على الأقل (8 الصبح ← 1 بالليل)`,'');
-  const sum=p=>{const n=days.reduce((a,d)=>a+(p.days[d]?.fb.n||0),0),zero=days.filter(d=>p.days[d]?.fb.open&&p.days[d].fb.n===0).length,low=days.filter(d=>{const x=p.days[d]?.fb;return x&&x.n>0&&x.n<m;}).length;
-    const lv=zero?'r':low?'o':'g';return{n,zero,low,lv};};
-  const list=rows.map(p=>({p,s:sum(p)})),rank={r:0,o:1,g:2};list.sort((a,b)=>rank[a.s.lv]-rank[b.s.lv]||a.s.n-b.s.n);
-  for(const{p,s}of list){
-    if(days.length===1){const x=p.days[days[0]].fb,ig=p.days[days[0]].ig;
-      L.push(`${s.lv==='r'?'🔴':s.lv==='o'?'🟠':'🟢'} *${p.name}* — ${x.n===0?'ما نزلت ولا منشور':x.n+' منشور'}${x.n&&p.days[days[0]].sys?` (المنظومة ${p.days[days[0]].sys}، يدوي ${Math.max(0,x.n-p.days[days[0]].sys)})`:''}${ig?` • انستا ${ig.n}`:''}${x.n&&x.gap_h>=4?` • ${x.gap_h} ساعة بدون نشر`:''}`);
-    }else L.push(`${s.lv==='r'?'🔴':s.lv==='o'?'🟠':'🟢'} *${p.name}* — ${s.n} منشور${s.zero?` • ${s.zero} يوم بدون نشر`:''}${s.low?` • ${s.low} يوم أقل من ${m}`:''}`);
+// the WhatsApp report of one group: only the pages with a problem, asking for the reason
+function actText(group){
+  if(!ACT)return'';const days=ACT.days,one=days.length===1;
+  const list=actList().filter(x=>(group==='__all'||(x.p.wa_group||'بدون كروب')===group)&&(x.e.lv==='r'||x.e.lv==='o'));
+  const L=[`*📊 تقرير النشر — ${one?dayAr(days[0]):dS(days[0])+' ← '+dS(days[days.length-1])}*`];
+  if(group!=='__all')L.push(`*الكروب: ${group}*`);
+  L.push('الدوام: 8 الصبح ← 1 بالليل','');
+  if(!list.length){L.push('✅ كل الصفحات نزلت العدد المطلوب. عاشت ايدكم 🌷');return L.join('\n');}
+  for(const x of list){const p=x.p;
+    if(one){const y=p.days[days[0]].fb;L.push(`${LVI[x.e.lv]} *${p.name}* — ${y.n===0?`ما نزلت ولا منشور (المطلوب ${x.e.tg})`:`${y.n} من ${x.e.tg} منشورات`}${y.n&&y.gap_h>=5?` • ${y.gap_h} ساعة بدون نشر`:''}`);}
+    else L.push(`${LVI[x.e.lv]} *${p.name}* — ${x.e.n} منشور بالفترة • ${x.e.zero?`${x.e.zero} يوم بدون نشر`:''}${x.e.zero&&x.e.low?' + ':''}${x.e.low?`${x.e.low} يوم أقل من ${x.e.tg}`:''}`);
   }
-  const bad=list.filter(x=>x.s.lv!=='g').length;
-  L.push('','━━━━━━━━━━',bad?`⚠️ *المطلوب:* الصفحات الحمرة والبرتقالية تلتزم بالنشر خلال الدوام — ${m} منشورات باليوم على الأقل، وتوزيعها على اليوم بدل ما تنزل سوية.`:'✅ كل الصفحات ملتزمة بالنشر. عاشت ايدكم.');
+  L.push('','━━━━━━━━━━','⚠️ الصفحات أعلاه نزلت أقل من العدد المطلوب.','*يرجى من المسؤولة عن كل صفحة بيان السبب بالرد على هالرسالة.*');
   return L.join('\n');
 }
 $('xGo').onclick=loadAct;
+$('xYest').onclick=()=>{$('xFrom').value=bizDay(1);$('xTo').value=bizDay(1);loadAct();};
 $('xGrp').onchange=()=>{lsSet('actGrp',$('xGrp').value);renderAct();};
+$('xSort').onchange=renderAct;$('xQ').oninput=renderAct;
 $('xMin').onchange=()=>{lsSet('actMin',String(xMin()));renderAct();};
-$('xCopy').onclick=async()=>{if(!ACT)return toast('اضغط «عرض» أول');try{await navigator.clipboard.writeText(actText());toast('انسخ التقرير');}catch(_){toast('ما انسخ، جرّب واتساب');}};
-$('xWa').onclick=()=>{if(!ACT)return toast('اضغط «عرض» أول');openWa(actText());};
+$('xCopy').onclick=async()=>{if(!ACT)return toast('اضغط «عرض» أول');try{await navigator.clipboard.writeText(actText($('xGrp').value));toast('انسخ التقرير');}catch(_){toast('ما انسخ، استخدم زر الكروب');}};
+document.addEventListener('click',e=>{
+  const f=e.target.closest('[data-xlv]');if(f){xLv=f.dataset.xlv;lsSet('actLv',xLv);renderAct();return;}
+  const sd=e.target.closest('[data-xsend]');if(sd){openWa(actText(sd.dataset.xsend));}
+});
+// a page's own daily target, saved for everyone
+document.addEventListener('change',async e=>{
+  const t=e.target.closest('[data-xtgt]');if(!t)return;const v=Math.max(0,Math.min(50,+t.value||0)),id=t.dataset.xtgt;
+  const{error}=await sb.from('activity_targets').upsert({page_id:id,daily_target:v,updated_at:new Date().toISOString()});
+  if(error)return toast('ما انحفظ: '+error.message,5000);TGT.set(id,v);toast(`المطلوب لـ${pname(id)}: ${v} باليوم`);renderAct();
+});
 </script>
 </body>
 </html>
