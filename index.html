@@ -389,7 +389,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
           <div class="row"><span id="sIgAcc" class="pill">—</span>
             <label class="row" style="gap:4px"><input type="checkbox" id="sIgOn"> انشر على انستكرام أيضاً (افتراضي)</label>
             <button id="sIgSync" class="line sm">تحديث حسابات انستكرام</button></div>
-          <span class="muted" id="sIgNote">صورة واحدة تُنشر كمنشور عادي، وأكثر من صورة تُنشر ألبوماً (حتى 10 صور، بمقاس 4:5 مثل الكتالوج).</span>
+          <span class="muted" id="sIgNote">صورة واحدة تُنشر كمنشور عادي، وأكثر من صورة تُنشر ألبوماً (حتى 10 صور، بـ«قياس انستكرام» الموحّد 1440×1800).</span>
         </div>
         <div class="field">
           <label>الفئات التي تنشرها الصفحة</label>
@@ -740,9 +740,11 @@ function renderTextOnCanvas(ctx,image,product,C){
     const sl=sortSizesList(extractSizesList(sizeRaw));if(sl.length>1)sizesBox(sl,bh+pad+10);
   }
 }
-// قياس إنستغرام (نفس دالة الكتالوج): 4:5 للطويلة، 1.91:1 للعريضة، عرض 1080–2160، خلفية مموهة من نفس الصورة
-function buildInstagramCanvas(src){const w=src.width,h=src.height;if(!w||!h)return null;const ratio=w/h;const tr=ratio<0.8?0.8:(ratio>1.91?1.91:ratio);
-  const frameW=Math.max(w,Math.round(h*tr));const outW=Math.min(2160,Math.max(1080,frameW));const outH=Math.round(outW/tr);
+// «قياس انستكرام» الموحّد (نفسه في تطبيق فاحص السلة): مقاس ثابت 1440×1800 (4:5) لكل الصور،
+// الصورة كاملة بدون قص والفراغ خلفية مموهة من نفس الصورة — يرهم للفيد والكاروسيل (كل صور الألبوم نفس النسبة) والبروفايل والإعلانات.
+const IG_SIZE={w:1440,h:1800};
+function buildInstagramCanvas(src){const w=src.width,h=src.height;if(!w||!h)return null;
+  const outW=IG_SIZE.w,outH=IG_SIZE.h;
   const out=document.createElement('canvas');out.width=outW;out.height=outH;const ctx=out.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,outW,outH);
   try{const cs=Math.max(outW/w,outH/h);const cw=w*cs,ch=h*cs;ctx.save();ctx.filter='blur(40px) brightness(0.9)';ctx.drawImage(src,(outW-cw)/2,(outH-ch)/2,cw,ch);ctx.restore();ctx.filter='none';}catch(e){ctx.filter='none';}
   const fs=Math.min(outW/w,outH/h);const dw=w*fs,dh=h*fs;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(src,(outW-dw)/2,(outH-dh)/2,dw,dh);return out;}
