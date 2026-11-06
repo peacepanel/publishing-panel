@@ -140,7 +140,7 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
     <div id="aRuns" class="stack"></div>
   </section>
   <section id="tab_act" class="stack" hidden>
-    <div class="tip">كم منشور نزلت كل صفحة باليوم خلال الدوام (8 الصبح ← 1 بالليل). كل صفحة إلها <b>العدد المطلوب</b> باليوم (تكدر تغيره من الجدول، و0 = الصفحة ما مطلوب منها نشر). 🔴 ما نزلت شي، أو منشورين نزلوا متقاربين (أقل من الفرق المسموح) • 🟠 أقل من المطلوب • 🟢 تمام. زر الكروب يرسل للواتساب الصفحات اللي بيها مشكلة بس، ويطلب بيان السبب.</div>
+    <div class="tip">كم منشور نزلت كل صفحة باليوم خلال الدوام (8 الصبح ← 1 بالليل). كل صفحة إلها <b>العدد المطلوب</b> باليوم (تكدر تغيره من الجدول، و0 = الصفحة ما مطلوب منها نشر). 🔴 ما نزلت شي، أو منشورين نزلوا متقاربين (أقل من الفرق المسموح)، أو نزل منشور خارج الدوام 🌙 (هذا ما ينحسب ضمن العدد) • 🟠 أقل من المطلوب • 🟢 تمام. زر الكروب يرسل للواتساب الصفحات اللي بيها مشكلة بس، ويطلب بيان السبب.</div>
     <div class="box stack" style="gap:10px">
       <div class="row">
         <span class="muted" style="font-size:13px">من</span><input type="date" id="xFrom">
@@ -551,13 +551,14 @@ async function loadAct(){
 // one page over the chosen days: level, totals, days short of its target
 function evalPage(p){
   const days=ACT.days,tg=tgtOf(p.id);
-  if(p.err)return{lv:'x',err:true,tg,n:0,sys:0,man:0,zero:0,low:0,close:0,closeDays:0,minM:null,days:{}};
-  let n=0,sys=0,zero=0,low=0,close=0,closeDays=0,minM=null;const dl={},dc={};
+  if(p.err)return{lv:'x',err:true,tg,n:0,sys:0,man:0,zero:0,low:0,close:0,closeDays:0,minM:null,out:0,outT:[],days:{},dc:{}};
+  let n=0,sys=0,zero=0,low=0,close=0,closeDays=0,minM=null,out=0;const outT=[];const dl={},dc={};
   for(const d of days){const x=p.days[d];if(!x)continue;const c=x.fb.n;n+=c;sys+=Math.min(c,x.sys||0);
     const cl=closeOf(x.fb.times);dc[d]=cl;if(cl.n){close+=cl.n;closeDays++;}if(cl.min!==null&&(minM===null||cl.min<minM))minM=cl.min;
-    const l=tg===0?'x':(!x.fb.open?'x':(c===0||cl.n)?'r':c<tg?'o':'g');dl[d]=l;if(c===0&&tg&&x.fb.open)zero++;else if(l==='o')low++;}
-  const lv=tg===0?'x':(zero||close)?'r':low?'o':'g';
-  return{lv,tg,n,sys,man:n-sys,zero,low,close,closeDays,minM,days:dl,dc};
+    const o=x.fb.out||0;out+=o;outT.push(...(x.fb.out_times||[]));
+    const l=tg===0?'x':(!x.fb.open?'x':(c===0||cl.n||o)?'r':c<tg?'o':'g');dl[d]=l;if(c===0&&tg&&x.fb.open)zero++;else if(l==='o')low++;}
+  const lv=tg===0?'x':(zero||close||out)?'r':low?'o':'g';
+  return{lv,tg,n,sys,man:n-sys,zero,low,close,closeDays,minM,out,outT,days:dl,dc};
 }
 function actList(){
   if(!ACT)return[];const g=$('xGrp').value,q=$('xQ').value.trim();
@@ -578,13 +579,13 @@ function renderAct(){
   const tgIn=(x)=>`<input type="number" min="0" max="50" value="${x.e.tg}" data-xtgt="${x.p.id}" style="width:56px" title="المطلوب باليوم لهالصفحة">`;
   let html;
   if(one){const d=days[0];
-    html=`<table class="xt"><tr><th>الصفحة</th><th>الكروب</th><th>المطلوب</th><th>فيسبوك</th><th>🤖 المنظومة</th><th>✋ يدوي</th><th>انستكرام</th><th>أقل فرق بين منشورين</th><th>أول منشور</th><th>آخر منشور</th><th>أطول فترة بدون نشر</th></tr>${list.map(x=>{
-      const p=x.p;if(p.err)return`<tr><td>⚠️ ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td colspan="8" style="color:var(--red);text-align:start">${esc(p.err)}</td></tr>`;
+    html=`<table class="xt"><tr><th>الصفحة</th><th>الكروب</th><th>المطلوب</th><th>فيسبوك</th><th>🤖 المنظومة</th><th>✋ يدوي</th><th>انستكرام</th><th>أقل فرق بين منشورين</th><th>🌙 خارج الدوام</th><th>أول منشور</th><th>آخر منشور</th><th>أطول فترة بدون نشر</th></tr>${list.map(x=>{
+      const p=x.p;if(p.err)return`<tr><td>⚠️ ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td colspan="9" style="color:var(--red);text-align:start">${esc(p.err)}</td></tr>`;
       const y=p.days[d],l=x.e.days[d]||'x',cl=x.e.dc[d]||{n:0,min:null};
-      return`<tr class="${cl.n?'rowbad':''}"><td>${LVI[l]} ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td class="${l==='x'?'':l}">${y.fb.n}</td><td>${Math.min(y.fb.n,y.sys||0)}</td><td><b>${Math.max(0,y.fb.n-(y.sys||0))}</b></td><td>${y.ig?y.ig.n:'—'}</td><td class="${cl.n?'cl':''}">${cl.min===null?'—':cl.min+' د'}${cl.n?`<small>⏱️ ${cl.n} مرة أقل من ${xGapM()} د</small>`:''}</td><td>${tAr(y.fb.first)}</td><td>${tAr(y.fb.last)}</td><td>${y.fb.open?y.fb.gap_h+' س':'—'}${y.fb.out?`<small>+${y.fb.out} خارج الدوام</small>`:''}</td></tr>`;}).join('')}</table>`;
+      return`<tr class="${cl.n||y.fb.out?'rowbad':''}"><td>${LVI[l]} ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td class="${l==='x'?'':l}">${y.fb.n}</td><td>${Math.min(y.fb.n,y.sys||0)}</td><td><b>${Math.max(0,y.fb.n-(y.sys||0))}</b></td><td>${y.ig?y.ig.n:'—'}</td><td class="${cl.n?'cl':''}">${cl.min===null?'—':cl.min+' د'}${cl.n?`<small>⏱️ ${cl.n} مرة أقل من ${xGapM()} د</small>`:''}</td><td class="${y.fb.out?'cl':''}">${y.fb.out?`${y.fb.out}<small>${(y.fb.out_times||[]).map(tAr).join('، ')}</small>`:'—'}</td><td>${tAr(y.fb.first)}</td><td>${tAr(y.fb.last)}</td><td>${y.fb.open?y.fb.gap_h+' س':'—'}</td></tr>`;}).join('')}</table>`;
   }else{
-    html=`<table class="xt"><tr><th>الصفحة</th><th>المطلوب</th>${days.map(d=>`<th>${dS(d)}</th>`).join('')}<th>المجموع</th><th>🤖 / ✋</th><th>أيام ناقصة</th><th>⏱️ متقاربة</th></tr>${list.map(x=>{const p=x.p;
-      return`<tr class="${x.e.close?'rowbad':''}"><td>${LVI[x.e.lv]} ${esc(p.name)}</td><td>${tgIn(x)}</td>${days.map(d=>{if(p.err)return'<td class="muted">⚠️</td>';const y=p.days[d],l=x.e.days[d]||'x',cl=x.e.dc[d]||{n:0};return y?`<td class="${l==='x'?'':l}">${y.fb.n}${cl.n?' ⏱️':''}${y.ig?`<small>انستا ${y.ig.n}</small>`:''}</td>`:'<td></td>';}).join('')}<td><b>${x.e.n}</b></td><td>${x.e.sys} / ${x.e.man}</td><td>${x.e.zero+x.e.low?`<b style="color:var(--red)">${x.e.zero+x.e.low}</b>`:'—'}</td><td class="${x.e.close?'cl':''}">${x.e.close?`${x.e.close} مرة (أقل فرق ${x.e.minM} د)`:'—'}</td></tr>`;}).join('')}</table>`;
+    html=`<table class="xt"><tr><th>الصفحة</th><th>المطلوب</th>${days.map(d=>`<th>${dS(d)}</th>`).join('')}<th>المجموع</th><th>🤖 / ✋</th><th>أيام ناقصة</th><th>⏱️ متقاربة</th><th>🌙 خارج الدوام</th></tr>${list.map(x=>{const p=x.p;
+      return`<tr class="${x.e.close||x.e.out?'rowbad':''}"><td>${LVI[x.e.lv]} ${esc(p.name)}</td><td>${tgIn(x)}</td>${days.map(d=>{if(p.err)return'<td class="muted">⚠️</td>';const y=p.days[d],l=x.e.days[d]||'x',cl=x.e.dc[d]||{n:0};return y?`<td class="${l==='x'?'':l}">${y.fb.n}${cl.n?' ⏱️':''}${y.fb.out?' 🌙':''}${y.ig?`<small>انستا ${y.ig.n}</small>`:''}</td>`:'<td></td>';}).join('')}<td><b>${x.e.n}</b></td><td>${x.e.sys} / ${x.e.man}</td><td>${x.e.zero+x.e.low?`<b style="color:var(--red)">${x.e.zero+x.e.low}</b>`:'—'}</td><td class="${x.e.close?'cl':''}">${x.e.close?`${x.e.close} مرة (أقل فرق ${x.e.minM} د)`:'—'}</td><td class="${x.e.out?'cl':''}">${x.e.out||'—'}</td></tr>`;}).join('')}</table>`;
   }
   $('xOut').innerHTML=list.length?html:'<div class="muted">ماكو صفحات بهالفلتر.</div>';
 }
@@ -597,11 +598,11 @@ function actText(group){
   L.push('الدوام: 8 الصبح ← 1 بالليل','');
   if(!list.length){L.push('✅ كل الصفحات نزلت العدد المطلوب. عاشت ايدكم 🌷');return L.join('\n');}
   for(const x of list){const p=x.p;
-    const clTxt=x.e.close?` • ⏱️ منشورات متقاربة: ${x.e.close} مرة (أقل فرق ${x.e.minM} دقيقة)`:'';
+    const clTxt=(x.e.close?` • ⏱️ منشورات متقاربة: ${x.e.close} مرة (أقل فرق ${x.e.minM} دقيقة)`:'')+(x.e.out?` • 🌙 ${x.e.out} منشور خارج الدوام${one?` (${x.e.outT.map(tAr).join('، ')})`:''} — ما ينحسب`:'');
     if(one){const y=p.days[days[0]].fb;L.push(`${LVI[x.e.lv]} *${p.name}* — ${y.n===0?`ما نزلت ولا منشور (المطلوب ${x.e.tg})`:(y.n>=x.e.tg?`${y.n} منشورات`:`${y.n} من ${x.e.tg} منشورات`)}${clTxt}${y.n&&y.gap_h>=5?` • ${y.gap_h} ساعة بدون نشر`:''}`);}
     else L.push(`${LVI[x.e.lv]} *${p.name}* — ${x.e.n} منشور بالفترة • ${x.e.zero?`${x.e.zero} يوم بدون نشر`:''}${x.e.zero&&x.e.low?' + ':''}${x.e.low?`${x.e.low} يوم أقل من ${x.e.tg}`:''}${clTxt}`);
   }
-  L.push('','━━━━━━━━━━','⚠️ الصفحات أعلاه نزلت أقل من العدد المطلوب، أو نزلت منشورات متقاربة.',`📌 لازم يكون الفرق بين منشور ومنشور أكثر من ${xGapM()} دقيقة، والنشر موزع على اليوم.`,'*يرجى من المسؤولة عن كل صفحة بيان السبب بالرد على هالرسالة.*');
+  L.push('','━━━━━━━━━━','⚠️ الصفحات أعلاه نزلت أقل من العدد المطلوب، أو نزلت منشورات متقاربة أو خارج الدوام.','🌙 المنشور خارج الدوام (بين 1 بالليل و8 الصبح) محد يشوفه وما ينحسب ضمن العدد.',`📌 لازم يكون الفرق بين منشور ومنشور أكثر من ${xGapM()} دقيقة، والنشر موزع على اليوم.`,'*يرجى من المسؤولة عن كل صفحة بيان السبب بالرد على هالرسالة.*');
   return L.join('\n');
 }
 $('xGo').onclick=loadAct;
