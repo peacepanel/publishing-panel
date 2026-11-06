@@ -323,10 +323,10 @@ const pname=id=>(pages.find(p=>p.id===id)||{}).name||'صفحة';
 const ST={queued:'⏳ بالانتظار',working:'⚙️ يشتغل',done:'✅ خلص',failed:'❌ فشل',cancelled:'⏹ ملغي'};
 // pictures removed from posts (from audit_deletions): their cards show «انحذفت» and stop counting
 let DEL=new Set();const ikey=src=>(String(src||'').split('?')[0].split('/').pop()||'').toLowerCase();
-const RM=[];function rmBtn(o){if(!o.pid||!o.src||!o.link)return'';RM.push(o);return`<div data-rmbox="${RM.length-1}"><button class="rm" data-rm="${RM.length-1}">🗑 حذف هالصورة من المنشور</button></div>`;}
+const RM=[];function rmBtn(o){if(!o.pid||!o.src||!o.link)return'';RM.push(o);return`<div data-rmbox="${RM.length-1}"><button class="rm" data-rm="${RM.length-1}">🗑 حذف هالصورة</button></div>`;}
 const ORD=['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر'];
 // one card per post: the picture that repeats, its number, date and time, page, who published it, and a link to open it
-function pcards(list){return`<div class="pcards">${list.map((p,i)=>{const im=p.thumb||p.img;return`<div class="pcard ${p.gone?'gone':''}">${im?`<a href="${esc(im)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(im)}" alt="" onerror="this.style.visibility='hidden'"></a>`:''}<span class="n">المنشور ${ORD[i]||(i+1)}</span><span>📅 ${dAr(p.at)}</span>${p.page?`<span>📄 ${esc(p.page)}</span>`:''}<span class="by">👤 ${p.by?esc(p.by):'الناشر غير معروف'}</span><a class="open" href="${esc(p.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${p.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':(im?rmBtn({pid:p.pid,link:p.link,id:p.id,src:im}):'')}</div>`;}).join('')}</div>`;}
+function pcards(list){return`<div class="pcards">${list.map((p,i)=>{const im=p.thumb||p.img;return`<div class="pcard ${p.gone?'gone':''}">${im?`<a href="${esc(im)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(im)}" alt="" onerror="this.style.visibility='hidden'"></a>`:''}<span class="n">المنشور ${ORD[i]||(i+1)}</span><span>📅 ${dAr(p.at)}</span>${p.page?`<span>📄 ${esc(p.page)}</span>`:''}<span class="by">👤 ${p.by?esc(p.by):'الناشر غير معروف'}</span><a class="open" href="${esc(p.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${p.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':(im?rmBtn({pid:p.pid,link:p.link,id:p.id,src:im,by:p.by}):'')}</div>`;}).join('')}</div>`;}
 const thumbs=pcards;
 const hamG=(a,b)=>{let x=BigInt('0x'+a)^BigInt('0x'+b),n=0;while(x){n+=Number(x&1n);x>>=1n;}return n;};
 // fingerprints of every checked post (from all loaded reports), to show how many pictures match
@@ -407,7 +407,7 @@ function runBody(r){
     } else if(r.status==='done'){
       const f=res.flags||[];
       body=`<div class="row" style="gap:6px"><span class="pill">${res.posts} منشور</span><span class="pill">${res.images} صورة</span><span class="pill">${res.checked} فحص جديد</span>${res.reused?`<span class="pill grn">${res.reused} مفحوصة من قبل (مجاناً)</span>`:''}${f.filter(x=>!x.gone).length?`<span class="pill red">${f.filter(x=>!x.gone).length} صورة بيها براند</span>`:'<span class="pill grn">ماكو براندات ممنوعة</span>'}${res.allowed?`<span class="pill">${res.allowed} صورة شي ان (مسموحة)</span>`:''}${res.failed?`<span class="pill yel">${res.failed} صورة ما انقرت</span>`:''}</div>
-        ${f.length?`<div class="pcards">${f.map(x=>`<div class="pcard ${x.gone?'gone':''}"><a href="${esc(x.img)}" target="_blank" rel="noopener" title="فتح الصورة بحجمها"><img loading="lazy" src="${esc(x.img)}" alt="" onerror="this.style.visibility='hidden'"></a><span class="n" style="color:var(--red)">🏷️ ${esc(x.brand||'براند')}</span><span>${x.conf==='high'?'ثقة عالية':x.conf==='medium'?'ثقة متوسطة':'ثقة قليلة'} • صورة ${x.n} بالمنشور</span>${x.desc?`<span class="by">${esc(x.desc)}</span>`:''}<span>📅 ${dAr(x.at)}</span><span>📄 ${esc(pname(r.page_id))}</span><span class="by">👤 ${x.by?esc(x.by):'الناشر غير معروف'}</span><a class="open" href="${esc(x.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${x.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':rmBtn({pid:r.page_id,link:x.link,id:x.id,src:x.img,n:x.n})}</div>`).join('')}</div>`:''}`;
+        ${f.length?`<div class="pcards">${f.map(x=>`<div class="pcard ${x.gone?'gone':''}"><a href="${esc(x.img)}" target="_blank" rel="noopener" title="فتح الصورة بحجمها"><img loading="lazy" src="${esc(x.img)}" alt="" onerror="this.style.visibility='hidden'"></a><span class="n" style="color:var(--red)">🏷️ ${esc(x.brand||'براند')}</span><span>${x.conf==='high'?'ثقة عالية':x.conf==='medium'?'ثقة متوسطة':'ثقة قليلة'} • صورة ${x.n} بالمنشور</span>${x.desc?`<span class="by">${esc(x.desc)}</span>`:''}<span>📅 ${dAr(x.at)}</span><span>📄 ${esc(pname(r.page_id))}</span><span class="by">👤 ${x.by?esc(x.by):'الناشر غير معروف'}</span><a class="open" href="${esc(x.link)}" target="_blank" rel="noopener">🔗 فتح المنشور</a>${x.gone?'<span class="gonetag">🗑 انحذفت الصورة</span>':rmBtn({pid:r.page_id,link:x.link,id:x.id,src:x.img,n:x.n,by:x.by})}</div>`).join('')}</div>`:''}`;
     }
     return body;
 }
@@ -455,10 +455,18 @@ document.addEventListener('click',async e=>{
   const rm=e.target.closest('[data-rm]'),rmok=e.target.closest('[data-rmok]'),rmno=e.target.closest('[data-rmno]');
   if(rm){const i=+rm.dataset.rm,o=RM[i],box=document.querySelector(`[data-rmbox="${i}"]`);rm.disabled=true;rm.textContent='يتأكد من الصورة...';
     try{const j=await callAudit({action:'photo',dry:true,page_id:o.pid,link:o.link,post_id:o.id,src:o.src,n:o.n});
-      box.innerHTML=`<div class="rmask"><b style="color:var(--red)">تحذف الصورة ${j.n} من ${j.count} من المنشور؟</b>${j.only?'<span style="color:var(--red)">⚠️ هي الصورة الوحيدة بالمنشور — يبقى المنشور بدون صورة.</span>':'<span>بقية الصور والمنشور يبقون.</span>'}<span class="muted">الحذف من فيسبوك نهائي.</span><div class="row"><button class="rm" data-rmok="${i}">✔ احذف</button><button class="sm line" data-rmno="${i}">إلغاء</button></div></div>`;}
+      // Facebook lets an app delete only the photos it uploaded itself: posts made by hand open on the exact photo instead
+      const sysPost=/^منظومة النشر/.test(o.by||''),photoUrl=`https://www.facebook.com/photo/?fbid=${j.photo_id}`;
+      box.innerHTML=sysPost
+        ?`<div class="rmask"><b style="color:var(--red)">تحذف الصورة ${j.n} من ${j.count} من المنشور؟</b>${j.only?'<span style="color:var(--red)">⚠️ هي الصورة الوحيدة بالمنشور — يبقى المنشور بدون صورة.</span>':'<span>بقية الصور والمنشور يبقون.</span>'}<span class="muted">الحذف من فيسبوك نهائي.</span><div class="row"><button class="rm" data-rmok="${i}">✔ احذف</button><button class="sm line" data-rmno="${i}">إلغاء</button></div></div>`
+        :`<div class="rmask"><a class="open" href="${photoUrl}" target="_blank" rel="noopener" style="background:var(--red-soft);color:var(--red);border-color:var(--red)">📷 افتح الصورة ${j.n} من ${j.count} مباشرة</a><span class="muted">بعدين من «…» فوگ الصورة ← «حذف الصورة». المنشور ينزل يدوي، فيسبوك ما يسمح نحذفه من هنا.</span><button class="sm line" data-rmdone="${i}">✔ حذفتها</button></div>`;}
     catch(er){box.innerHTML=`<div class="rmask"><span style="color:var(--red)">ما گدرت ألگه: ${esc(er.message)}</span><span class="muted">افتح المنشور واحذفها يدوياً.</span></div>`;}
     return;}
-  if(rmno){const i=+rmno.dataset.rmno;document.querySelector(`[data-rmbox="${i}"]`).innerHTML=`<button class="rm" data-rm="${i}">🗑 حذف هالصورة من المنشور</button>`;return;}
+  const rmdone=e.target.closest('[data-rmdone]');
+  if(rmdone){const i=+rmdone.dataset.rmdone,o=RM[i];rmdone.disabled=true;
+    try{await callAudit({action:'photo_done',page_id:o.pid,link:o.link,post_id:o.id,src:o.src});toast('انسجلت محذوفة ✔');loadRuns();}catch(er){toast(er.message==='still_there'?'الصورة بعدها موجودة بالمنشور — احذفها من فيسبوك أول':'خطأ: '+er.message,6000);rmdone.disabled=false;}
+    return;}
+  if(rmno){const i=+rmno.dataset.rmno;document.querySelector(`[data-rmbox="${i}"]`).innerHTML=`<button class="rm" data-rm="${i}">🗑 حذف هالصورة</button>`;return;}
   if(rmok){const i=+rmok.dataset.rmok,o=RM[i],box=document.querySelector(`[data-rmbox="${i}"]`);rmok.disabled=true;rmok.textContent='يحذف...';
     try{await callAudit({action:'photo',page_id:o.pid,link:o.link,post_id:o.id,src:o.src,n:o.n});toast('انحذفت الصورة من المنشور ✔');loadRuns();}
     catch(er){box.innerHTML=`<div class="rmask"><span style="color:var(--red)">فيسبوك رفض الحذف: ${esc(er.message)}</span><span class="muted">افتح المنشور واحذفها يدوياً.</span></div>`;}
