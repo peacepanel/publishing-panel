@@ -100,6 +100,7 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
 .xt th:first-child,.xt td:first-child{text-align:start;position:sticky;inset-inline-start:0;background:var(--surface)}
 .xt td.r{background:var(--red-soft);color:var(--red);font-weight:700}.xt td.o{background:var(--org-soft);color:var(--org);font-weight:700}.xt td.g{color:var(--grn);font-weight:700}
 .xt tr.rowbad td{background:var(--red-soft)}.xt tr.rowbad td:first-child{color:var(--red);font-weight:700}.xt td.cl{color:var(--red);font-weight:800}
+.tl{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:340px;margin:auto}.tl span{border-radius:6px;padding:1px 5px;font-size:12px;background:var(--surface2);white-space:nowrap}.tl .o{background:var(--red);color:#fff;font-weight:700}.tl .c{background:var(--org);color:#fff;font-weight:700}.tl .s{opacity:.6}
 .xt small{display:block;color:var(--muted);font-weight:400;font-size:11px}
 </style>
 </head>
@@ -140,7 +141,7 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
     <div id="aRuns" class="stack"></div>
   </section>
   <section id="tab_act" class="stack" hidden>
-    <div class="tip">كم منشور نزلت كل صفحة باليوم خلال الدوام (8 الصبح ← 1 بالليل). كل صفحة إلها <b>العدد المطلوب</b> باليوم (تكدر تغيره من الجدول، و0 = الصفحة ما مطلوب منها نشر). 🔴 ما نزلت شي، أو منشورين نزلوا متقاربين (أقل من الفرق المسموح)، أو نزل منشور خارج الدوام 🌙 (هذا ما ينحسب ضمن العدد) • 🟠 أقل من المطلوب • 🟢 تمام. زر الكروب يرسل للواتساب الصفحات اللي بيها مشكلة بس، ويطلب بيان السبب. <b>منشورات منظومة النشر 🤖 تنحسب ضمن العدد، بس ما تسبب مخالفة أبداً</b> (التقارب وخارج الدوام يتحسبون على المنشورات اليدوية بس).</div>
+    <div class="tip">كم منشور نزلت كل صفحة باليوم خلال الدوام (8 الصبح ← 1 بالليل). كل صفحة إلها <b>العدد المطلوب</b> باليوم (تكدر تغيره من الجدول، و0 = الصفحة ما مطلوب منها نشر). 🔴 ما نزلت شي، أو منشورين نزلوا متقاربين (أقل من الفرق المسموح)، أو نزل منشور خارج الدوام 🌙 (هذا ما ينحسب ضمن العدد) • 🟠 أقل من المطلوب • 🟢 تمام. زر الكروب يرسل للواتساب الصفحات اللي بيها مشكلة بس، ويطلب بيان السبب. <b>منشورات منظومة النشر 🤖 تنحسب ضمن العدد، بس ما تسبب مخالفة أبداً</b> (التقارب وخارج الدوام يتحسبون على المنشورات اليدوية بس). بعمود الأوقات: <span style="background:var(--red);color:#fff;border-radius:5px;padding:0 4px">أحمر</span> خارج الدوام • <span style="background:var(--org);color:#fff;border-radius:5px;padding:0 4px">برتقالي</span> نزل ورا منشور ثاني • 🤖 المنظومة.</div>
     <div class="box stack" style="gap:10px">
       <div class="row">
         <span class="muted" style="font-size:13px">من</span><input type="date" id="xFrom">
@@ -525,7 +526,7 @@ const xGapM=()=>{const v=$('xGapM').value;return v===''?40:Math.max(0,+v);};
 // posts too close together in one day: how many pairs, and the smallest distance in minutes
 function closeOf(times){const lim=xGapM()*6e4;let n=0,min=null;const pairs=[];for(let i=1;i<(times||[]).length;i++){const d=times[i]-times[i-1];if(min===null||d<min)min=d;if(lim&&d<=lim){n++;pairs.push([times[i-1],times[i]]);}}return{n,min:min===null?null:Math.round(min/6e4),pairs};}
 // English digits for times and dates in the activity report (easier to read in WhatsApp)
-const tAr=t=>t?new Date(t).toLocaleTimeString('ar-IQ-u-nu-latn',{hour:'numeric',minute:'2-digit'}):'—';
+const tAr=t=>{if(!t)return'—';const d=new Date(t),h=d.getHours(),m=d.getMinutes();return`${h%12||12}${m?':'+String(m).padStart(2,'0'):''}${h<12?'ص':'م'}`;};
 const dayAr=d=>new Date(d+'T12:00:00').toLocaleDateString('ar-IQ-u-nu-latn',{weekday:'long',day:'numeric',month:'long'});
 // the last business day that has ended (a day runs 08:00 -> 01:00): at 04:00 or at 10:00 on the 6th it is the 5th
 const bizDay=(back=1)=>dISO(new Date(Date.now()-36e5-back*864e5));
@@ -582,10 +583,10 @@ function renderAct(){
   const tgIn=(x)=>`<input type="number" min="0" max="50" value="${x.e.tg}" data-xtgt="${x.p.id}" style="width:56px" title="المطلوب باليوم لهالصفحة">`;
   let html;
   if(one){const d=days[0];
-    html=`<table class="xt"><tr><th>الصفحة</th><th>الكروب</th><th>المطلوب</th><th>فيسبوك</th><th>🤖 المنظومة</th><th>✋ يدوي</th><th>انستكرام</th><th>أقل فرق بين المنشورات اليدوية</th><th>🌙 خارج الدوام (يدوي)</th><th>أول منشور</th><th>آخر منشور</th><th>أطول فترة بدون نشر</th><th>تنبيه</th></tr>${list.map(x=>{
-      const p=x.p;if(p.err)return`<tr><td>⚠️ ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td colspan="10" style="color:var(--red);text-align:start">${esc(p.err)}</td></tr>`;
+    html=`<table class="xt"><tr><th>الصفحة</th><th>الكروب</th><th>المطلوب</th><th>فيسبوك</th><th>🤖 المنظومة</th><th>✋ يدوي</th><th>انستكرام</th><th>أقل فرق بين المنشورات اليدوية</th><th>🌙 خارج الدوام (يدوي)</th><th>أوقات المنشورات</th><th>أطول فترة بدون نشر</th><th>تنبيه</th></tr>${list.map(x=>{
+      const p=x.p;if(p.err)return`<tr><td>⚠️ ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td colspan="9" style="color:var(--red);text-align:start">${esc(p.err)}</td></tr>`;
       const y=p.days[d],l=x.e.days[d]||'x',cl=x.e.dc[d]||{n:0,min:null};
-      return`<tr class="${cl.n||y.fb.out?'rowbad':''}"><td>${LVI[l]} ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td class="${l==='x'?'':l}">${y.fb.n}</td><td>${Math.min(y.fb.n,y.sys||0)}</td><td><b>${Math.max(0,y.fb.n-(y.sys||0))}</b></td><td>${y.ig?y.ig.n:'—'}</td><td class="${cl.n?'cl':''}">${cl.min===null?'—':cl.min+' د'}${cl.n?`<small>⏱️ ${cl.n} مرة أقل من ${xGapM()} د</small>`:''}</td><td class="${y.fb.out?'cl':''}">${y.fb.out?`${y.fb.out}<small>${(y.fb.out_times||[]).map(tAr).join('، ')}</small>`:'—'}${y.fb.sys_out?`<small>🤖 ${y.fb.sys_out} من المنظومة (ما تنحسب)</small>`:''}</td><td>${tAr(y.fb.first)}</td><td>${tAr(y.fb.last)}</td><td>${y.fb.open?y.fb.gap_h+' س':'—'}</td><td>${alertBtn(x)}</td></tr>`;}).join('')}</table>`;
+      return`<tr class="${cl.n||y.fb.out?'rowbad':''}"><td>${LVI[l]} ${esc(p.name)}</td><td class="muted">${esc(p.wa_group||'')}</td><td>${tgIn(x)}</td><td class="${l==='x'?'':l}">${y.fb.n}</td><td>${Math.min(y.fb.n,y.sys||0)}</td><td><b>${Math.max(0,y.fb.n-(y.sys||0))}</b></td><td>${y.ig?y.ig.n:'—'}</td><td class="${cl.n?'cl':''}">${cl.min===null?'—':cl.min+' د'}${cl.n?`<small>⏱️ ${cl.n} مرة أقل من ${xGapM()} د</small>`:''}</td><td class="${y.fb.out?'cl':''}">${y.fb.out?`${y.fb.out}<small>${(y.fb.out_times||[]).map(tAr).join('، ')}</small>`:'—'}${y.fb.sys_out?`<small>🤖 ${y.fb.sys_out} من المنظومة (ما تنحسب)</small>`:''}</td><td>${timeLine(y.fb)}</td><td>${y.fb.open?y.fb.gap_h+' س':'—'}</td><td>${alertBtn(x)}</td></tr>`;}).join('')}</table>`;
   }else{
     html=`<table class="xt"><tr><th>الصفحة</th><th>المطلوب</th>${days.map(d=>`<th>${dS(d)}</th>`).join('')}<th>المجموع</th><th>🤖 / ✋</th><th>أيام ناقصة</th><th>⏱️ متقاربة</th><th>🌙 خارج الدوام</th><th>تنبيه</th></tr>${list.map(x=>{const p=x.p;
       return`<tr class="${x.e.close||x.e.out?'rowbad':''}"><td>${LVI[x.e.lv]} ${esc(p.name)}</td><td>${tgIn(x)}</td>${days.map(d=>{if(p.err)return'<td class="muted">⚠️</td>';const y=p.days[d],l=x.e.days[d]||'x',cl=x.e.dc[d]||{n:0};return y?`<td class="${l==='x'?'':l}">${y.fb.n}${cl.n?' ⏱️':''}${y.fb.out?' 🌙':''}${y.ig?`<small>انستا ${y.ig.n}</small>`:''}</td>`:'<td></td>';}).join('')}<td><b>${x.e.n}</b></td><td>${x.e.sys} / ${x.e.man}</td><td>${x.e.zero+x.e.low?`<b style="color:var(--red)">${x.e.zero+x.e.low}</b>`:'—'}</td><td class="${x.e.close?'cl':''}">${x.e.close?`${x.e.close} مرة (أقل فرق ${x.e.minM} د)`:'—'}</td><td class="${x.e.out?'cl':''}">${x.e.out||'—'}</td><td>${alertBtn(x)}</td></tr>`;}).join('')}</table>`;
@@ -598,6 +599,10 @@ const WHY_CLOSE='المنشورات اللي تنزل ورا بعض فيسبوك
 const WHY_OUT='المنشور اللي ينزل بالليل (بعد 1 بالليل وقبل 8 الصبح) محد يشوفه، الزبائن نايمين، فيروح بلاش وما ينحسب ضمن العدد اليومي.';
 const periodAr=()=>{const d=ACT.days;return d.length===1?dayAr(d[0]):dS(d[0])+' ← '+dS(d[d.length-1]);};
 const pairAr=pr=>`${tAr(pr[0])} و ${tAr(pr[1])}`;
+// every post of the day as a small chip: red = outside business hours, orange = went up right after another hand-made post, faded 🤖 = the publishing system
+function timeLine(fb){const L=fb.list||[];if(!L.length)return'—';const lim=xGapM()*6e4,man=L.filter(x=>!x.s&&!x.o).map(x=>x.t),close=new Set();
+  for(let i=1;i<man.length;i++)if(lim&&man[i]-man[i-1]<=lim){close.add(man[i-1]);close.add(man[i]);}
+  return`<div class="tl">${L.map(x=>`<span class="${x.o&&!x.s?'o':close.has(x.t)?'c':x.s?'s':''}" title="${x.s?'منظومة النشر':'يدوي'}${x.o?' • خارج الدوام':''}">${x.s?'🤖':''}${tAr(x.t)}</span>`).join('')}</div>`;}
 // runs of posts that went up one after another: «من ٢:٠٠ لـ ٤:٠٠ نزلت 9 منشورات»
 function bursts(times){const lim=xGapM()*6e4,out=[];let cur=null;
   for(let i=1;i<(times||[]).length;i++){if(times[i]-times[i-1]<=lim){if(!cur){cur=[times[i-1]];out.push(cur);}cur.push(times[i]);}else cur=null;}
