@@ -61,6 +61,18 @@ input,select{background:var(--surface);border:1px solid var(--line);border-radiu
 .login{max-width:380px;margin:60px auto}
 .tip{background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-size:14px}
 @media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+.al{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.al .box h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+.al .box h3 .sp{flex:1}
+.al label.f{display:flex;align-items:center;gap:6px;font-size:14px;flex-wrap:wrap}
+.al label.f input[type=number]{width:72px}
+.sw{position:relative;width:42px;height:24px;flex:none}.sw input{opacity:0;width:0;height:0}
+.sw i{position:absolute;inset:0;background:var(--surface2);border:1px solid var(--line);border-radius:99px;cursor:pointer;transition:.15s}
+.sw i:before{content:"";position:absolute;width:18px;height:18px;top:2px;inset-inline-start:2px;background:var(--muted);border-radius:50%;transition:.15s}
+.sw input:checked+i{background:var(--accent);border-color:var(--accent)}.sw input:checked+i:before{background:var(--accent-ink);inset-inline-start:20px}
+.hrs{display:flex;flex-wrap:wrap;gap:4px}.hrs button{padding:4px 0;width:44px;font-size:12px;font-weight:500;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:8px}
+.hrs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.prev{white-space:pre-wrap;background:var(--surface2);border-radius:10px;padding:10px;font-size:13px;max-height:320px;overflow:auto}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tabs button{background:var(--surface);color:var(--fg);border:1px solid var(--line)}
 .tabs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -125,7 +137,7 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
 </div>
 
 <main id="app" class="wrap stack" hidden>
-  <div class="tabs" id="tabs"><button data-tab="reply" class="on">💬 الرد على الزبائن</button><button data-tab="dup">🔁 المنشورات المكررة</button><button data-tab="brand">™ العلامات التجارية</button><button data-tab="act">📊 نشاط النشر</button></div>
+  <div class="tabs" id="tabs"><button data-tab="reply" class="on">💬 الرد على الزبائن</button><button data-tab="dup">🔁 المنشورات المكررة</button><button data-tab="brand">™ العلامات التجارية</button><button data-tab="act">📊 نشاط النشر</button><button data-tab="alerts" id="alertsTabBtn" hidden>🔔 تنبيهات الواتساب</button></div>
   <section id="tab_audit" class="stack" hidden>
     <div class="tip" id="auditTip"></div>
     <div class="box stack" style="gap:10px">
@@ -166,6 +178,43 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
     </div>
     <div id="xOut" class="box" style="overflow-x:auto"><div class="muted">اختار الفترة واضغط «عرض».</div></div>
   </section>
+  <section id="tab_alerts" class="stack" hidden>
+    <div class="tip">التنبيهات اللي تطلع تلقائياً للكروبات عن طريق مركز الواتساب (التابلت). كل تغيير هنا يشتغل من الدورة الجاية بدون أي تحديث ثاني.</div>
+    <div class="al">
+      <div class="box stack" style="gap:10px">
+        <h3>🕘 أوقات الدوام</h3>
+        <div class="muted" style="font-size:13px">تنبيه المتأخرة والصفحة الخاملة يطلعن بس بهالوقت (بتوقيت بغداد).</div>
+        <label class="f">من الساعة <select id="al_start_hour"></select> إلى <select id="al_end_hour"></select></label>
+      </div>
+      <div class="box stack" style="gap:10px">
+        <h3>🔴 رسائل متأخرة بدون رد<span class="sp"></span><label class="sw"><input type="checkbox" id="al_enabled"><i></i></label></h3>
+        <div class="muted" style="font-size:13px">رسالة وحدة لكل كروب بيه صفحات عليها متأخرة كثيرة.</div>
+        <label class="f">الصفحة بيها <input type="number" id="al_threshold" min="1"> متأخرة أو أكثر</label>
+        <label class="f">المتأخرة = تنتظر أكثر من <input type="number" id="al_red_min" min="5"> دقيقة</label>
+        <label class="f">نفس الكروب ما يتنبه أكثر من مرة كل <input type="number" id="al_cooldown_min" min="10"> دقيقة</label>
+      </div>
+      <div class="box stack" style="gap:10px">
+        <h3>⚠️ صفحة خاملة<span class="sp"></span><label class="sw"><input type="checkbox" id="al_idle_enabled"><i></i></label></h3>
+        <div class="muted" style="font-size:13px">أكو زبون ينتظر والصفحة ما ردّت على أحد. تروح لكروب الصفحة ولكروب المشرفات.</div>
+        <label class="f">بدون أي رد لمدة <input type="number" id="al_idle_min" min="15"> دقيقة</label>
+        <label class="f">نفس الصفحة ما تتنبه أكثر من مرة كل <input type="number" id="al_idle_cooldown_min" min="10"> دقيقة</label>
+        <label class="f">كروب المشرفات <input id="al_supervisors_group" style="flex:1;min-width:160px" placeholder="اسم الكروب بالدليل"></label>
+      </div>
+      <div class="box stack" style="gap:10px">
+        <h3>⏰ انتهاء الجدولة<span class="sp"></span><label class="sw"><input type="checkbox" id="al_sched_enabled"><i></i></label></h3>
+        <div class="muted" style="font-size:13px">تذكير لمندوبات الصفحة حتى يطلبن تمديد جدولة منشورات المباشر.</div>
+        <label class="f">قبل نهاية الجدولة بـ <input type="number" id="al_sched_days_before" min="1" max="14"> يوم</label>
+        <div class="muted" style="font-size:13px">الساعات (اضغط على الساعة حتى تختارها أو تشيلها):</div>
+        <div class="hrs" id="al_hours"></div>
+      </div>
+    </div>
+    <div class="row"><button id="alSave">💾 حفظ</button><span id="alMsg" class="muted" style="font-size:13px"></span><span class="sp" style="flex:1"></span><button class="line" id="alPrev">👁 معاينة: شنو راح يطلع هسه؟</button></div>
+    <div id="alPrevOut"></div>
+    <div class="al">
+      <div class="box stack" style="gap:8px"><h3>📅 نهاية الجدولة لكل صفحة</h3><div id="alSched" style="overflow-x:auto"></div></div>
+      <div class="box stack" style="gap:8px"><h3>📜 آخر التنبيهات المرسلة</h3><div id="alLog" style="overflow-x:auto"></div></div>
+    </div>
+  </section>
   <section id="tab_reply" class="stack">
   <div class="tip">التعليقات والرسائل اللي تنتظر رد بكل الصفحات الشغالة (آخر 48 ساعة). الخادم يفحص كل صفحة تلقائياً تقريباً كل 20 دقيقة، و«فحص الآن» يحدّث صفحة فوراً. تنبيه الواتساب يرسل المتأخرة بس (الحمرة، أكثر من <span class="rmin">60</span> دقيقة). ما ينحسب: رد الصفحة تحت التعليق أو الرد الخاص عليه، وعبارات الختام («شكراً»، «تمام»، 👍، ستيكر)، والتعليقات اللي بيها بس تاك لصديق، والمخفية. اللون حسب أقدم واحد ينتظر: 🟢 أقل من <span class="ymin">15</span> دقيقة • 🟡 أكثر • 🔴 أكثر من <span class="rmin">60</span> دقيقة.</div>
   <div class="kpis" id="kpis"></div>
@@ -192,6 +241,54 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lsGet=(k,d)=>{try{const v=localStorage.getItem('mon_'+k);return v==null?d:v;}catch(_){return d;}};
 const lsSet=(k,v)=>{try{localStorage.setItem('mon_'+k,v);}catch(_){}};
+
+// ---------- WhatsApp alert settings (admins only: alerts_get / alerts_set) ----------
+let AL=null,alHours=new Set(),alWired=false;
+const bgDt=t=>new Date(t).toLocaleString('ar-IQ-u-nu-latn',{timeZone:'Asia/Baghdad',weekday:'short',day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'});
+const hLbl=h=>h===0||h===24?'12 بالليل':h<12?`${h} الصبح`:h===12?'12 الظهر':h<17?`${h-12} الظهر`:h<20?`${h-12} العصر`:`${h-12} بالليل`;
+async function alInit(){
+  if(!alWired){alWired=true;
+    $('al_start_hour').innerHTML=[...Array(24).keys()].map(h=>`<option value="${h}">${hLbl(h)}</option>`).join('');
+    $('al_end_hour').innerHTML=[...Array(24).keys()].map(h=>h+1).map(h=>`<option value="${h}">${hLbl(h)}</option>`).join('');
+    $('al_hours').onclick=e=>{const b=e.target.closest('[data-h]');if(!b)return;const h=+b.dataset.h;alHours.has(h)?alHours.delete(h):alHours.add(h);b.classList.toggle('on');};
+    $('alSave').onclick=alSave;$('alPrev').onclick=alPreview;}
+  $('alMsg').textContent='...';
+  const{data,error}=await sb.rpc('alerts_get');
+  if(error){$('alMsg').textContent='خطأ: '+error.message;return;}
+  AL=data;const s=data.settings;$('alMsg').textContent='';
+  for(const k of ['enabled','idle_enabled','sched_enabled'])$('al_'+k).checked=!!s[k];
+  for(const k of ['threshold','red_min','cooldown_min','idle_min','idle_cooldown_min','sched_days_before','start_hour','end_hour'])$('al_'+k).value=s[k];
+  $('al_supervisors_group').value=s.supervisors_group||'';
+  alHours=new Set(s.sched_hours||[]);
+  $('al_hours').innerHTML=[...Array(24).keys()].map(h=>`<button data-h="${h}" class="${alHours.has(h)?'on':''}" title="${hLbl(h)}">${String(h).padStart(2,'0')}:00</button>`).join('');
+  const days=+s.sched_days_before;
+  $('alSched').innerHTML=data.schedules.length?`<table class="xt"><tr><th>الصفحة</th><th>الكروب</th><th>باقي</th><th>آخر منشور مجدول</th><th>التذكير</th></tr>${data.schedules.map(x=>{
+    const end=new Date(new Date(x.last_at).toLocaleString('en-US',{timeZone:'Asia/Baghdad'}));end.setHours(0,0,0,0);
+    const rem=new Date(end.getTime()-days*864e5),left=Math.round((end-new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Baghdad'})).setHours(0,0,0,0))/864e5);
+    return`<tr class="${left<=days?'rowbad':''}"><td>${esc(x.name)}</td><td class="muted">${esc(x.wa_group||'— ما إلها كروب')}</td><td>${x.n}</td><td>${bgDt(x.last_at)}${left>=0?` <small>(بعد ${left} يوم)</small>`:''}</td><td>${x.wa_group?(s.sched_enabled?`${rem.getDate()}/${rem.getMonth()+1}`:'متوقف'):'—'}</td></tr>`;}).join('')}</table>`:'<div class="muted">ماكو جدولة شغالة.</div>';
+  const K={late:'🔴 متأخرة',idle:'⚠️ خاملة',sched:'⏰ جدولة'};
+  $('alLog').innerHTML=data.log.length?`<table class="xt"><tr><th>الوقت</th><th>النوع</th><th>الكروب</th><th>الصفحات</th></tr>${data.log.slice(0,40).map(l=>`<tr><td>${bgDt(l.at)}</td><td>${K[l.k]||l.k}</td><td>${esc(l.g||'')}</td><td>${esc(l.pages||'')}</td></tr>`).join('')}</table>`:'<div class="muted">بعد ما طلع أي تنبيه.</div>';
+}
+async function alSave(){
+  const n=k=>+$('al_'+k).value,p={enabled:$('al_enabled').checked,idle_enabled:$('al_idle_enabled').checked,sched_enabled:$('al_sched_enabled').checked,
+    threshold:n('threshold'),red_min:n('red_min'),cooldown_min:n('cooldown_min'),idle_min:n('idle_min'),idle_cooldown_min:n('idle_cooldown_min'),
+    sched_days_before:n('sched_days_before'),start_hour:n('start_hour'),end_hour:n('end_hour'),supervisors_group:$('al_supervisors_group').value.trim(),sched_hours:[...alHours]};
+  if(p.end_hour<=p.start_hour){toast('نهاية الدوام لازم تكون بعد بدايته');return;}
+  if(p.sched_enabled&&!p.sched_hours.length){toast('اختار ساعة وحدة على الأقل لتذكير الجدولة');return;}
+  $('alSave').disabled=true;const{error}=await sb.rpc('alerts_set',{p});$('alSave').disabled=false;
+  if(error){toast('خطأ: '+error.message);return;}toast('✅ انحفظ — يشتغل من الدورة الجاية');alInit();
+}
+async function alPreview(){
+  const o=$('alPrevOut');o.innerHTML='<div class="box muted">...</div>';
+  try{const{data:{session}}=await sb.auth.getSession();const call=b=>fetch(`${SB_URL}/functions/v1/monitor`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify(b)}).then(r=>r.json());
+    const[a,sc]=await Promise.all([call({alert_preview:true}),call({schedule_preview:true})]);
+    const blk=(t,list)=>`<div class="box stack" style="gap:8px"><h3 style="margin:0;font-size:15px">${t}</h3>${list.length?list.map(m=>`<div><b>← ${esc(m.to)}</b>${m.note?` <span class="muted">${esc(m.note)}</span>`:''}<div class="prev">${esc(m.text)}</div></div>`).join(''):'<div class="muted">ماكو شي.</div>'}</div>`;
+    const late=(a.late?.groups||[]).map(g=>({to:g.group,note:g.skipped==='cooldown'?'(بفترة الانتظار — ما يندز هسه)':'',text:g.preview?g.preview+(g.chars>600?'\n…':''):''}));
+    const idle=(a.idle?.messages||[]).map(m=>({to:m.to,text:m.preview+(m.chars>500?'\n…':'')}));
+    const sch=(sc.messages||[]).map(m=>({to:m.to,text:m.text}));
+    o.innerHTML=`<div class="tip">معاينة بس — ما ينرسل شي. تبين شنو يطلع لو هسه وقت دوام${sc.end_date?`، وتذكير الجدولة للصفحات اللي تخلص يوم ${esc(sc.end_date)}`:''}.</div><div class="al">${blk('🔴 متأخرة',late)}${blk('⚠️ خاملة',idle)}${blk('⏰ انتهاء الجدولة',sch)}</div>`;
+  }catch(e){o.innerHTML=`<div class="box">خطأ: ${esc(e.message)}</div>`;}
+}
 let tT;function toast(m,ms=3500){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(tT);tT=setTimeout(()=>t.hidden=true,ms);}
 // theme
 const applyTheme=()=>{const t=lsGet('theme','');if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme;};applyTheme();
@@ -207,7 +304,7 @@ const mins=t=>Math.max(0,Math.round((Date.now()-new Date(t).getTime())/60000));
 const ago=m=>m<60?`${m} دقيقة`:m<1440?`${Math.floor(m/60)} ساعة${m%60?` و${m%60} د`:''}`:`${Math.floor(m/1440)} يوم`;
 const colorOf=m=>m==null?'grn':m>RMIN?'red':m>YMIN?'yel':'grn';
 
-const STANDALONE=/\/watch\//.test(location.pathname);
+const STANDALONE=/\/watch\//.test(location.pathname);let IS_ADMIN=false;
 if(STANDALONE)document.title='نظام مراقبة الصفحات';
 async function start(){
   const{data:{session}}=await sb.auth.getSession();
@@ -216,7 +313,7 @@ async function start(){
   const{data:okMon}=await sb.rpc('am_monitor');
   if(!okMon){$('loginBox').hidden=false;$('app').hidden=true;$('loginMsg').textContent=`الحساب ${session.user.email} ما عنده صلاحية (لازم يكون بعمود «ايميل الادمن» بالشيت).`;$('swBtn').hidden=false;return;}
   // the link back to the publishing panel only for its admins
-  const{data:adm}=await sb.from('admins').select('email').limit(1);if(STANDALONE||!adm||!adm.length)$('pubLink').hidden=true;
+  const{data:adm}=await sb.from('admins').select('email').limit(1);IS_ADMIN=!!(adm&&adm.length);if(STANDALONE||!IS_ADMIN)$('pubLink').hidden=true;$('alertsTabBtn').hidden=!IS_ADMIN;if(tab==='alerts'&&!IS_ADMIN)tab='reply';
   $('loginBox').hidden=true;$('app').hidden=false;
   $('ymin').value=YMIN;$('rmin').value=RMIN;await load();setInterval(()=>{if(tab==='reply'&&!document.hidden)load();},60000);setTab(tab);
 }
@@ -323,7 +420,7 @@ let tab=lsGet('tab','reply'),aSel=new Set((a=>a.length>15?[]:a)(JSON.parse(lsGet
 const dISO=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const dAr=t=>new Date(t).toLocaleDateString('ar-IQ',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'});
 function setTab(t){tab=t;lsSet('tab',t);document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
-  $('tab_reply').hidden=t!=='reply';$('tab_audit').hidden=!(t==='dup'||t==='brand');$('tab_act').hidden=t!=='act';if(t==='dup'||t==='brand'){auditInit();loadRuns();}if(t==='act')actInit();}
+  $('tab_reply').hidden=t!=='reply';$('tab_audit').hidden=!(t==='dup'||t==='brand');$('tab_act').hidden=t!=='act';$('tab_alerts').hidden=t!=='alerts';if(t==='alerts')alInit();if(t==='dup'||t==='brand'){auditInit();loadRuns();}if(t==='act')actInit();}
 function auditInit(){
   const brand=tab==='brand';
   $('auditTip').innerHTML=brand
