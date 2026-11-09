@@ -185,6 +185,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
 .pgname{font-weight:700;color:var(--accent,#5e35b1)}
 .rep td{vertical-align:top;padding:8px 6px;border-bottom:1px solid var(--line,#e6e0ee)}.rep th{text-align:right;padding:6px;font-size:13px;color:var(--muted)}.rep tr.paused{opacity:.7}.rep .tm{margin:2px 0}.rep .bar{height:4px;background:var(--accent-soft);border-radius:3px;margin-top:4px;min-width:60px}.rep .bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
 .rep .tmc{display:inline-flex;align-items:center;margin:2px 0}.rep .tmx{border:0;background:none;color:#c62828;cursor:pointer;font-size:12px;padding:0 4px}.rep .tmadd{margin:2px 0}.rep .autot{margin-top:4px;font-size:12px}
+.rep .tm.st-ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}.rep .tm.st-bad{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}.rep .tm.st-late{background:var(--warn-soft);color:var(--bad);border-color:var(--bad);font-weight:700}.rep .tm.st-run{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}.rep .tm[disabled]{opacity:1;cursor:default}.rep tr.nosch{opacity:.75}.rfl{display:flex;gap:8px;align-items:flex-start}.rfn{min-width:58px;padding-top:4px;font-size:12px}.chips .gchip.dim{opacity:.45}.chips .gchip.rst.bad.on{background:var(--bad);color:#fff}.chips .gchip.rst.warn.on{background:var(--warn);color:#fff}.chips .gchip.rst.ok.on{background:var(--ok);color:#fff}.rep thead th{position:sticky;top:0;background:var(--surface,#fff);z-index:1}
 .rep tr.det td{background:var(--surface2,#f7f4fb);border-radius:8px}.rep .catblk{padding:6px 0;border-bottom:1px dashed var(--line,#e6e0ee)}
 </style>
 </head>
@@ -257,6 +258,7 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
     <div id="tab-rep" class="stack" hidden>
       <div class="tip">تقرير كل الصفحات اللي عليها جدولة، لكل مصدر (📦 مباشر من المخزن • ✈️ شحن • 🔁 إعادة من الصفحات): من وين لوين، كم منشور، كم نُشر وكم باقي، وأوقات النشر اليومية. «إيقاف» يوقف المتبقي مؤقتاً (يبقى محجوز بمنتجاته وأوقاته) ويطفي النشر التلقائي من الخادم، و«تشغيل» يرجعه؛ المنشورات اللي فات وقتها أثناء الإيقاف تُلغى حتى ما تنزل مرة وحدة. اضغط على أي وقت لتغييره لكل المتبقي، و✕ جنبه يلغي هذا الوقت من المتبقي، و«＋ وقت» يضيف وقت يومي جديد لباقي أيام الجدولة بمنتجات جديدة. «⚡ تلقائي» زر واحد يشغّل أو يطفي النشر التلقائي من الخادم (الخادم ينشئ منشورات بنفسه كل فاصل ضمن أوقات العمل). ما يتضاعف النشر: إذا الصفحة عليها جدولة، التلقائي يبقى «احتياطي» وينتظر لحد ما تخلص الجدولة وبعدها يكمل هو. «📋 نسخ لصفحات مشابهة» يعرض الصفحات اللي بنفس الفئة (ويأشر اللي عندها جدولة) وينسخ الجدولة للمختارة بمنتجات جديدة لكل صفحة وإزاحة وقت. «🏷 الفئات» يعرض الفئات والأنواع داخل الجدولة: تلغي بعضها، أو تستبدلها بفئة ثانية بنفس الأوقات، أو تضيف فئة بوقت يومي جديد. «إلغاء المتبقي» يحرر المنتجات. «فتح» ينقلك لجدول الصفحة لتعديل منشور معيّن.<button class="tx">✕</button></div>
       <div class="box row"><button id="repBtn" class="ghost">تحديث التقرير</button><span id="repSum" class="muted"></span></div>
+      <div id="repFilt" class="box"></div>
       <div id="repList" class="stack"></div>
     </div>
     <div id="tab-sched" class="stack" hidden>
@@ -1314,26 +1316,89 @@ const SRCN={stock:'📦 مباشر',ship:'✈️ شحن',posts:'🔁 إعادة 
 let repRows=[];
 const fmtD=d=>{const x=new Date(d);return`${AR_DAYS[x.getDay()]} ${x.getDate()}/${x.getMonth()+1}`;};
 const fmtHM=t=>{const[h,m]=t.split(':').map(Number);return`${((h+11)%12)+1}:${String(m).padStart(2,'0')} ${h<12?'ص':'م'}`;};
+// تحميل التقرير: الجدولة + بيانات الصفحات (محفظة، كروب، مشرفة، فئات) + حالة اليوم لكل وقت
+let repMeta=new Map(),repAll=[];
+const RF_KEY='repFilt';
+let RF=(()=>{try{return Object.assign({pf:[],wa:[],sup:[],cat:[],st:[],q:''},JSON.parse(lsGet(RF_KEY,'{}')));}catch(e){return{pf:[],wa:[],sup:[],cat:[],st:[],q:''};}})();
+const rfSave=()=>lsSet(RF_KEY,JSON.stringify(RF));
+const normAr=s=>String(s||'').toLowerCase().replace(/[ً-ٰٟـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').trim();
 async function loadReport(){$('repList').innerHTML='<div class="box muted">جارٍ التحميل...</div>';
-  const{data,error}=await sb.rpc('schedule_report');if(error){$('repList').innerHTML=`<div class="box">خطأ: ${esc(error.message)}</div>`;return;}
-  repRows=data||[];const pagesN=new Set(repRows.map(r=>r.page_id)).size;
-  $('repSum').textContent=`${pagesN} صفحة • ${repRows.reduce((a,r)=>a+r.remaining,0)} منشور متبقي • ${repRows.reduce((a,r)=>a+r.paused,0)} موقوف`;
-  if(!repRows.length){$('repList').innerHTML='<div class="box muted">لا توجد صفحات عليها جدولة حالياً.</div>';return;}
-  $('repList').innerHTML=`<div class="box" style="overflow-x:auto"><table class="rep"><thead><tr><th>الصفحة</th><th>المصدر</th><th>المدة</th><th>العدد</th><th>نُشر</th><th>متبقي</th><th>أوقات النشر اليومي</th><th>انستكرام</th><th>الحالة</th><th></th></tr></thead><tbody>${repRows.map((r,i)=>{
-    const done=r.total?Math.round(r.published/r.total*100):0;const paused=r.paused>0&&!r.remaining;
-    return`<tr class="${paused?'paused':''}">
-    <td><b>${esc(r.page_name)}</b></td><td>${SRCN[r.source]||esc(r.source)}</td>
+  const[a,b]=await Promise.all([sb.rpc('schedule_report'),sb.rpc('schedule_report_meta')]);
+  if(a.error){$('repList').innerHTML=`<div class="box">خطأ: ${esc(a.error.message)}</div>`;return;}
+  repMeta=new Map(((b.error?[]:b.data)||[]).map(m=>[m.page_id,m]));
+  repRows=a.data||[];
+  const has=new Set(repRows.map(r=>r.page_id));
+  // الصفحات بدون جدولة تظهر أيضاً (حتى تعرف وين ماكو نشر)
+  repAll=repRows.map((r,i)=>({...r,_i:i,_m:repMeta.get(r.page_id)}));
+  repMeta.forEach(m=>{if(!has.has(m.page_id))repAll.push({page_id:m.page_id,page_name:m.page_name,source:'none',total:0,published:0,failed:0,remaining:0,paused:0,times:[],_i:-1,_m:m});});
+  repAll.forEach(r=>r._d=repDay(r));
+  const pagesN=has.size;
+  $('repSum').textContent=`${pagesN} صفحة عليها جدولة • ${repRows.reduce((x,r)=>x+r.remaining,0)} منشور متبقي • ${repRows.reduce((x,r)=>x+r.paused,0)} موقوف • آخر تحديث ${new Date().toLocaleTimeString('ar-IQ',{hour:'numeric',minute:'2-digit'})}`;
+  renderReport();}
+// حالة اليوم: لكل وقت (نُشر/فشل/متأخر/قيد التجهيز/بالانتظار)
+function repDay(r){const m=r._m,src=r.source;const list=m?(m.today||[]).filter(x=>x.src===src):[];const now=Date.now();
+  const st=x=>x.st==='published'?'ok':x.st==='failed'?'bad':['rendering','publishing'].includes(x.st)?'run':x.st==='paused'?'pz':new Date(x.at).getTime()<now-15*60e3?'late':'wait';
+  const byT=new Map();list.forEach(x=>{const k=st(x);(byT.get(x.t)||byT.set(x.t,[]).get(x.t)).push(k);});
+  const k=list.map(st);return{byT,tot:list.length,ok:k.filter(x=>x==='ok').length,bad:k.filter(x=>x==='bad').length,late:k.filter(x=>x==='late').length,run:k.filter(x=>x==='run').length,wait:k.filter(x=>x==='wait').length};}
+// حالة السطر للفلترة
+function repStates(r){const s=[];const d=r._d;
+  if(r.source==='none')s.push('none');else if(r.paused>0&&!r.remaining)s.push('paused');else if(r.remaining)s.push('running');else s.push('ended');
+  if(d.bad)s.push('bad');if(d.late)s.push('late');if(d.tot&&d.ok===d.tot)s.push('full');
+  if(r.source!=='none'&&r.times&&r.times.length&&d.tot<r.times.length&&r.remaining)s.push('short');
+  if(r.ig_fail)s.push('igbad');return s;}
+const RST=[['running','▶ الجدولة تعمل','ok'],['paused','⏸ موقوفة','warn'],['none','بدون جدولة',''],['ended','انتهت الجدولة',''],['full','✓ اليوم مكتمل','ok'],['late','⏰ متأخر اليوم','bad'],['bad','✗ فشل اليوم','bad'],['short','اليوم أقل من الأوقات','warn'],['igbad','فشل انستكرام','bad']];
+const RLV=[['pf','المحفظة',r=>r._m?.portfolio||'غير مصنّف'],['wa','الكروب',r=>r._m?.wa_group||'غير مصنّف'],['sup','المشرفة',r=>r._m?.supervisor||'غير مصنّف'],['cat','الفئة',r=>(r._m?.categories||[]).length?r._m.categories:['غير مصنّف']]];
+const rfVals=(r,key)=>{const f=RLV.find(x=>x[0]===key)[2](r);return Array.isArray(f)?f:[f];};
+function rfPass(r,skip){for(const[k]of RLV){if(k===skip||!RF[k].length)continue;if(!rfVals(r,k).some(v=>RF[k].includes(v)))return false;}
+  if(skip!=='st'&&RF.st.length){const s=repStates(r);if(!RF.st.some(x=>s.includes(x)))return false;}
+  if(RF.q){const q=normAr(RF.q);const m=r._m||{};if(!normAr([r.page_name,m.supervisor,m.wa_group,m.portfolio,...(m.categories||[])].join(' ')).includes(q))return false;}
+  return true;}
+function renderRepFilters(){const box=$('repFilt');if(!box)return;
+  const lvl=RLV.map(([k,lbl])=>{const cnt=new Map();repAll.filter(r=>rfPass(r,k)).forEach(r=>new Set(rfVals(r,k)).forEach(v=>cnt.set(v,(cnt.get(v)||0)+1)));
+    RF[k].forEach(v=>{if(!cnt.has(v))cnt.set(v,0);});
+    const items=[...cnt.entries()].sort((a,b)=>(a[0]==='غير مصنّف')-(b[0]==='غير مصنّف')||b[1]-a[1]);
+    return`<div class="rfl"><span class="muted rfn">${lbl}</span><div class="chips">${items.map(([v,n])=>`<button class="gchip ${RF[k].includes(v)?'on':''} ${n?'':'dim'}" data-rf="${k}" data-v="${esc(v)}">${esc(v)}<small>${n}</small></button>`).join('')}</div></div>`;}).join('');
+  const sc=new Map();repAll.filter(r=>rfPass(r,'st')).forEach(r=>repStates(r).forEach(s=>sc.set(s,(sc.get(s)||0)+1)));
+  const sts=`<div class="rfl"><span class="muted rfn">الحالة</span><div class="chips">${RST.map(([k,l,c])=>`<button class="gchip rst ${c} ${RF.st.includes(k)?'on':''} ${sc.get(k)?'':'dim'}" data-rf="st" data-v="${k}">${l}<small>${sc.get(k)||0}</small></button>`).join('')}</div></div>`;
+  const act=[...RLV.flatMap(([k])=>RF[k].map(v=>[k,v,v])),...RF.st.map(v=>['st',v,(RST.find(x=>x[0]===v)||[,v])[1]])];
+  box.innerHTML=`<div class="row" style="gap:8px;flex-wrap:wrap"><input id="repQ" type="search" placeholder="بحث باسم الصفحة أو المشرفة أو الفئة..." value="${esc(RF.q)}" style="flex:1;min-width:200px"><button class="sm line" id="repFT">${$('repFilt').dataset.open==='1'?'إخفاء الفلاتر':'فلترة'}</button></div>
+    <div id="repFB" class="stack" style="gap:6px;margin-top:8px" ${$('repFilt').dataset.open==='0'?'hidden':''}>${lvl}${sts}</div>
+    ${act.length?`<div class="chips" style="margin-top:8px">${act.map(([k,v,l])=>`<button class="gchip on" data-rfx="${k}" data-v="${esc(v)}">${esc(l)} ✕</button>`).join('')}<button class="gchip" id="repFC">مسح الكل</button></div>`:''}`;
+  const q=$('repQ');q.oninput=()=>{RF.q=q.value;rfSave();const pos=q.selectionStart;renderReport();const n=$('repQ');n.focus();n.setSelectionRange(pos,pos);};}
+function renderReport(){renderRepFilters();
+  const rows=repAll.filter(r=>rfPass(r)).sort((a,b)=>String(a.page_name).localeCompare(String(b.page_name),'ar')||(a.source>b.source?1:-1));
+  const head=`<div class="muted" style="margin-bottom:6px">عرض ${rows.length} من ${repAll.length}</div>`;
+  if(!rows.length){$('repList').innerHTML=`<div class="box muted">ماكو نتائج بهالفلاتر. <button class="sm line" id="repFC2">مسح الفلاتر</button></div>`;return;}
+  $('repList').innerHTML=`<div class="box" style="overflow-x:auto">${head}<table class="rep"><thead><tr><th>الصفحة</th><th>المصدر</th><th>المدة</th><th>العدد</th><th>نُشر</th><th>متبقي</th><th>اليوم</th><th>أوقات النشر اليومي</th><th>انستكرام</th><th>الحالة</th><th></th></tr></thead><tbody>${rows.map(r=>repRowHtml(r)).join('')}</tbody></table></div>`;}
+const SLT={ok:['ok','✓','نُشر اليوم'],bad:['bad','✗','فشل اليوم'],late:['late','⏰','فات وقته وما نُشر'],run:['run','⏳','قيد التجهيز/النشر'],wait:['wait','','بانتظار وقته اليوم'],pz:['wait','⏸','موقوف']};
+function repRowHtml(r){const m=r._m||{},d=r._d,i=r._i;
+  const meta=`<div class="muted" style="font-size:11px">${esc(m.supervisor||'')}${m.wa_group?' • '+esc(m.wa_group):''}</div>`;
+  if(r.source==='none')return`<tr class="nosch"><td><b>${esc(r.page_name)}</b>${meta}</td><td colspan="9"><span class="pill">لا جدولة على هذه الصفحة</span></td><td><button class="sm line" data-ropen="${esc(r.page_id)}">فتح</button></td></tr>`;
+  const done=r.total?Math.round(r.published/r.total*100):0;const paused=r.paused>0&&!r.remaining;
+  const all=[...new Set([...(r.times||[]),...d.byT.keys()])].sort();
+  const dayCls=d.bad||d.late?'bad':d.tot&&d.ok===d.tot?'ok':'';
+  const tm=all.map(t=>{const ks=d.byT.get(t)||[];const k=ks.includes('bad')?'bad':ks.includes('late')?'late':ks.includes('run')?'run':ks.length&&ks.every(x=>x==='ok')?'ok':ks.length?ks[0]:'none';
+    const s=SLT[k]||['none','','ما عليه منشور اليوم'];const inRem=(r.times||[]).includes(t);
+    return`<span class="tmc"><button class="sm line tm st-${s[0]}" ${inRem?`data-rt="${i}"`:'disabled'} data-t="${t}" title="${s[2]}${inRem?' — اضغط لتغيير هذا الوقت لكل المتبقي':''}">${s[1]?s[1]+' ':''}${fmtHM(t)}</button>${inRem?`<button class="tmx" data-rx="${i}" data-t="${t}" title="إلغاء هذا الوقت من المتبقي">✕</button>`:''}</span>`;}).join(' ');
+  return`<tr class="${paused?'paused':''}">
+    <td><b>${esc(r.page_name)}</b>${meta}</td><td>${SRCN[r.source]||esc(r.source)}</td>
     <td style="white-space:nowrap">من ${fmtD(r.start_at)}<br>إلى ${fmtD(r.end_at)}<div class="muted">${r.days} يوم</div></td>
     <td><b>${r.total}</b></td>
     <td>${r.published}${r.failed?` <span class="pill bad" title="فشل">${r.failed} فشل</span>`:''}<div class="bar"><i style="width:${done}%"></i></div></td>
     <td><b>${r.remaining}</b>${r.paused?` <span class="pill warn">${r.paused} موقوف</span>`:''}${r.next_at?`<div class="muted">التالي: ${fmtT(new Date(r.next_at))}</div>`:''}</td>
-    <td>${(r.times||[]).map(t=>`<span class="tmc"><button class="sm line tm" data-rt="${i}" data-t="${t}" title="غيّر هذا الوقت لكل المتبقي">${fmtHM(t)}</button><button class="tmx" data-rx="${i}" data-t="${t}" title="إلغاء هذا الوقت من المتبقي">✕</button></span>`).join(' ')||'<span class="muted">—</span>'}${r.source!=='posts'?` <button class="sm tmadd" data-radd="${i}" title="إضافة وقت يومي جديد لباقي أيام الجدولة">＋ وقت</button>`:''}</td>
+    <td style="white-space:nowrap"><span class="pill ${dayCls}" title="المنشور اليوم من مجموع منشورات اليوم">${d.ok}/${d.tot}</span>${d.late?`<div class="pill bad" style="margin-top:3px">${d.late} متأخر</div>`:''}${d.bad?`<div class="pill bad" style="margin-top:3px">${d.bad} فشل</div>`:''}${(r.times||[]).length>d.tot&&r.remaining?`<div class="muted" style="font-size:11px">الأوقات ${(r.times||[]).length}</div>`:''}</td>
+    <td>${tm||'<span class="muted">—</span>'}${r.source!=='posts'?` <button class="sm tmadd" data-radd="${i}" title="إضافة وقت يومي جديد لباقي أيام الجدولة">＋ وقت</button>`:''}</td>
     <td>${r.ig_ok?`<span class="pill ok">${r.ig_ok} ✓</span>`:''}${r.ig_fail?` <span class="pill bad">${r.ig_fail} فشل</span>`:''}${!r.ig_ok&&!r.ig_fail?'<span class="muted">—</span>':''}</td>
     <td><div>${paused?'<span class="pill warn">⏸ الجدولة موقوفة</span>':r.remaining?'<span class="pill ok">▶ الجدولة تعمل</span>':'<span class="pill">لا جدولة متبقية</span>'}</div>${r.source!=='posts'?`<button class="sm ${r.auto_on?'ok':'line'} autot" data-rauto="${i}" title="النشر التلقائي من الخادم: ينشئ منشورات بنفسه كل فاصل ضمن أوقات العمل — وما دامت الجدولة شغالة ينتظر ويشتغل بعد ما تخلص (ما يتضاعف النشر)">⚡ تلقائي: ${r.auto_on?(r.remaining||r.paused?'احتياطي':'مفعّل'):'مطفأ'}</button>${r.auto_on&&(r.remaining||r.paused)?'<div class="muted" style="font-size:11px">يبدأ بعد انتهاء الجدولة</div>':''}`:''}</td>
     <td style="white-space:nowrap">${paused?`<button class="sm ok" data-ra="resume" data-i="${i}">▶ تشغيل</button>`:`<button class="sm" data-ra="pause" data-i="${i}">⏸ إيقاف</button>`}
       <button class="sm line" data-ra="open" data-i="${i}">فتح</button> <button class="sm line" data-ra="cancel" data-i="${i}" style="color:#c62828">إلغاء المتبقي</button>
       <div style="margin-top:4px"><button class="sm line" data-ra="copy" data-i="${i}">📋 نسخ لصفحات مشابهة</button> <button class="sm line" data-ra="cats" data-i="${i}">🏷 الفئات</button></div></td></tr>
-    <tr class="det" id="repDet${i}" hidden><td colspan="10"></td></tr>`;}).join('')}</tbody></table></div>`;}
+    <tr class="det" id="repDet${i}" hidden><td colspan="11"></td></tr>`;}
+$('repFilt').addEventListener('click',e=>{const b=e.target.closest('[data-rf]'),x=e.target.closest('[data-rfx]');
+  if(e.target.id==='repFT'){const o=$('repFilt').dataset.open==='0'?'1':'0';$('repFilt').dataset.open=o;lsSet('repFiltOpen',o);renderReport();return;}
+  if(e.target.id==='repFC'){RF={pf:[],wa:[],sup:[],cat:[],st:[],q:''};rfSave();renderReport();return;}
+  const t=b||x;if(!t)return;const k=t.dataset.rf||t.dataset.rfx,v=t.dataset.v;const a=RF[k];const j=a.indexOf(v);if(j>=0)a.splice(j,1);else if(b)a.push(v);rfSave();renderReport();});
+$('repFilt').dataset.open=lsGet('repFiltOpen','1');
 
 // إضافة وقت يومي جديد لباقي أيام الجدولة: منتجات جديدة من النشر الدوري لكل يوم
 async function repAddTime(r,btn,cats,preset){const v=preset||prompt(`وقت يومي جديد لـ ${r.page_name} (${SRCN[r.source]})${cats?' من فئة '+cats.join('، '):''} بصيغة 24 ساعة مثل 13:30:`,'');if(!v)return;const t=v.trim();
@@ -1413,7 +1478,9 @@ async function repCatsUI(r,td){td.innerHTML='<span class="muted">جارٍ الت
     catch(er){toast('خطأ: '+er.message,6000);out.textContent='';e.target.disabled=false;}};
   td.querySelector('.cadd').onclick=e=>{const c=td.querySelector('.caddc').value;if(!c)return toast('الصفحة ما عندها فئات');repAddTime(r,e.target,[c]);};}
 $('repBtn').onclick=loadReport;
-$('repList').addEventListener('click',async e=>{const tb=e.target.closest('[data-rt]');const ab=e.target.closest('[data-ra]');
+$('repList').addEventListener('click',async e=>{if(e.target.id==='repFC2'){RF={pf:[],wa:[],sup:[],cat:[],st:[],q:''};rfSave();renderReport();return;}
+  const ob=e.target.closest('[data-ropen]');if(ob){const id=ob.dataset.ropen;$('pageSel').value=id;if($('pageSel').value!==id){$('pageSearch').value='';fillPageSelect();$('pageSel').value=id;}onPageChange();showTab('cand');return;}
+  const tb=e.target.closest('[data-rt]');const ab=e.target.closest('[data-ra]');
   const xb=e.target.closest('[data-rx]'),addb=e.target.closest('[data-radd]'),aub=e.target.closest('[data-rauto]');
   if(xb){const r=repRows[+xb.dataset.rx],t=xb.dataset.t;if(!confirm(`إلغاء وقت ${fmtHM(t)} من كل المنشورات المتبقية لـ ${r.page_name}؟ منتجاتها ترجع غير منشورة.`))return;
     const{data,error}=await sb.rpc('schedule_remove_time',{p_page:r.page_id,p_source:r.source,p_time:t});if(error)return toast('خطأ: '+error.message);
