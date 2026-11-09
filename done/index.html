@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تأكيد تنفيذ الطلب</title>
+<style>
+  :root{--bg:#f4f5fb;--card:#fff;--ink:#222;--muted:#777;--ok:#1e8449;--bad:#c0392b;--acc:#667eea}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15161c;--card:#1f2029;--ink:#eee;--muted:#aaa}}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+  .c{background:var(--card);border-radius:18px;max-width:520px;width:100%;padding:24px;box-shadow:0 6px 30px rgba(0,0,0,.08);text-align:center}
+  .big{font-size:56px;line-height:1}
+  h1{font-size:20px;margin:12px 0 6px}
+  p{color:var(--muted);margin:4px 0}
+  pre{white-space:pre-wrap;text-align:right;background:rgba(102,126,234,.08);border-radius:12px;padding:12px;font-family:inherit;font-size:14px;color:var(--ink);margin-top:16px}
+</style>
+</head>
+<body>
+<div class="c" id="c"><div class="big">⏳</div><h1>جاري التأكيد…</h1></div>
+<script>
+(async () => {
+  const c = document.getElementById('c');
+  const q = new URLSearchParams(location.search);
+  const r = q.get('r'), t = q.get('t');
+  const esc = s => String(s || '').replace(/[&<>]/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[x]));
+  if (!r || !t) { c.innerHTML = '<div class="big">⚠️</div><h1>الرابط ناقص</h1>'; return; }
+  try {
+    const res = await fetch('https://lxikqgjfjnfkhvuckihx.supabase.co/rest/v1/rpc/page_request_done', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT', Authorization: 'Bearer sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT' },
+      body: JSON.stringify({ p_id: r, p_token: t })
+    });
+    const o = await res.json();
+    if (!o.ok) { c.innerHTML = '<div class="big">⚠️</div><h1>' + esc(o.error || 'صار خطأ') + '</h1>'; return; }
+    const d = new Date(o.done_at).toLocaleString('ar-IQ', { timeZone: 'Asia/Baghdad', hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'numeric' });
+    c.innerHTML = '<div class="big">✅</div><h1>' + (o.already ? 'هذا الطلب متأكد من قبل' : 'تم — وقف التذكير') + '</h1>' +
+      '<p>الطلب #' + esc(o.id) + ' · ' + esc(d) + '</p>' + '<pre>' + esc(o.msg) + '</pre>';
+  } catch (e) {
+    c.innerHTML = '<div class="big">⚠️</div><h1>ما كدرت أوصل للنظام</h1><p>جرب مرة ثانية</p>';
+  }
+})();
+</script>
+</body>
+</html>
