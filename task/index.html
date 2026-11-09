@@ -83,6 +83,7 @@ function render(){
   $('app').innerHTML = `
     ${T.answered_at ? `<div class="done">✅ وصل جوابك (${new Date(T.answered_at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'})}). تكدرين تعدلين وترسلين مرة ثانية لحد ما ينتهي الرابط.</div>` : ''}
     <div class="box how">أشّري ✅ على <b>كل صفحة تشرفين عليها</b> وبعدين دوسي «إرسال». ما تحتاجين تكتبين شي.<br>إذا صفحة مكتوب عليها «اختارتها» مشرفة ثانية وهي هم إلج، أشّريها عادي وإحنا نرتبها.</div>
+    <div class="box"><div class="lbl" style="margin-top:0">📞 رقم تلفونج (واتساب) — مطلوب</div><input class="search" id="ph" inputmode="tel" placeholder="07xxxxxxxxx" value="${esc((T.answer && T.answer.phone) || T.phone || '')}" style="margin-top:6px;direction:ltr;text-align:right"></div>
     <input class="search" id="q" placeholder="🔍 ابحثي باسم الصفحة…" value="${esc(q)}">
     <div class="lbl">الكروب الرئيسي</div>
     <div class="chips">${['الكل', ...Object.keys(gc)].map(g => `<button class="chip ${g==='الكل' ? (!groups.size?'on':'') : (groups.has(g)?'on':'')}" data-g="${esc(g)}">${esc(g)}<b>${g==='الكل'?all.length:gc[g]}</b></button>`).join('')}</div>
@@ -95,7 +96,8 @@ function render(){
     <div class="box" style="margin-top:14px"><div class="lbl" style="margin-top:0">ملاحظة (اختياري)</div><textarea id="note" placeholder="مثلاً: صفحة ناقصة بالقائمة، أو صفحة انتقلت لمشرفة ثانية…">${esc(T.answer && T.answer.note || '')}</textarea></div>`;
   document.querySelector('.bar') || document.body.insertAdjacentHTML('beforeend', `<div class="bar"><span>اخترتي <span class="n" id="n"></span> صفحة</span><button class="send" id="send">إرسال ✅</button></div>`);
   $('n').textContent = picked.size;
-  $('q').oninput = e => { q = e.target.value; const pos = e.target.selectionStart; render(); const el = $('q'); el.focus(); el.setSelectionRange(pos,pos); };
+  $('ph').oninput = e => { T.answer = T.answer || {}; T.answer.phone = e.target.value; };
+  $('q').oninput = e => { keepNote(); q = e.target.value; const pos = e.target.selectionStart; render(); const el = $('q'); el.focus(); el.setSelectionRange(pos,pos); };
   document.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const g = b.dataset.g; if(g==='الكل') groups.clear(); else groups.has(g) ? groups.delete(g) : groups.add(g); render(); });
   document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; render(); });
   document.querySelectorAll('[data-id]').forEach(b => b.onclick = () => { const id = b.dataset.id; picked.has(id) ? picked.delete(id) : picked.add(id); keepNote(); render(); });
@@ -103,15 +105,17 @@ function render(){
   const clr = $('clr'); if (clr) clr.onclick = () => { groups.clear(); view='الكل'; q=''; render(); };
   $('send').onclick = send;
 }
-function keepNote(){ const n = $('note'); if(n){ T.answer = T.answer || {}; T.answer.note = n.value; } }
+function keepNote(){ T.answer = T.answer || {}; const n = $('note'); if(n) T.answer.note = n.value; const ph = $('ph'); if(ph) T.answer.phone = ph.value; }
 
 async function send(){
   const b = $('send'); keepNote();
+  const phone = (($('ph')||{}).value || '').replace(/[^0-9٠-٩]/g,'').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+  if(!/^(07\d{9}|9647\d{9})$/.test(phone)){ alert('اكتبي رقم تلفونج صحيح (11 رقم يبدي بـ 07)'); const el=$('ph'); el.focus(); el.scrollIntoView({block:'center'}); return; }
   if(!picked.size && !confirm('ما اخترتي ولا صفحة. ترسلين هيچ؟')) return;
   b.disabled = true; b.textContent = '⏳ جاري الإرسال…';
   const names = T.pages.filter(p => picked.has(p.id)).map(p => p.name);
   try {
-    const r = await rpc('task_submit', {p_token: token, p_answer: {pages:[...picked], names, note: ($('note')||{}).value || ''}});
+    const r = await rpc('task_submit', {p_token: token, p_answer: {pages:[...picked], names, phone, note: ($('note')||{}).value || ''}});
     if(!r.ok) throw new Error(r.error || 'خطأ');
     T.answered_at = new Date().toISOString();
     $('app').innerHTML = `<div class="msg">✅ وصل جوابك، شكراً ${esc(T.person)} 🌹<br><br>اخترتي ${names.length} صفحة:<br><span style="font-size:14px;color:#55657a">${esc(names.join('، '))}</span><br><br><button class="chip" id="edit">تعديل الاختيار</button></div>`;
