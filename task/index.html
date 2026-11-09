@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مهمة — Peace Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--ink:#14243a;--mut:#66758a;--line:#e3e8ef;--brand:#1f3a5f;--ok:#1a8a5a;--okbg:#e8f6ee;--warn:#d35400;--warnbg:#fff3e0;--chip:#eef2f8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',Tahoma,sans-serif;-webkit-tap-highlight-color:transparent}
+header{background:linear-gradient(135deg,#1f3a5f,#2d5a8e);color:#fff;padding:18px 16px 16px}
+header h1{margin:0 0 4px;font-size:20px}
+header p{margin:0;opacity:.85;font-size:14px;line-height:1.7}
+.wrap{max-width:720px;margin:0 auto;padding:12px 16px 120px}
+.box{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,36,58,.06)}
+.how{font-size:14px;line-height:1.9;color:#3a4a60}
+.search{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:15px;background:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:7px 13px;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer;white-space:nowrap}
+.chip b{font-weight:600;color:var(--mut);margin-inline-start:4px}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.chip.on b{color:#cfe0f5}
+.lbl{font-size:12.5px;color:var(--mut);margin-top:10px}
+.count{font-size:13px;color:var(--mut);margin:6px 2px 8px}
+.grp{font-weight:700;font-size:14px;color:var(--brand);margin:16px 4px 8px;display:flex;justify-content:space-between;align-items:center}
+.grp button{border:0;background:none;color:var(--brand);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+.pg{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;user-select:none}
+.pg.on{border-color:var(--ok);background:var(--okbg)}
+.tick{width:28px;height:28px;border-radius:8px;border:2px solid #c3ccd8;display:grid;place-items:center;flex:none;font-size:17px;color:#fff;background:#fff}
+.pg.on .tick{background:var(--ok);border-color:var(--ok)}
+.pg .nm{font-weight:600;font-size:15.5px}
+.pg .sub{font-size:12.5px;color:var(--mut);margin-top:2px}
+.pg .other{display:inline-block;margin-top:4px;font-size:12px;background:var(--warnbg);color:var(--warn);border-radius:6px;padding:1px 7px}
+textarea{width:100%;min-height:70px;border:1.5px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:14px}
+.bar{position:fixed;inset-inline:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center;justify-content:center}
+.bar .n{font-weight:700;color:var(--brand)}
+.send{border:0;background:var(--ok);color:#fff;font:inherit;font-weight:700;font-size:16px;border-radius:12px;padding:13px 22px;cursor:pointer;min-width:190px}
+.send:disabled{opacity:.6}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+.msg{text-align:center;padding:40px 16px;font-size:16px;line-height:2}
+.done{background:var(--okbg);color:var(--ok);border-radius:12px;padding:12px;font-weight:600;margin-bottom:12px;line-height:1.8}
+</style>
+</head>
+<body>
+<header><h1 id="h">…</h1><p id="hp">جاري التحميل…</p></header>
+<div class="wrap" id="app"></div>
+<script>
+const SB = 'https://lxikqgjfjnfkhvuckihx.supabase.co', KEY = 'sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT';
+const token = new URLSearchParams(location.search).get('k') || '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nk = s => String(s||'').toLowerCase().replace(/[ً-ٟـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').trim();
+async function rpc(fn, args){ const r = await fetch(`${SB}/rest/v1/rpc/${fn}`, {method:'POST', headers:{apikey:KEY, Authorization:'Bearer '+KEY, 'Content-Type':'application/json'}, body:JSON.stringify(args)}); return r.json(); }
+
+let T = null, picked = new Set(), groups = new Set(), view = 'الكل', q = '';
+function stop(msg){ $('h').textContent = 'Peace Panel'; $('hp').textContent = ''; $('app').innerHTML = `<div class="msg">${esc(msg)}</div>`; }
+
+async function load(){
+  if(!token) return stop('الرابط ناقص. افتحي الرابط مثل ما وصلك بالواتساب.');
+  let d; try { d = await rpc('task_open', {p_token: token}); } catch(e){ return stop('ما كدرت أفتح المهمة. تأكدي من النت وجربي مرة ثانية.'); }
+  if(!d || !d.ok) return stop((d && d.error) || 'الرابط غير صالح');
+  T = d;
+  (d.answer && d.answer.pages || []).forEach(id => picked.add(id));
+  $('h').textContent = 'هلا ' + d.person + ' 🌹';
+  const exp = new Date(d.expires_at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'long',day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'});
+  $('hp').textContent = 'تأكيد الصفحات اللي تشرفين عليها • الرابط شغال لحد ' + exp;
+  render();
+}
+
+function counts(list){ const m = {}; list.forEach(p => m[p.group] = (m[p.group]||0)+1); return m; }
+function filtered(){
+  return T.pages.filter(p => (!groups.size || groups.has(p.group)) && (!q || nk(p.name).includes(nk(q)) || nk((p.categories||[]).join(' ')).includes(nk(q))) &&
+    (view==='الكل' || (view==='المختارة' && picked.has(p.id)) || (view==='غير المختارة' && !picked.has(p.id)) || (view==='اختارتها غيري' && p.claimed_by.length)));
+}
+
+function render(){
+  const all = T.pages, gc = counts(all), list = filtered();
+  const vc = {'الكل':all.length,'المختارة':all.filter(p=>picked.has(p.id)).length,'غير المختارة':all.filter(p=>!picked.has(p.id)).length,'اختارتها غيري':all.filter(p=>p.claimed_by.length).length};
+  const byG = {}; list.forEach(p => (byG[p.group] = byG[p.group] || []).push(p));
+  $('app').innerHTML = `
+    ${T.answered_at ? `<div class="done">✅ وصل جوابك (${new Date(T.answered_at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'})}). تكدرين تعدلين وترسلين مرة ثانية لحد ما ينتهي الرابط.</div>` : ''}
+    <div class="box how">أشّري ✅ على <b>كل صفحة تشرفين عليها</b> وبعدين دوسي «إرسال». ما تحتاجين تكتبين شي.<br>إذا صفحة مكتوب عليها «اختارتها» مشرفة ثانية وهي هم إلج، أشّريها عادي وإحنا نرتبها.</div>
+    <input class="search" id="q" placeholder="🔍 ابحثي باسم الصفحة…" value="${esc(q)}">
+    <div class="lbl">الكروب الرئيسي</div>
+    <div class="chips">${['الكل', ...Object.keys(gc)].map(g => `<button class="chip ${g==='الكل' ? (!groups.size?'on':'') : (groups.has(g)?'on':'')}" data-g="${esc(g)}">${esc(g)}<b>${g==='الكل'?all.length:gc[g]}</b></button>`).join('')}</div>
+    <div class="lbl">العرض</div>
+    <div class="chips">${Object.keys(vc).map(v => `<button class="chip ${view===v?'on':''}" data-v="${esc(v)}">${esc(v)}<b>${vc[v]}</b></button>`).join('')}</div>
+    <div class="count">عرض ${list.length} من ${all.length} صفحة</div>
+    ${list.length ? Object.keys(byG).map(g => `<div class="grp"><span>${esc(g)}</span><button data-all="${esc(g)}">${byG[g].every(p=>picked.has(p.id)) ? 'إلغاء الكل' : 'اختيار الكل'}</button></div>` +
+      byG[g].map(p => `<div class="pg ${picked.has(p.id)?'on':''}" data-id="${p.id}"><div class="tick">${picked.has(p.id)?'✓':''}</div><div><div class="nm">${esc(p.name)}</div>${(p.categories||[]).length?`<div class="sub">${esc(p.categories.join('، '))}</div>`:''}${p.claimed_by.length?`<span class="other">اختارتها: ${esc(p.claimed_by.join('، '))}</span>`:''}</div></div>`).join('')).join('')
+      : `<div class="empty">ماكو صفحات بهالاختيار<br><button class="chip" id="clr" style="margin-top:10px">مسح الفلاتر</button></div>`}
+    <div class="box" style="margin-top:14px"><div class="lbl" style="margin-top:0">ملاحظة (اختياري)</div><textarea id="note" placeholder="مثلاً: صفحة ناقصة بالقائمة، أو صفحة انتقلت لمشرفة ثانية…">${esc(T.answer && T.answer.note || '')}</textarea></div>`;
+  document.querySelector('.bar') || document.body.insertAdjacentHTML('beforeend', `<div class="bar"><span>اخترتي <span class="n" id="n"></span> صفحة</span><button class="send" id="send">إرسال ✅</button></div>`);
+  $('n').textContent = picked.size;
+  $('q').oninput = e => { q = e.target.value; const pos = e.target.selectionStart; render(); const el = $('q'); el.focus(); el.setSelectionRange(pos,pos); };
+  document.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const g = b.dataset.g; if(g==='الكل') groups.clear(); else groups.has(g) ? groups.delete(g) : groups.add(g); render(); });
+  document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; render(); });
+  document.querySelectorAll('[data-id]').forEach(b => b.onclick = () => { const id = b.dataset.id; picked.has(id) ? picked.delete(id) : picked.add(id); keepNote(); render(); });
+  document.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { const ps = byG[b.dataset.all]; const allOn = ps.every(p=>picked.has(p.id)); ps.forEach(p => allOn ? picked.delete(p.id) : picked.add(p.id)); keepNote(); render(); });
+  const clr = $('clr'); if (clr) clr.onclick = () => { groups.clear(); view='الكل'; q=''; render(); };
+  $('send').onclick = send;
+}
+function keepNote(){ const n = $('note'); if(n){ T.answer = T.answer || {}; T.answer.note = n.value; } }
+
+async function send(){
+  const b = $('send'); keepNote();
+  if(!picked.size && !confirm('ما اخترتي ولا صفحة. ترسلين هيچ؟')) return;
+  b.disabled = true; b.textContent = '⏳ جاري الإرسال…';
+  const names = T.pages.filter(p => picked.has(p.id)).map(p => p.name);
+  try {
+    const r = await rpc('task_submit', {p_token: token, p_answer: {pages:[...picked], names, note: ($('note')||{}).value || ''}});
+    if(!r.ok) throw new Error(r.error || 'خطأ');
+    T.answered_at = new Date().toISOString();
+    $('app').innerHTML = `<div class="msg">✅ وصل جوابك، شكراً ${esc(T.person)} 🌹<br><br>اخترتي ${names.length} صفحة:<br><span style="font-size:14px;color:#55657a">${esc(names.join('، '))}</span><br><br><button class="chip" id="edit">تعديل الاختيار</button></div>`;
+    document.querySelector('.bar').remove();
+    $('edit').onclick = () => render();
+  } catch(e){ alert('ما وصل الجواب: ' + e.message + '\nجربي مرة ثانية.'); b.disabled = false; b.textContent = 'إرسال ✅'; }
+}
+load();
+</script>
+</body>
+</html>
