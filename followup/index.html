@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>متابعة تأكيد المندوبات</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+  :root{--bg:#f4f5fb;--card:#fff;--ink:#1d2733;--muted:#6b7686;--line:#e3e6ee;--ok:#1a8a5a;--warn:#d35400;--bad:#c0392b;--acc:#25d366}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15161c;--card:#1f2029;--ink:#eee;--muted:#a3a9b5;--line:#2e3040}}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;padding:16px}
+  .wrap{max-width:760px;margin:0 auto}
+  h1{font-size:20px;margin:4px 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+  .c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
+  .nm{font-weight:800;font-size:17px}.role{color:var(--muted);font-size:13px}
+  .st{font-size:13px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
+  .st.ok{background:#e3f6ec;color:var(--ok)}.st.wait{background:#fff1e0;color:var(--warn)}.st.no{background:#fde8e6;color:var(--bad)}
+  .need{margin:10px 0;font-size:14px}
+  .note{font-size:13px;background:rgba(102,126,234,.08);border-radius:10px;padding:8px 10px;white-space:pre-wrap;margin-bottom:8px}
+  textarea{width:100%;box-sizing:border-box;min-height:110px;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:14px;background:var(--bg);color:var(--ink)}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .acts a,.acts button{flex:1;min-width:130px;text-align:center;text-decoration:none;border:0;border-radius:10px;padding:11px;font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+  .wa{background:var(--acc);color:#fff}.cp{background:var(--line);color:var(--ink)}.call{background:#e8eefc;color:#2d5d8a}
+  .msg{color:var(--muted);text-align:center;padding:30px}
+  .sum{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.sum div{flex:1;min-width:90px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}.sum b{display:block;font-size:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📋 متابعة تأكيد المندوبات</h1>
+  <div class="sub">لكل وحدة: شنو باقي عليها + رسالة جاهزة تعدّلها وترسلها من واتسابك بضغطة. الحالة تتحدث كل ما تفتح الصفحة.</div>
+  <div id="sum" class="sum"></div>
+  <div id="list"><div class="msg">يحمّل…</div></div>
+</div>
+<script>
+const SB_URL='https://lxikqgjfjnfkhvuckihx.supabase.co', SB_KEY='sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const LINK=t=>'https://peacepanel.github.io/publishing-panel/reps/?k='+t;
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const first=n=>String(n).split(' ')[0];
+function plan(p){
+  const L=LINK(p.token);
+  if(!p.opened) return {cls:'no',st:'⏳ ما فتحت الرابط',need:'ما بدت بالتأكيد أصلاً.',
+    text:`هلا ${first(p.name)} 🌸\nممكن اليوم تفتحين رابط تأكيد المندوبات وتأكدين كل وحدة، وبالأخير «إرسال نهائي» 🙏\n${L}`};
+  if(p.recheck>0) return {cls:'wait',st:`🔁 تراجع ${p.recheck} ${p.recheck==1?'حساب':'حسابات'}`,need:`أرسلت، بس عليها مراجعة ${p.recheck} ${p.recheck==1?'حساب':'حسابات'} معلّمة 🔁 بالرابط وبعدها «إرسال نهائي».`,
+    text:`هلا ${first(p.name)} 🌸 شكراً على تأكيدج\nحدّثنا رابط تأكيد المندوبات وضفنا خيار «مندوبة من شغلنا بس تابعة لمشرفة ثانية».\nممكن تفتحين نفس الرابط وتراجعين بس الحسابات المعلّمة 🔁 وبعدها «إرسال نهائي» 🙏\n${L}`};
+  if(p.person.startsWith('sura')) return {cls:'wait',st:'✏️ ناقص أسماء مساعداتها',need:'أرسلت، بس مساعداتها مو مسجلات فما طلعن إلها. نحتاج أسماءهن وأرقامهن.',
+    text:`هلا سرى 🌸 شكراً على ردج\nممكن تكتبين بخانة «ملاحظات» بنفس الرابط أسماء مساعداتج + أرقامهن + اسم حساب كل وحدة بالفيسبوك، وبعدها «إرسال نهائي» 🙏\n${L}`};
+  if(!p.final) return {cls:'wait',st:'✏️ بدت وما أرسلت',need:`أكدت ${p.reps_done} لحد هسه وما ضغطت «إرسال نهائي».`,
+    text:`هلا ${first(p.name)} 🌸\nباقي بس تكملين تأكيد المندوبات وتضغطين «إرسال نهائي» 🙏\n${L}`};
+  return {cls:'ok',st:'✅ خلصت',need:'ماكو شي باقي عليها.',text:`هلا ${first(p.name)} 🌸 شكراً على تأكيدج، وصلنا كامل 🙏`};
+}
+function wa(phone,text){const n=String(phone).replace(/\D/g,'').replace(/^0/,'964');return `https://wa.me/${n}?text=${encodeURIComponent(text)}`;}
+async function load(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){document.getElementById('list').innerHTML='<div class="msg">لازم تسجل دخول أول من <a href="../monitor/">لوحة المراقبة</a> وبعدها ارجع لهالصفحة.</div>';return;}
+  const {data,error}=await sb.rpc('rep_followup');
+  if(error){document.getElementById('list').innerHTML=`<div class="msg">خطأ: ${esc(error.message)}</div>`;return;}
+  const rows=(data||[]).map(p=>({...p,...plan(p)})).sort((a,b)=>({no:0,wait:1,ok:2}[a.cls]-{no:0,wait:1,ok:2}[b.cls]));
+  const c=k=>rows.filter(r=>r.cls===k).length;
+  document.getElementById('sum').innerHTML=`<div><b style="color:var(--bad)">${c('no')}</b>ما فتحن</div><div><b style="color:var(--warn)">${c('wait')}</b>باقي عليهن شي</div><div><b style="color:var(--ok)">${c('ok')}</b>خلصن</div>`;
+  document.getElementById('list').innerHTML=rows.map((p,i)=>`<div class="c">
+    <div class="top"><div><div class="nm">${esc(p.name)}</div><div class="role">${esc(p.role)} • ${esc(p.phone)}</div></div><span class="st ${p.cls}">${p.st}</span></div>
+    <div class="need">${esc(p.need)}</div>
+    ${p.note?`<div class="note">📝 ملاحظتها: ${esc(p.note)}</div>`:''}
+    ${p.cls!=='ok'?`<textarea id="t${i}">${esc(p.text)}</textarea>
+    <div class="acts"><a class="wa" id="w${i}" href="${wa(p.phone,p.text)}" target="_blank" rel="noopener">💬 أرسل بالواتساب</a>
+      <a class="call" href="tel:${esc(p.phone)}">📞 اتصال</a>
+      <button class="cp" data-l="${esc(LINK(p.token))}">🔗 انسخ رابطها</button></div>`:''}
+  </div>`).join('')||'<div class="msg">ماكو أحد</div>';
+  rows.forEach((p,i)=>{const t=document.getElementById('t'+i);if(t)t.addEventListener('input',()=>{document.getElementById('w'+i).href=wa(p.phone,t.value);});});
+}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-l]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.l);b.textContent='✔ انسخ';}catch(_){prompt('انسخ الرابط:',b.dataset.l);}});
+load();
+</script>
+</body>
+</html>
