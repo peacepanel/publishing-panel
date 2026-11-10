@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تأكيد المندوبات — Peace Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--ink:#14243a;--mut:#66758a;--line:#e3e8ef;--brand:#1f3a5f;--ok:#1a8a5a;--okbg:#e8f6ee;--warn:#d35400;--warnbg:#fff3e0;--bad:#c0392b;--badbg:#fdecea}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',Tahoma,sans-serif;-webkit-tap-highlight-color:transparent}
+header{background:linear-gradient(135deg,#1f3a5f,#2d5a8e);color:#fff;padding:18px 16px 16px}
+header h1{margin:0 0 4px;font-size:20px}
+header p{margin:0;opacity:.85;font-size:14px;line-height:1.7}
+.wrap{max-width:760px;margin:0 auto;padding:12px 16px 130px}
+.box{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,36,58,.06)}
+.how{font-size:14px;line-height:1.9;color:#3a4a60}
+.how b{color:var(--brand)}
+.search{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:15px;background:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:7px 13px;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer;white-space:nowrap}
+.chip b{font-weight:600;color:var(--mut);margin-inline-start:4px}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.chip.on b{color:#cfe0f5}
+.prog{height:8px;background:#e6ebf2;border-radius:99px;overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.grp{font-weight:700;font-size:16px;color:var(--brand);margin:20px 4px 8px;display:flex;justify-content:space-between;align-items:baseline}
+.grp small{font-weight:500;color:var(--mut);font-size:12.5px}
+.rep{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.rep.ok{border-color:var(--ok);background:var(--okbg)}
+.rep.edit{border-color:var(--warn);background:var(--warnbg)}
+.rep.gone{border-color:var(--bad);background:var(--badbg);opacity:.85}
+.nm{font-weight:700;font-size:16px}
+.info{font-size:13px;color:var(--mut);margin-top:3px;line-height:1.8;word-break:break-all}
+.info a{color:var(--brand)}
+.row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.row label{font-size:12.5px;color:var(--mut);min-width:86px}
+select,input[type=text],input[type=tel]{flex:1;min-width:0;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:14px;background:#fff;color:var(--ink)}
+.sug{font-size:11.5px;color:var(--ok);font-weight:600}
+.acts{display:flex;gap:6px;margin-top:10px}
+.acts button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;color:var(--ink)}
+.acts .a-ok.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.acts .a-edit.on{background:var(--warn);border-color:var(--warn);color:#fff}
+.acts .a-gone.on{background:var(--bad);border-color:var(--bad);color:#fff}
+.edit-box{display:none;margin-top:6px;border-top:1px dashed #e0c9a6;padding-top:4px}
+.rep.edit .edit-box{display:block}
+.meta{background:#fff;border:1.5px dashed #c9d3e0;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.meta .mn{font-weight:600}
+.meta.done{border-style:solid;border-color:var(--ok)}
+.sub-h{font-size:13.5px;font-weight:700;color:var(--warn);margin:12px 4px 6px}
+textarea{width:100%;min-height:70px;border:1.5px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:14px}
+.bar{position:fixed;inset-inline:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+.bar .n{font-weight:700;color:var(--brand);font-size:14px}
+.bar .sv{font-size:12px;color:var(--mut)}
+.send{border:0;background:var(--ok);color:#fff;font:inherit;font-weight:700;font-size:16px;border-radius:12px;padding:12px 22px;cursor:pointer;min-width:180px}
+.send:disabled{opacity:.6}
+.msg{text-align:center;padding:40px 16px;font-size:16px;line-height:2}
+.done-note{background:var(--okbg);color:var(--ok);border-radius:12px;padding:12px;font-weight:600;margin-bottom:12px;line-height:1.8}
+.empty{text-align:center;color:var(--mut);padding:24px 10px}
+</style>
+</head>
+<body>
+<header><h1 id="h">…</h1><p id="hp">جاري التحميل…</p></header>
+<div class="wrap" id="app"></div>
+<div class="bar" id="bar" style="display:none">
+  <div><div class="n" id="bn"></div><div class="sv" id="sv"></div></div>
+  <button class="send" id="send" onclick="finish()">✅ إرسال نهائي</button>
+</div>
+<script>
+const SB = 'https://lxikqgjfjnfkhvuckihx.supabase.co', KEY = 'sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT';
+const token = new URLSearchParams(location.search).get('k') || '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nk = s => String(s||'').toLowerCase().replace(/[ً-ٟـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ء/g,'').replace(/\s+/g,' ').trim();
+async function rpc(fn, args){ const r = await fetch(`${SB}/rest/v1/rpc/${fn}`, {method:'POST', headers:{apikey:KEY, Authorization:'Bearer '+KEY, 'Content-Type':'application/json'}, body:JSON.stringify(args)}); return r.json(); }
+
+let T = null, A = { reps: {}, meta: {}, note: '', final: false }, fPage = 'الكل', fSt = 'الكل', q = '';
+function stop(msg){ $('h').textContent = 'Peace Panel'; $('hp').textContent = ''; $('app').innerHTML = `<div class="msg">${esc(msg)}</div>`; }
+
+// اقتراح حساب ميتا لكل مندوبة: أكثر كلمات مشتركة بالاسم
+function score(a, b){
+  const wa = nk(a).split(' ').filter(w => w.length > 1), wb = nk(b).split(' ').filter(w => w.length > 1);
+  if (!wa.length || !wb.length) return 0;
+  let s = 0; wa.forEach(w => { if (wb.some(x => x === w)) s += 2; else if (wb.some(x => x.startsWith(w) || w.startsWith(x))) s += 1; });
+  return s;
+}
+function suggest(page){
+  const used = new Set(), out = {};
+  const pairs = [];
+  page.reps.forEach(r => page.meta.forEach(m => { const s = score(r.name, m.name); if (s > 0) pairs.push([s, r.email, m.id]); }));
+  pairs.sort((x, y) => y[0] - x[0]);
+  pairs.forEach(([s, e, id]) => { if (!out[e] && !used.has(id)) { out[e] = id; used.add(id); } });
+  return out;
+}
+
+async function load(){
+  if(!token) return stop('الرابط ناقص. افتحي الرابط مثل ما وصلك بالواتساب.');
+  let d; try { d = await rpc('rep_task_open', {p_token: token}); } catch(e){ return stop('ما كدرت أفتح المهمة. تأكدي من النت وجربي مرة ثانية.'); }
+  if(!d || !d.ok) return stop((d && d.error) || 'الرابط غير صالح');
+  T = d;
+  if (d.answer) A = Object.assign(A, d.answer);
+  T.pages.forEach(p => { p.sug = suggest(p); });
+  if (T.orphans && T.orphans.length) T.pages.push({ id: 'orphans', name: 'مندوبات صفحتهن مو واضحة', reps: T.orphans, meta: [], sug: {}, orphan: true });
+  $('h').textContent = 'هلا ' + d.person + ' 🌹';
+  const exp = new Date(d.expires_at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'long',day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'});
+  $('hp').textContent = 'تأكيد مندوبات صفحاتك • الرابط شغال لحد ' + exp;
+  $('bar').style.display = 'flex';
+  render();
+}
+
+function repState(e){ return (A.reps[e] && A.reps[e].st) || ''; }
+function allReps(){ const o = []; T.pages.forEach(p => p.reps.forEach(r => o.push([p, r]))); return o; }
+
+function render(){
+  const reps = allReps(), done = reps.filter(([p, r]) => repState(r.email)).length;
+  const stCount = k => reps.filter(([p, r]) => k === 'بانتظار' ? !repState(r.email) : k === 'صحيحة' ? repState(r.email) === 'ok' : k === 'تعديل' ? repState(r.email) === 'edit' : repState(r.email) === 'gone').length;
+  let h = '';
+  if (A.final && T.answered_at) h += `<div class="done-note">✅ وصلنا تأكيدك. إذا تريدين تغيرين شي، عدّلي واضغطي «إرسال نهائي» مرة ثانية.</div>`;
+  h += `<div class="box how">لكل مندوبة بصفحاتك: إذا المعلومات صحيحة اضغطي <b>✅ صحيحة</b>. إذا بيها غلط اضغطي <b>✏️ تعديل</b> وصححي. إذا ما تشتغل ويانا اضغطي <b>🚫 ما تشتغل</b>.<br>
+    وبـ«حسابها بالفيسبوك» اختاري الحساب اللي داخلة بيه على الصفحة (المقترح مكتوب يمه <span class="sug">مقترح</span>).<br>
+    كل شي ينحفظ وحده أول بأول، وبالأخير اضغطي <b>إرسال نهائي</b>.
+    <div class="prog"><i style="width:${reps.length ? Math.round(done * 100 / reps.length) : 0}%"></i></div></div>`;
+  h += `<input class="search" placeholder="🔎 ابحثي بالاسم أو الرقم أو الإيميل…" value="${esc(q)}" oninput="q=this.value;renderList()">`;
+  h += `<div class="chips">${['الكل', 'بانتظار', 'صحيحة', 'تعديل', 'ما تشتغل'].map(k => `<button class="chip ${fSt === k ? 'on' : ''}" onclick="fSt='${k}';render()">${k === 'بانتظار' ? '⏳ بانتظار التأكيد' : k === 'صحيحة' ? '✅ صحيحة' : k === 'تعديل' ? '✏️ تعديل' : k === 'ما تشتغل' ? '🚫 ما تشتغل' : 'الكل'}<b>${k === 'الكل' ? reps.length : stCount(k)}</b></button>`).join('')}</div>`;
+  h += `<div class="chips">${['الكل'].concat(T.pages.map(p => p.name)).map(n => `<button class="chip ${fPage === n ? 'on' : ''}" onclick='fPage=${JSON.stringify(n).replace(/'/g, "&#39;")};render()'>${esc(n)}${n !== 'الكل' ? `<b>${(T.pages.find(p => p.name === n) || {reps: []}).reps.length}</b>` : ''}</button>`).join('')}</div>`;
+  h += `<div id="list"></div>`;
+  h += `<div class="box"><div class="how" style="margin-bottom:6px">ملاحظة (اختياري):</div><textarea oninput="A.note=this.value;queueSave()">${esc(A.note || '')}</textarea></div>`;
+  $('app').innerHTML = h;
+  renderList();
+}
+
+function match(r){
+  if (q && !nk([r.name, r.phone, r.email].join(' ')).includes(nk(q))) return false;
+  const st = repState(r.email);
+  return fSt === 'الكل' || (fSt === 'بانتظار' && !st) || (fSt === 'صحيحة' && st === 'ok') || (fSt === 'تعديل' && st === 'edit') || (fSt === 'ما تشتغل' && st === 'gone');
+}
+
+function metaOptions(p, r, cur){
+  let o = `<option value="">— اختاري —</option>`;
+  p.meta.forEach(m => o += `<option value="${esc(m.id)}" ${cur === m.id ? 'selected' : ''}>${esc(m.name)}${p.sug[r.email] === m.id ? '  ✓ مقترح' : ''}</option>`);
+  o += `<option value="none" ${cur === 'none' ? 'selected' : ''}>مو داخلة على الصفحة / ما أعرف</option>`;
+  return o;
+}
+
+function renderList(){
+  let h = '', shown = 0;
+  T.pages.forEach(p => {
+    if (fPage !== 'الكل' && fPage !== p.name) return;
+    const reps = p.reps.filter(match);
+    const linked = new Set(p.reps.map(r => (A.reps[r.email] || {}).meta || (repState(r.email) ? '' : p.sug[r.email])).filter(Boolean));
+    const extra = p.meta.filter(m => !linked.has(m.id));
+    if (!reps.length && (fPage === 'الكل' && (q || fSt !== 'الكل'))) return;
+    h += `<div class="grp">${esc(p.name)} <small>${p.reps.length} مندوبة بالانفو • ${p.meta.length} حساب داخل بالفيسبوك</small></div>`;
+    if (!p.reps.length) h += `<div class="empty">ماكو مندوبات مسجلات على هالصفحة بالانفو</div>`;
+    reps.forEach(r => {
+      shown++;
+      const a = A.reps[r.email] || {}, st = a.st || '';
+      const cur = a.meta !== undefined ? a.meta : (p.sug[r.email] || '');
+      const id = btoa(unescape(encodeURIComponent(r.email))).replace(/=/g, '');
+      h += `<div class="rep ${st}" id="r_${id}">
+        <div class="nm">${esc(r.name || '—')}</div>
+        <div class="info">📱 ${r.phone ? `<a href="tel:${esc(r.phone)}">${esc(r.phone)}</a>` : '—'} &nbsp; ✉️ ${esc(r.email)}${p.orphan ? `<br>📄 مكتوب: ${esc(r.page || '—')}` : ''}</div>
+        ${p.orphan ? '' : `<div class="row"><label>حسابها بالفيسبوك</label><select onchange="setMeta('${esc(r.email)}', this.value, '${p.id}')">${metaOptions(p, r, cur)}</select></div>`}
+        <div class="acts">
+          <button class="a-ok ${st === 'ok' ? 'on' : ''}" onclick="setSt('${esc(r.email)}','ok','${p.id}')">✅ صحيحة</button>
+          <button class="a-edit ${st === 'edit' ? 'on' : ''}" onclick="setSt('${esc(r.email)}','edit','${p.id}')">✏️ تعديل</button>
+          <button class="a-gone ${st === 'gone' ? 'on' : ''}" onclick="setSt('${esc(r.email)}','gone','${p.id}')">🚫 ما تشتغل</button>
+        </div>
+        <div class="edit-box">
+          <div class="row"><label>الاسم الصحيح</label><input type="text" value="${esc(a.name ?? r.name)}" oninput="setF('${esc(r.email)}','name',this.value)"></div>
+          <div class="row"><label>رقم الموبايل</label><input type="tel" value="${esc(a.phone ?? r.phone)}" oninput="setF('${esc(r.email)}','phone',this.value)"></div>
+          <div class="row"><label>الصفحة</label><select onchange="setF('${esc(r.email)}','page',this.value)">${T.all_pages.map(n => `<option ${((a.page ?? (p.orphan ? '' : p.name)) === n) ? 'selected' : ''}>${esc(n)}</option>`).join('')}${p.orphan && !a.page ? '<option selected value="">— اختاري —</option>' : ''}</select></div>
+          <div class="row"><label>الإيميل</label><input type="text" dir="ltr" value="${esc(a.email ?? r.email)}" oninput="setF('${esc(r.email)}','email',this.value)"></div>
+        </div>
+      </div>`;
+    });
+    if (!p.orphan && extra.length && fSt === 'الكل' && !q) {
+      h += `<div class="sub-h">حسابات داخلة على ${esc(p.name)} وما مربوطة بأي مندوبة — منو هاي؟</div>`;
+      extra.forEach(m => {
+        const k = p.id + ':' + m.id, v = A.meta[k] || '';
+        h += `<div class="meta ${v ? 'done' : ''}"><div class="mn">👤 ${esc(m.name)}</div>
+          <div class="row"><select onchange="setExtra('${k}', this.value)">
+            <option value="">— اختاري —</option>
+            ${p.reps.map(r => `<option value="${esc(r.email)}" ${v === r.email ? 'selected' : ''}>هاي ${esc(r.name)}</option>`).join('')}
+            <option value="new" ${v === 'new' ? 'selected' : ''}>مندوبة جديدة مو مسجلة بالانفو</option>
+            <option value="team" ${v === 'team' ? 'selected' : ''}>مشرفة / إدارة</option>
+            <option value="stranger" ${v === 'stranger' ? 'selected' : ''}>مو مندوبتنا — تنشال من الصفحة</option>
+          </select></div></div>`;
+      });
+    }
+  });
+  if (!shown && !h) h = `<div class="empty">ماكو نتائج بهالفلاتر</div>`;
+  $('list').innerHTML = h;
+  bar();
+}
+
+function ensure(e){ return A.reps[e] = A.reps[e] || {}; }
+function setSt(e, st, pid){
+  const a = ensure(e); a.st = a.st === st ? '' : st;
+  const p = T.pages.find(x => String(x.id) === String(pid));
+  if (p && a.meta === undefined && p.sug[e]) a.meta = p.sug[e];
+  queueSave(); renderList();
+}
+function setMeta(e, v, pid){ ensure(e).meta = v; queueSave(); renderList(); }
+function setF(e, f, v){ ensure(e)[f] = v; queueSave(); }
+function setExtra(k, v){ A.meta[k] = v; queueSave(); renderList(); }
+
+function bar(){
+  const reps = allReps(), done = reps.filter(([p, r]) => repState(r.email)).length;
+  $('bn').textContent = `أكدتي ${done} من ${reps.length} مندوبة`;
+}
+let saveT = null;
+function queueSave(){ $('sv').textContent = 'جاري الحفظ…'; clearTimeout(saveT); saveT = setTimeout(save, 900); }
+async function save(){
+  try { const r = await rpc('rep_task_save', { p_token: token, p_answer: A }); $('sv').textContent = r && r.ok ? 'انحفظ ✓' : ('ما انحفظ: ' + ((r && r.error) || '')); }
+  catch (e) { $('sv').textContent = 'ما انحفظ — تأكدي من النت'; }
+}
+async function finish(){
+  const reps = allReps(), left = reps.filter(([p, r]) => !repState(r.email)).length;
+  if (left && !confirm(`باقي ${left} مندوبة بدون تأكيد. ترسلين هسه؟`)) return;
+  A.final = true; $('send').disabled = true;
+  await save(); $('send').disabled = false;
+  T.answered_at = new Date().toISOString(); render(); window.scrollTo(0, 0);
+}
+load();
+</script>
+</body>
+</html>
