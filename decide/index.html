@@ -24,6 +24,11 @@
   .ch button.on{background:var(--acc);border-color:var(--acc);color:#fff}
   .ch button.x{grid-column:1/-1;color:var(--bad)}
   .ch button.x.on{background:var(--bad);border-color:var(--bad);color:#fff}
+  .ch button.y{grid-column:1/-1;color:#b9770e}
+  .ch button.y.on{background:#b9770e;border-color:#b9770e;color:#fff}
+  .pgs{margin-top:10px;background:rgba(91,91,214,.06);border-radius:10px;padding:8px 10px}
+  .pgs label{display:inline-flex;align-items:center;gap:5px;margin:4px 10px 4px 0;font-size:14px}
+  .pgs input{width:auto;margin:0}
   input{width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:9px;font:inherit;font-size:14px;background:var(--bg);color:var(--ink)}
   .msg{color:var(--muted);text-align:center;padding:30px}
   .cnt{font-size:14px;margin-bottom:10px}
@@ -39,21 +44,32 @@
 <script>
 const sb=supabase.createClient('https://lxikqgjfjnfkhvuckihx.supabase.co','sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const OPT=[['rep','مندوبة'],['supervisor','مشرفة'],['assistant','مساعدة'],['admin','إدارة عامة'],['orders','متابعة طلبات'],['secure','تأمين حساب فقط'],['stranger','🚫 غريبة — تنشال']];
+const OPT=[['rep','مندوبة'],['supervisor','مشرفة'],['assistant','مساعدة'],['admin','إدارة عامة'],['orders','متابعة طلبات'],['secure','تأمين حساب فقط'],['remove_page','↩️ طلّعها من هالصفحة بس'],['stranger','🚫 غريبة — تنشال من كل مكان']];
+const ROLE=new Set(['rep','supervisor','assistant','admin','orders','secure']);
 let rows=[];
 function count(){const d=rows.filter(r=>r.answer).length;document.getElementById('cnt').textContent=`جاوبت ${d} من ${rows.length}`;}
-function render(){
-  document.getElementById('list').innerHTML=rows.map((r,i)=>`<div class="c ${r.answer?'done':''}" id="c${i}">
+function pagesBox(r,i){
+  if(!ROLE.has(r.answer)) return '';
+  const all=r.all_pages||[r.page]; const sel=new Set(r.pages||all);
+  return `<div class="pgs"><div class="row">على أي صفحات؟</div>${all.map(p=>`<label><input type="checkbox" data-p="${i}" value="${esc(p)}" ${sel.has(p)?'checked':''}> ${esc(p)}</label>`).join('')}</div>`;
+}
+function card(r,i){return `
     <div class="pg">📄 ${esc(r.page)}</div>
     <div class="nm">👤 ${esc(r.meta)}</div>
     ${r.info?`<div class="row">مندوبات الصفحة بالانفو: <b>${esc(r.info)}</b></div>`:''}
-    ${r.other_pages?`<div class="row">داخلة هم على: <b>${esc(r.other_pages)}</b></div>`:''}
+    ${(r.all_pages||[]).length>1?`<div class="row">الحساب داخل على: <b>${esc(r.all_pages.join('، '))}</b></div>`:''}
     ${r.hint?`<div class="hint">${esc(r.hint)}</div>`:''}
-    <div class="ch">${OPT.map(([k,l])=>`<button data-i="${i}" data-k="${k}" class="${k==='stranger'?'x ':''}${r.answer===k?'on':''}">${l}</button>`).join('')}</div>
-    <input data-n="${i}" placeholder="ملاحظة (اختياري): مثلاً اسمها أو مساعدة منو" value="${esc(r.note||'')}">
-  </div>`).join('')||'<div class="msg">ماكو بطاقات ✅</div>';
+    <div class="ch">${OPT.map(([k,l])=>`<button data-i="${i}" data-k="${k}" class="${k==='stranger'?'x ':k==='remove_page'?'y ':''}${r.answer===k?'on':''}">${l}</button>`).join('')}</div>
+    ${pagesBox(r,i)}
+    <input data-n="${i}" placeholder="ملاحظة (اختياري): مثلاً اسمها أو مساعدة منو" value="${esc(r.note||'')}">`;}
+function render(){
+  document.getElementById('list').innerHTML=rows.map((r,i)=>`<div class="c ${r.answer?'done':''}" id="c${i}">${card(r,i)}</div>`).join('')||'<div class="msg">ماكو بطاقات ✅</div>';
   count();
 }
+function selPages(i){const b=[...document.querySelectorAll(`[data-p="${i}"]`)];return b.length?b.filter(x=>x.checked).map(x=>x.value):null;}
+async function save(i){const r=rows[i];
+  const {error}=await sb.rpc('account_review_answer',{p_id:r.id,p_answer:r.answer,p_note:r.note||null,p_pages:r.pages||null});
+  if(error) alert('ما انحفظ: '+error.message);}
 async function load(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session){document.getElementById('list').innerHTML='<div class="msg">لازم تسجل دخول أول من <a href="../monitor/">لوحة المراقبة</a> وبعدها ارجع.</div>';return;}
@@ -61,14 +77,13 @@ async function load(){
   if(error){document.getElementById('list').innerHTML=`<div class="msg">خطأ: ${esc(error.message)}</div>`;return;}
   rows=data||[];render();
 }
-document.addEventListener('click',async e=>{const b=e.target.closest('[data-k]');if(!b)return;const r=rows[b.dataset.i];
-  const note=document.querySelector(`[data-n="${b.dataset.i}"]`).value;
-  const {error}=await sb.rpc('account_review_answer',{p_id:r.id,p_answer:b.dataset.k,p_note:note||null});
-  if(error){alert('ما انحفظ: '+error.message);return;}
-  r.answer=b.dataset.k;r.note=note;const c=document.getElementById('c'+b.dataset.i);
-  c.classList.add('done');c.querySelectorAll('[data-k]').forEach(x=>x.classList.toggle('on',x===b));count();});
-document.addEventListener('change',async e=>{const n=e.target.closest('[data-n]');if(!n)return;const r=rows[n.dataset.n];r.note=n.value;
-  if(r.answer) await sb.rpc('account_review_answer',{p_id:r.id,p_answer:r.answer,p_note:n.value});});
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-k]');if(!b)return;const i=b.dataset.i,r=rows[i];
+  r.note=document.querySelector(`[data-n="${i}"]`).value;r.answer=b.dataset.k;
+  r.pages=ROLE.has(r.answer)?(r.pages||r.all_pages||[r.page]):null;
+  const c=document.getElementById('c'+i);c.innerHTML=card(r,i);c.classList.add('done');count();await save(i);});
+document.addEventListener('change',async e=>{
+  const p=e.target.closest('[data-p]');if(p){const i=p.dataset.p;rows[i].pages=selPages(i);await save(i);return;}
+  const n=e.target.closest('[data-n]');if(!n)return;const i=n.dataset.n;rows[i].note=n.value;if(rows[i].answer) await save(i);});
 load();
 </script>
 </body>
