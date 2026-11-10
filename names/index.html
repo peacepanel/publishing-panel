@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تسميات ميتا</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+  :root{--bg:#f4f5fb;--card:#fff;--ink:#1d2733;--muted:#6b7686;--line:#e3e6ee;--acc:#5b5bd6;--ok:#1a8a5a;--warn:#b9770e}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15161c;--card:#1f2029;--ink:#eee;--muted:#a3a9b5;--line:#2e3040}}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;padding:16px}
+  .wrap{max-width:640px;margin:0 auto}
+  h1{font-size:20px;margin:4px 0}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
+  .bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .bar button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:20px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer}
+  .bar button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .c{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+  .c.ok{border-color:var(--ok)} .c.skip{opacity:.5}
+  .pf{font-size:12px;color:var(--acc);font-weight:800}
+  .now{font-size:13px;color:var(--muted);margin-top:4px}
+  .now b{color:var(--ink);font-size:16px}
+  .row{font-size:13px;color:var(--muted);margin:3px 0}.row b{color:var(--ink);font-weight:600}
+  .warn{font-size:13px;color:var(--warn);font-weight:700;margin:4px 0}
+  label.l{display:block;font-size:12px;color:var(--muted);margin-top:10px}
+  input[type=text]{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:15px;background:var(--bg);color:var(--ink)}
+  .acts{display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:10px}
+  .acts button{border:0;border-radius:11px;padding:11px;font:inherit;font-weight:800;font-size:14px;cursor:pointer}
+  .a{background:var(--ok);color:#fff}.s{background:var(--line);color:var(--ink)}
+  .msg{color:var(--muted);text-align:center;padding:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏷️ تسميات ميتا</h1>
+  <div class="sub">الشكل: <b>الاسم - الصفحة</b>. عدّل الاسم إذا تحتاج واضغط «اعتمد». وإذا الانفو غلط اكتب التصحيح حتى يوصل لأسماء.</div>
+  <div class="bar" id="bar"></div>
+  <div id="list"><div class="msg">يحمّل…</div></div>
+</div>
+<script>
+const sb=supabase.createClient('https://lxikqgjfjnfkhvuckihx.supabase.co','sb_publishable_9AKXuA_fvfQroYZDRDpRfQ_bYXfrxoT');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let rows=[],flt='todo';
+function card(r,i){
+  const notInInfo=!r.info_name;
+  const pages=(r.meta_pages||[]).join('، ');
+  const diff=r.meta_pages&&r.info_page&&!r.meta_pages.includes(r.info_page)&&r.info_page!=='الادارة الثانوية';
+  return `<div class="pf">${esc(r.portfolio)} • ${esc(r.email)}</div>
+  <div class="now">اسمها بميتا هسه: <b>${esc(r.meta_name)}</b></div>
+  ${notInInfo?'<div class="warn">⚠️ مو موجودة بالانفو (نظام الصلاحيات)</div>':`<div class="row">بالانفو: <b>${esc(r.info_name)}</b> • صفحة <b>${esc(r.info_page)}</b> • مشرفة <b>${esc(r.info_sup)}</b></div>`}
+  ${pages?`<div class="row">داخلة فعلياً على: <b>${esc(pages)}</b></div>`:''}
+  ${diff?'<div class="warn">⚠️ صفحتها بالانفو غير الصفحة اللي داخلة عليها</div>':''}
+  <label class="l">الاسم الجديد بميتا</label><input type="text" id="f${i}" value="${esc(r.final||r.proposed)}">
+  <label class="l">تصحيح للانفو (لأسماء) — اختياري</label><input type="text" id="x${i}" value="${esc(r.info_fix||'')}" placeholder="${notInInfo?'مثلاً: ضيفيها مندوبة على صفحة … تبع …':'مثلاً: صفحتها الصحيحة …'}">
+  <div class="acts"><button class="a" data-a="ok" data-i="${i}">✅ اعتمد</button><button class="s" data-a="skip" data-i="${i}">⏭️ اتركها</button></div>`;
+}
+function render(){
+  const f=rows.map((r,i)=>[r,i]).filter(([r])=>flt==='all'||(flt==='todo'?!r.status:flt==='warn'?(!r.info_name||r.info_fix):r.status));
+  const n=k=>rows.filter(k).length;
+  document.getElementById('bar').innerHTML=[['todo',`باقي ${n(r=>!r.status)}`],['done',`خلصت ${n(r=>r.status)}`],['warn',`مشاكل انفو ${n(r=>!r.info_name||r.info_fix)}`],['all',`الكل ${rows.length}`]]
+    .map(([k,l])=>`<button data-f="${k}" class="${flt===k?'on':''}">${l}</button>`).join('');
+  document.getElementById('list').innerHTML=f.map(([r,i])=>`<div class="c ${r.status||''}" id="c${i}">${card(r,i)}</div>`).join('')||'<div class="msg">ماكو شي هنا ✅</div>';
+}
+async function load(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){document.getElementById('list').innerHTML='<div class="msg">لازم تسجل دخول أول من <a href="../monitor/">لوحة المراقبة</a> وبعدها ارجع.</div>';return;}
+  const {data,error}=await sb.rpc('name_review_list');
+  if(error){document.getElementById('list').innerHTML=`<div class="msg">خطأ: ${esc(error.message)}</div>`;return;}
+  rows=data||[];render();
+}
+document.addEventListener('click',async e=>{
+  const f=e.target.closest('[data-f]');if(f){flt=f.dataset.f;render();return;}
+  const b=e.target.closest('[data-a]');if(!b)return;const i=b.dataset.i,r=rows[i];
+  const fin=document.getElementById('f'+i).value.trim(),fix=document.getElementById('x'+i).value.trim();
+  const {error}=await sb.rpc('name_review_answer',{p_id:r.id,p_status:b.dataset.a,p_final:fin,p_fix:fix||null});
+  if(error){alert('ما انحفظ: '+error.message);return;}
+  r.status=b.dataset.a;r.final=fin;r.info_fix=fix||null;render();
+});
+load();
+</script>
+</body>
+</html>
