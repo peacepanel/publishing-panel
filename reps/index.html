@@ -76,7 +76,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const nk = s => String(s||'').toLowerCase().replace(/[ً-ٟـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ء/g,'').replace(/\s+/g,' ').trim();
 async function rpc(fn, args){ const r = await fetch(`${SB}/rest/v1/rpc/${fn}`, {method:'POST', headers:{apikey:KEY, Authorization:'Bearer '+KEY, 'Content-Type':'application/json'}, body:JSON.stringify(args)}); return r.json(); }
 
-let T = null, A = { reps: {}, meta: {}, note: '', final: false }, fPage = 'الكل', fSt = 'الكل', q = '';
+let T = null, A = { reps: {}, meta: {}, lead: {}, note: '', final: false }, fPage = 'الكل', fSt = 'الكل', q = '';
 function stop(msg){ $('h').textContent = 'Peace Panel'; $('hp').textContent = ''; $('app').innerHTML = `<div class="msg">${esc(msg)}</div>`; }
 
 // اقتراح حساب ميتا لكل مندوبة: أكثر كلمات مشتركة بالاسم
@@ -101,6 +101,8 @@ async function load(){
   if(!d || !d.ok) return stop((d && d.error) || 'الرابط غير صالح');
   T = d;
   if (d.answer) A = Object.assign(A, d.answer);
+  A.lead = A.lead || {};
+  d.pages.forEach(p => { if (p.lead && !A.lead[p.id]) A.lead[p.id] = p.lead; });
   T.pages.forEach(p => { p.sug = suggest(p); });
   if (T.orphans && T.orphans.length) T.pages.push({ id: 'orphans', name: 'مندوبات صفحتهن مو واضحة', reps: T.orphans, meta: [], sug: {}, orphan: true });
   $('h').textContent = 'هلا ' + d.person + ' 🌹';
@@ -154,13 +156,19 @@ function renderList(){
     if (!reps.length && (fPage === 'الكل' && (q || fSt !== 'الكل'))) return;
     h += `<div class="grp">${esc(p.name)} <small>${p.reps.length} مندوبة بالانفو • ${p.meta.length} حساب داخل بالفيسبوك</small></div>`;
     if (!p.reps.length) h += `<div class="empty">ماكو مندوبات مسجلات على هالصفحة بالانفو</div>`;
+    if (!p.orphan && p.reps.length > 1) {
+      const ld = A.lead[p.id] || '';
+      h += `<div class="row" style="margin:0 2px 10px"><label>⭐ المندوبة الرئيسية</label><select onchange="setLead('${p.id}', this.value)">
+        <option value="">— اختاري —</option>${p.reps.map(r => `<option value="${esc(r.email)}" ${ld === r.email ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}
+        <option value="none" ${ld === 'none' ? 'selected' : ''}>ماكو رئيسية (كلهن بنفس المستوى)</option></select></div>`;
+    }
     reps.forEach(r => {
       shown++;
       const a = A.reps[r.email] || {}, st = a.st || '';
-      const cur = a.meta !== undefined ? a.meta : (p.sug[r.email] || '');
+      const cur = a.meta !== undefined ? a.meta : ((r.links && r.links[0]) || p.sug[r.email] || '');
       const id = btoa(unescape(encodeURIComponent(r.email))).replace(/=/g, '');
       h += `<div class="rep ${st}" id="r_${id}">
-        <div class="nm">${esc(r.name || '—')}</div>
+        <div class="nm">${esc(r.name || '—')}${A.lead[p.id] === r.email ? ' <span class="sug" style="color:#b7791f">⭐ رئيسية</span>' : (A.lead[p.id] && A.lead[p.id] !== 'none' ? ' <span class="sug" style="color:#66758a">مساعدة</span>' : '')}</div>
         <div class="info">📱 ${r.phone ? `<a href="tel:${esc(r.phone)}">${esc(r.phone)}</a>` : '—'} &nbsp; ✉️ ${esc(r.email)}${p.orphan ? `<br>📄 مكتوب: ${esc(r.page || '—')}` : ''}</div>
         ${p.orphan ? '' : `<div class="row"><label>حسابها بالفيسبوك</label><select onchange="setMeta('${esc(r.email)}', this.value, '${p.id}')">${metaOptions(p, r, cur)}</select></div>`}
         <div class="acts">
@@ -183,7 +191,7 @@ function renderList(){
         h += `<div class="meta ${v ? 'done' : ''}"><div class="mn">👤 ${esc(m.name)}</div>
           <div class="row"><select onchange="setExtra('${k}', this.value)">
             <option value="">— اختاري —</option>
-            ${p.reps.map(r => `<option value="${esc(r.email)}" ${v === r.email ? 'selected' : ''}>هاي ${esc(r.name)}</option>`).join('')}
+            ${p.reps.map(r => `<option value="${esc(r.email)}" ${v === r.email ? 'selected' : ''}>هاي ${esc(r.name)} (حساب ثاني إلها)</option>`).join('')}
             <option value="new" ${v === 'new' ? 'selected' : ''}>مندوبة جديدة مو مسجلة بالانفو</option>
             <option value="team" ${v === 'team' ? 'selected' : ''}>مشرفة / إدارة</option>
             <option value="stranger" ${v === 'stranger' ? 'selected' : ''}>مو مندوبتنا — تنشال من الصفحة</option>
@@ -203,7 +211,15 @@ function setSt(e, st, pid){
   if (p && a.meta === undefined && p.sug[e]) a.meta = p.sug[e];
   queueSave(); renderList();
 }
-function setMeta(e, v, pid){ ensure(e).meta = v; queueSave(); renderList(); }
+function setMeta(e, v, pid){
+  if (v && v !== 'none') {
+    const other = Object.keys(A.reps).find(x => x !== e && A.reps[x].meta === v);
+    if (other && !confirm('هذا الحساب مختار لمندوبة ثانية بنفس الوقت. متأكدة إنه حساب هاي؟ (الحساب الواحد يكون لمندوبة وحدة)')) { renderList(); return; }
+    if (other) A.reps[other].meta = '';
+  }
+  ensure(e).meta = v; queueSave(); renderList();
+}
+function setLead(pid, v){ A.lead[pid] = v; queueSave(); renderList(); }
 function setF(e, f, v){ ensure(e)[f] = v; queueSave(); }
 function setExtra(k, v){ A.meta[k] = v; queueSave(); renderList(); }
 
