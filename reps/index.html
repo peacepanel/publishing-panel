@@ -168,8 +168,8 @@ function renderList(){
           <button class="a-edit ${st === 'edit' ? 'on' : ''}" onclick="setSt('${esc(r.email)}','edit','${p.id}')">✏️ تعديل</button>
           <button class="a-gone ${st === 'gone' ? 'on' : ''}" onclick="setSt('${esc(r.email)}','gone','${p.id}')">🚫 ما تشتغل</button>
         </div>
-        <div class="edit-box">
-          <div class="row"><label>الاسم الصحيح</label><input type="text" value="${esc(a.name ?? r.name)}" oninput="setF('${esc(r.email)}','name',this.value)"></div>
+        <div class="edit-box"><div class="info" style="color:#9a5b00">ملاحظة: التصحيح هنا للمراجعة بس — ما يغيّر اسمها بالفواتير ولا بأي نظام.</div>
+          <div class="row"><label>اسمها المعروف</label><input type="text" value="${esc(a.name ?? r.name)}" oninput="setF('${esc(r.email)}','name',this.value)"></div>
           <div class="row"><label>رقم الموبايل</label><input type="tel" value="${esc(a.phone ?? r.phone)}" oninput="setF('${esc(r.email)}','phone',this.value)"></div>
           <div class="row"><label>الصفحة</label><select onchange="setF('${esc(r.email)}','page',this.value)">${T.all_pages.map(n => `<option ${((a.page ?? (p.orphan ? '' : p.name)) === n) ? 'selected' : ''}>${esc(n)}</option>`).join('')}${p.orphan && !a.page ? '<option selected value="">— اختاري —</option>' : ''}</select></div>
           <div class="row"><label>الإيميل</label><input type="text" dir="ltr" value="${esc(a.email ?? r.email)}" oninput="setF('${esc(r.email)}','email',this.value)"></div>
