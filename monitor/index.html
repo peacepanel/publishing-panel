@@ -138,6 +138,10 @@ table.rp tr.red td{background:var(--red-soft)}table.rp tr.yel td{background:var(
 .qr .acts button{flex:1}
 .qr .out{white-space:pre-wrap;font-size:13px;background:var(--surface2);border-radius:10px;padding:10px;max-height:260px;overflow:auto;display:none}
 .qr .out.on{display:block}
+.qc-sum{font-size:13px;background:var(--surface2);border-radius:10px;padding:8px 10px}
+.qc-sum b{font-size:15px}
+#qcImgs img{width:100%;border-radius:10px;border:1px solid var(--line);margin-top:6px}
+.chip.dest-x{border-style:dashed}
 .qr-h{font-weight:700;color:var(--muted);font-size:13px;margin:6px 2px -4px}
 </style>
 </head>
@@ -242,10 +246,23 @@ table.rp tr.red td{background:var(--red-soft)}table.rp tr.yel td{background:var(
   </section>
   <section id="tab_quick" class="stack" hidden>
     <div class="tip">تقارير جاهزة ترسلها بضغطة. اضغط <b>👁 معاينة</b> حتى تشوف شنو راح ينرسل بدون ما يروح شي، وبعدها <b>📤 أرسل هسه</b>. كلها تروح عن طريق مركز الواتساب (التاب)، وتنسجل منو أرسلها ويمته.</div>
-    <div class="qr-h">لكروب المشرفات «<span class="qrSupG">مراقبة اداء صفحات</span>»</div>
+    <div class="qr" id="qcBox">
+      <h3>📋 تقرير الصفحات الخاملة والمتأخرة — اختار الصفحات ووين ينرسل</h3>
+      <div class="muted" style="font-size:13px">بدون أي فلتر = نفس تقرير الساعة 9 (كل الصفحات اللي ينتظرها 10 أو أكثر). فلتر حسب المحفظة أو كروب الواتساب أو الفئة أو اختار صفحات بعينها.</div>
+      <div class="rp-lv"><span>بحث</span><input id="qcQ" type="search" placeholder="اسم صفحة…" style="flex:1"></div>
+      <div id="qcLevels"></div>
+      <div id="qcActive" class="row" style="gap:6px;flex-wrap:wrap"></div>
+      <div class="rp-lv"><span>يطلع بالتقرير</span><div class="chips" id="qcMin"></div></div>
+      <div class="rp-lv"><span>الحالة</span><div class="chips" id="qcSt"></div></div>
+      <div class="qc-sum" id="qcSum"></div>
+      <div class="rp-lv"><span>يروح إلى</span><div style="flex:1"><div class="chips" data-dest="qc"></div></div></div>
+      <div class="last" data-qrlast="custom"></div>
+      <div class="out" id="qcOut"></div><div id="qcImgs"></div>
+      <div class="acts"><button class="sm line" id="qcPrev">👁 معاينة (صورة)</button><button class="sm" id="qcSend">📤 أرسل هسه</button></div>
+    </div>
+    <div class="qr-h">تقارير ثانية</div>
     <div class="qr-grid">
-      <div class="qr" data-qr="sup"><h3>📋 الصفحات الخاملة والمتأخرة</h3><div class="muted" style="font-size:13px">صورة جدول بالصفحات اللي ينتظرها 10 زبائن أو أكثر: 🔴 خاملة (ما ردّت من ساعة) و🟠 متأخرة. نفس التقرير اللي يطلع وحده الساعة 9 الصبح و9 بالليل.</div><div class="to">يروح إلى: <b class="qrSupG">مراقبة اداء صفحات</b></div><div class="last"></div><div class="out"></div><div class="acts"><button class="sm line" data-qrp="sup">👁 معاينة</button><button class="sm" data-qrs="sup">📤 أرسل هسه</button></div></div>
-      <div class="qr" data-qr="reps"><h3>👥 حالة تأكيد المندوبات</h3><div class="muted" style="font-size:13px">منو من المشرفات والمندوبات الرئيسيات أرسلت تأكيدها، ومنو بدت، ومنو بعدها ما فتحت الرابط.</div><div class="to">يروح إلى: <b class="qrSupG">مراقبة اداء صفحات</b></div><div class="last"></div><div class="out"></div><div class="acts"><button class="sm line" data-qrp="reps">👁 معاينة</button><button class="sm" data-qrs="reps">📤 أرسل هسه</button></div></div>
+      <div class="qr" data-qr="reps"><h3>👥 حالة تأكيد المندوبات</h3><div class="muted" style="font-size:13px">منو من المشرفات والمندوبات الرئيسيات أرسلت تأكيدها، ومنو بدت، ومنو بعدها ما فتحت الرابط.</div><div class="to">يروح إلى:</div><div class="chips" data-dest="reps"></div><div class="last"></div><div class="out"></div><div class="acts"><button class="sm line" data-qrp="reps">👁 معاينة</button><button class="sm" data-qrs="reps">📤 أرسل هسه</button></div></div>
     </div>
     <div class="qr-h">لكروبات ثانية</div>
     <div class="qr-grid">
@@ -947,9 +964,9 @@ $('rpQ').value=RPF.q||'';
 
 /* ===== ⚡ تقارير سريعة ===== */
 const QR_NAME={sup:'الصفحات الخاملة والمتأخرة',reps:'حالة تأكيد المندوبات',daily:'الصفحات المتوقفة عن العمل',alerts:'التنبيهات التلقائية'};
-async function qrCall(kind,send){const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SB_URL}/functions/v1/quick-reports`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({kind,send})});const j=await r.json();if(j.error&&j.ok!==false)throw new Error(j.error);return j;}
-async function qrInit(){try{const{data}=await sb.rpc('alerts_get');const g=data&&data.settings&&data.settings.supervisors_group;if(g)document.querySelectorAll('.qrSupG').forEach(e=>e.textContent=g);}catch(_){}
-  try{const{data}=await sb.rpc('quick_reports_last');document.querySelectorAll('[data-qr]').forEach(c=>{const l=(data||{})[c.dataset.qr];c.querySelector('.last').textContent=l?`آخر إرسال يدوي: ${new Date(l.at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'short',hour:'numeric',minute:'2-digit'})} — ${l.by||''}${l.ok?'':' ⚠️ فشل'}`:'';});}catch(_){}}
+async function qrCall(kind,send){if(kind==='reps'&&QD)return qcPost({kind,send,to:destList('reps')});const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SB_URL}/functions/v1/quick-reports`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({kind,send})});const j=await r.json();if(j.error&&j.ok!==false)throw new Error(j.error);return j;}
+async function qrInit(soft){if(!soft&&!QC.pages)qcLoad();try{const{data}=await sb.rpc('alerts_get');const g=data&&data.settings&&data.settings.supervisors_group;if(g)document.querySelectorAll('.qrSupG').forEach(e=>e.textContent=g);}catch(_){}
+  try{const{data}=await sb.rpc('quick_reports_last');const fl=l=>l?`آخر إرسال يدوي: ${new Date(l.at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'short',hour:'numeric',minute:'2-digit'})} — ${l.by||''}${l.ok?'':' ⚠️ فشل'}`:'';const cl=document.querySelector('[data-qrlast="custom"]');if(cl)cl.textContent=fl((data||{}).custom);document.querySelectorAll('[data-qr]').forEach(c=>{const l=(data||{})[c.dataset.qr];c.querySelector('.last').textContent=l?`آخر إرسال يدوي: ${new Date(l.at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'short',hour:'numeric',minute:'2-digit'})} — ${l.by||''}${l.ok?'':' ⚠️ فشل'}`:'';});}catch(_){}}
 function qrShow(kind,j){const o=document.querySelector(`[data-qr="${kind}"] .out`);let t='';
   if(kind==='sup')t=j.rows?`${j.rows} صفحة بالتقرير:\n• `+(j.pages||[]).join('\n• '):'✅ ماكو ولا صفحة ينتظرها 10 زبائن أو أكثر — ينرسل سطر «كلشي تمام».';
   else if(kind==='reps')t=j.preview||'';
@@ -959,9 +976,80 @@ function qrShow(kind,j){const o=document.querySelector(`[data-qr="${kind}"] .out
 document.addEventListener('click',async e=>{
   const p=e.target.closest('[data-qrp]'),s=e.target.closest('[data-qrs]');
   if(p){const k=p.dataset.qrp;p.disabled=true;const tx=p.textContent;p.textContent='يجهّز…';try{qrShow(k,await qrCall(k,false));}catch(er){toast('خطأ: '+er.message,6000);}p.disabled=false;p.textContent=tx;return;}
-  if(s){const k=s.dataset.qrs,to=s.closest('.qr').querySelector('.to b')?.textContent||'';if(!confirm(`ترسل «${QR_NAME[k]}» هسه إلى «${to}»؟`))return;s.disabled=true;const tx=s.textContent;s.textContent='يرسل…';
-    try{const j=await qrCall(k,true);if(j.ok===false)toast('ما انرسل: '+(j.error||''),7000);else toast('✔ انرسل لمركز الواتساب — يوصل خلال دقايق');qrInit();}catch(er){toast('خطأ: '+er.message,6000);}s.disabled=false;s.textContent=tx;}
+  if(s){const k=s.dataset.qrs,to=k==='reps'?destLabel('reps'):(s.closest('.qr').querySelector('.to b')?.textContent||'');if(!to){toast('اختار وين ينرسل',4000);return;}if(!confirm(`ترسل «${QR_NAME[k]}» هسه إلى «${to}»؟`))return;s.disabled=true;const tx=s.textContent;s.textContent='يرسل…';
+    try{const j=await qrCall(k,true);if(j.ok===false)toast('ما انرسل: '+(j.error||''),7000);else toast(k==='reps'?qcSentMsg(j):'✔ انرسل لمركز الواتساب — يوصل خلال دقايق',7000);qrInit();}catch(er){toast('خطأ: '+er.message,6000);}s.disabled=false;s.textContent=tx;}
 });
+
+/* ===== 📋 التقرير المفلتر + اختيار المستلم ===== */
+const DIR_GROUPS=['مراقبة اداء صفحات','النسائي','اطفالي','fashinista','Accessories Group','اكسسوار','دلوعه ستايل','بيج وردة','بيج مخمل وحرير','شي ان العراق','شي ان الى العراق','كروب تثبيت شامل','Goods تثبيت','حسابات peace panel','مناقشات اطفالي','مناقشات كيدز','كروب فاشنستا توصيل القلعه','كفرات تك نك كفري مميز'];
+const DEST_FIXED=[['مراقبة اداء صفحات','👥 مراقبة اداء صفحات'],['07851651331','📱 واتساب الشغل مالتي'],['حيدر','📱 رقمي الخاص']];
+const QD={qc:new Set(['مراقبة اداء صفحات']),reps:new Set(['مراقبة اداء صفحات'])},QDX={qc:[],reps:[]};let QC_PG=false;
+function destRender(id){const el=document.querySelector(`[data-dest="${id}"]`);if(!el)return;const sel=QD[id];
+  const groups=[...new Set((QC.pages||[]).map(p=>p.group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  let h=DEST_FIXED.map(([v,l])=>`<button class="chip ${sel.has(v)?'on':''}" data-dv="${esc(v)}" data-did="${id}">${l}</button>`).join('');
+  if(id==='qc')h+=`<button class="chip ${QC_PG?'on':''}" data-dpg="1" title="كل كروب يوصله تقرير صفحاته بس">🔀 كروب كل صفحة (صفحاته بس)</button>`;
+  h+=groups.filter(g=>g!=='مراقبة اداء صفحات').map(g=>`<button class="chip ${sel.has(g)?'on':''}" data-dv="${esc(g)}" data-did="${id}">💬 ${esc(g)}</button>`).join('');
+  QDX[id].forEach(v=>{h+=`<button class="chip dest-x ${sel.has(v)?'on':''}" data-dv="${esc(v)}" data-did="${id}">${/^\+?\d/.test(v)?'📱':'💬'} ${esc(v)}</button>`;});
+  const others=DIR_GROUPS.filter(g=>!groups.includes(g)&&!DEST_FIXED.some(d=>d[0]===g)&&!QDX[id].includes(g));
+  h+=`<select data-dadd="${id}" class="sm" style="max-width:170px"><option value="">+ كروب آخر…</option>${others.map(g=>`<option>${esc(g)}</option>`).join('')}<option value="__num">📱 رقم تلفون…</option></select>`;
+  el.innerHTML=h;}
+function destList(id){return[...QD[id]];}
+function destLabel(id){const a=destList(id).map(v=>(DEST_FIXED.find(d=>d[0]===v)||[0,v])[1].replace(/^\S+ /,''));if(id==='qc'&&QC_PG)a.push('كروب كل صفحة');return a.join('، ');}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-dv]');if(b){const id=b.dataset.did,v=b.dataset.dv;QD[id].has(v)?QD[id].delete(v):QD[id].add(v);destRender(id);return;}
+  if(e.target.closest('[data-dpg]')){QC_PG=!QC_PG;destRender('qc');}});
+document.addEventListener('change',e=>{const s=e.target.closest('[data-dadd]');if(!s)return;const id=s.dataset.dadd;let v=s.value;s.value='';if(!v)return;
+  if(v==='__num'){v=(prompt('رقم الواتساب (مثل 07xxxxxxxxx):')||'').replace(/[^\d+]/g,'');if(v.length<10)return;}
+  if(!QDX[id].includes(v))QDX[id].push(v);QD[id].add(v);destRender(id);});
+
+let QC={pages:null},QCF={pf:[],grp:[],cat:[],st:[],pg:[],q:''},QCMIN=10,QCST='all';
+const QC_ST={idle:'🔴 خاملة',late:'🟠 متأخرة',ok:'🟢 ماكو انتظار'};
+const qcVal={pf:p=>p.portfolios.length?p.portfolios:[UNC],grp:p=>[p.group||UNC],cat:p=>p.cats.length?p.cats:[UNC],st:p=>[p.st]};
+function qcMatch(p,skip){for(const k of['pf','grp','cat','st'])if(k!==skip&&QCF[k].length&&!qcVal[k](p).some(v=>QCF[k].includes(v)))return false;
+  if(skip!=='pg'&&QCF.pg.length&&!QCF.pg.includes(p.id))return false;
+  if(QCF.q&&skip!=='q'&&!nkA(p.name).includes(nkA(QCF.q)))return false;return true;}
+function qcChips(k,opts){const sel=QCF[k];let h=`<button class="chip ${sel.length?'':'on'}" data-qck="${k}" data-qcv="">الكل</button>`;
+  opts.forEach(([v,l,n])=>{if(!n&&!sel.includes(v))return;h+=`<button class="chip ${sel.includes(v)?'on':''}" data-qck="${k}" data-qcv="${esc(v)}">${esc(l)}<small>${n}</small></button>`;});return h;}
+function qcCount(k){const m={};QC.pages.forEach(p=>{if(qcMatch(p,k))qcVal[k](p).forEach(v=>m[v]=(m[v]||0)+1);});return m;}
+function qcScope(){return QC.pages.filter(p=>qcMatch(p,null));}
+function qcRows(sc){return sc.filter(p=>p.st!=='ok'&&p.w>=QCMIN&&(QCST==='all'||p.st===QCST));}
+function qcLabel(){const a=[];if(QCF.pg.length)a.push(QCF.pg.length===1?QC.pages.find(p=>p.id===QCF.pg[0])?.name:`${QCF.pg.length} صفحات`);
+  else{if(QCF.grp.length)a.push('كروب '+QCF.grp.join(' و'));if(QCF.pf.length)a.push(QCF.pf.join(' و'));if(QCF.cat.length)a.push(QCF.cat.join(' و'));}
+  if(QCST!=='all')a.push(QCST==='idle'?'الخاملة بس':'المتأخرة بس');return a.join(' • ');}
+function qcRender(){if(!QC.pages)return;
+  const srt=m=>Object.keys(m).sort((a,b)=>a===UNC?1:b===UNC?-1:m[b]-m[a]||a.localeCompare(b,'ar'));
+  const pf=qcCount('pf'),gr=qcCount('grp'),ct=qcCount('cat'),st=qcCount('st');
+  const pgList=QC.pages.filter(p=>qcMatch(p,'pg')).sort((a,b)=>b.w-a.w);
+  $('qcLevels').innerHTML=
+    `<div class="rp-lv"><span>المحفظة</span><div class="chips">${qcChips('pf',srt(pf).map(v=>[v,v,pf[v]]))}</div></div>`+
+    `<div class="rp-lv"><span>كروب الواتساب</span><div class="chips">${qcChips('grp',srt(gr).map(v=>[v,v,gr[v]]))}</div></div>`+
+    `<div class="rp-lv"><span>الفئة</span><div class="chips">${qcChips('cat',srt(ct).map(v=>[v,v,ct[v]]))}</div></div>`+
+    `<div class="rp-lv"><span>حالة الصفحة</span><div class="chips">${qcChips('st',['idle','late','ok'].map(v=>[v,QC_ST[v],st[v]||0]))}</div></div>`+
+    `<div class="rp-lv"><span>الصفحات</span><div class="chips">${qcChips('pg',pgList.map(p=>[p.id,p.name,p.w||'0']))}</div></div>`;
+  const nm={pf:'المحفظة',grp:'الكروب',cat:'الفئة',st:'الحالة',pg:'صفحة'};let a='';
+  for(const k in nm)QCF[k].forEach(v=>a+=`<span class="pill">${nm[k]}: ${esc(k==='st'?QC_ST[v]:k==='pg'?(QC.pages.find(p=>p.id===v)||{}).name:v)} <button data-qck="${k}" data-qcv="${esc(v)}">×</button></span>`);
+  if(QCF.q)a+=`<span class="pill">بحث: ${esc(QCF.q)} <button data-qcq="1">×</button></span>`;
+  if(a)a+=`<button class="sm line" id="qcClear">مسح الفلاتر</button>`;$('qcActive').innerHTML=a;
+  $('qcMin').innerHTML=[1,5,10,20,30].map(n=>`<button class="chip ${QCMIN===n?'on':''}" data-qcmin="${n}">${n===1?'أي صفحة بيها زبون ينتظر':n+' ينتظرون أو أكثر'}</button>`).join('');
+  $('qcSt').innerHTML=[['all','الخاملة والمتأخرة'],['idle','🔴 الخاملة بس'],['late','🟠 المتأخرة بس']].map(([v,l])=>`<button class="chip ${QCST===v?'on':''}" data-qcst="${v}">${l}</button>`).join('');
+  const sc=qcScope(),rs=qcRows(sc);
+  $('qcSum').innerHTML=`الفلتر يشمل <b>${sc.length}</b> صفحة • راح يطلع بالتقرير <b>${rs.length}</b> صفحة`+(rs.length?`: ${rs.slice(0,12).map(p=>`${esc(p.name)} (${p.w})`).join('، ')}${rs.length>12?'…':''}`:' — ينرسل سطر «كلشي تمام»')+(qcLabel()?`<div class="muted" style="margin-top:4px">عنوان التقرير: «… — ${esc(qcLabel())}»</div>`:'');}
+async function qcLoad(){$('qcSum').textContent='يحمّل الصفحات…';try{const j=await qrCall('stats',false);QC.pages=j.pages;if(j.sup_group&&j.sup_group!=='مراقبة اداء صفحات'){DEST_FIXED[0]=[j.sup_group,'👥 '+j.sup_group];['qc','reps'].forEach(id=>{QD[id].delete('مراقبة اداء صفحات');QD[id].add(j.sup_group);});}qcRender();destRender('qc');destRender('reps');}catch(er){$('qcSum').textContent='خطأ: '+er.message;}}
+function qcBody(send){const sc=qcScope();const all=sc.length===QC.pages.length;return{kind:'custom',send,page_ids:all?[]:sc.map(p=>p.id),min:QCMIN,status:QCST,label:qcLabel(),to:destList('qc'),page_groups:QC_PG};}
+async function qcPost(b){const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SB_URL}/functions/v1/quick-reports`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify(b)});const j=await r.json();if(j.error&&j.ok!==false)throw new Error(j.error);return j;}
+function qcSentMsg(j){if(j.ok===false)return'ما انرسل: '+(j.error||'')+(j.errors&&j.errors.length?' — '+j.errors.map(x=>(x.to||'')+' '+x.error).join('، '):'');
+  if(j.sent===0)return j.note||'ماكو شي ينرسل';let m='✔ انرسل لمركز الواتساب'+(j.to?' ← '+[].concat(j.to).join('، '):'');if(j.errors&&j.errors.length)m+=' ⚠️ ما انرسل لـ: '+j.errors.map(x=>x.to||'').join('، ')+' (مو موجود بدليل مركز الواتساب)';return m;}
+document.addEventListener('click',async e=>{
+  const c=e.target.closest('[data-qck]');if(c){const k=c.dataset.qck,v=c.dataset.qcv;if(!v)QCF[k]=[];else{const i=QCF[k].indexOf(v);i>-1?QCF[k].splice(i,1):QCF[k].push(v);}qcRender();return;}
+  const m=e.target.closest('[data-qcmin]');if(m){QCMIN=+m.dataset.qcmin;qcRender();return;}
+  const t=e.target.closest('[data-qcst]');if(t){QCST=t.dataset.qcst;qcRender();return;}
+  if(e.target.closest('[data-qcq]')){QCF.q='';$('qcQ').value='';qcRender();return;}
+  if(e.target.id==='qcClear'){QCF={pf:[],grp:[],cat:[],st:[],pg:[],q:''};$('qcQ').value='';qcRender();return;}
+  if(e.target.id==='qcPrev'){const b=e.target;b.disabled=true;b.textContent='يرسم الصورة…';try{const j=await qcPost(qcBody(false));$('qcOut').textContent=j.text||'';$('qcOut').classList.add('on');$('qcImgs').innerHTML=(j.images||[]).map(x=>`<img src="data:image/png;base64,${x}" alt="معاينة التقرير">`).join('');}catch(er){toast('خطأ: '+er.message,6000);}b.disabled=false;b.textContent='👁 معاينة (صورة)';return;}
+  if(e.target.id==='qcSend'){const to=destLabel('qc');if(!to){toast('اختار وين ينرسل',4000);return;}const sc=qcScope(),rs=qcRows(sc);
+    if(!confirm(`ترسل تقرير ${rs.length} صفحة${qcLabel()?' ('+qcLabel()+')':''}\nإلى: ${to}؟`))return;const b=e.target;b.disabled=true;b.textContent='يرسل…';
+    try{const j=await qcPost(qcBody(true));toast(qcSentMsg(j),8000);qrInit(true);}catch(er){toast('خطأ: '+er.message,6000);}b.disabled=false;b.textContent='📤 أرسل هسه';}
+});
+let qcT;$('qcQ').addEventListener('input',e=>{clearTimeout(qcT);qcT=setTimeout(()=>{QCF.q=e.target.value.trim();qcRender();},150);});
 </script>
 </body>
 </html>
