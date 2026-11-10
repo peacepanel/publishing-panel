@@ -128,6 +128,17 @@ table.rp td{padding:8px;border-top:1px solid var(--line);vertical-align:top}
 table.rp tr.red td{background:var(--red-soft)}table.rp tr.yel td{background:var(--yel-soft)}
 .rp-wrap{max-height:70vh;overflow:auto}
 @media (max-width:760px){table.rp thead{display:none}table.rp,table.rp tbody,table.rp tr,table.rp td{display:block;width:100%}table.rp tr{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}table.rp td{border:0;padding:4px 10px}table.rp td::before{content:attr(data-l);display:block;font-size:11px;color:var(--muted)}}
+
+.qr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.qr{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.qr h3{margin:0;font-size:16px}
+.qr .to{font-size:13px}.qr .to b{color:var(--accent)}
+.qr .last{font-size:12px;color:var(--muted)}
+.qr .acts{display:flex;gap:8px;margin-top:auto}
+.qr .acts button{flex:1}
+.qr .out{white-space:pre-wrap;font-size:13px;background:var(--surface2);border-radius:10px;padding:10px;max-height:260px;overflow:auto;display:none}
+.qr .out.on{display:block}
+.qr-h{font-weight:700;color:var(--muted);font-size:13px;margin:6px 2px -4px}
 </style>
 </head>
 <body>
@@ -151,7 +162,7 @@ table.rp tr.red td{background:var(--red-soft)}table.rp tr.yel td{background:var(
 </div>
 
 <main id="app" class="wrap stack" hidden>
-  <div class="tabs" id="tabs"><button data-tab="reply" class="on">💬 الرد على الزبائن</button><button data-tab="dup">🔁 المنشورات المكررة</button><button data-tab="brand">™ العلامات التجارية</button><button data-tab="act">📊 نشاط النشر</button><button data-tab="alerts" id="alertsTabBtn" hidden>🔔 تنبيهات الواتساب</button><button data-tab="reps" id="repsTabBtn" hidden>👥 المندوبات</button></div>
+  <div class="tabs" id="tabs"><button data-tab="reply" class="on">💬 الرد على الزبائن</button><button data-tab="dup">🔁 المنشورات المكررة</button><button data-tab="brand">™ العلامات التجارية</button><button data-tab="act">📊 نشاط النشر</button><button data-tab="alerts" id="alertsTabBtn" hidden>🔔 تنبيهات الواتساب</button><button data-tab="reps" id="repsTabBtn" hidden>👥 المندوبات</button><button data-tab="quick" id="quickTabBtn" hidden>⚡ تقارير سريعة</button></div>
   <section id="tab_audit" class="stack" hidden>
     <div class="tip" id="auditTip"></div>
     <div class="box stack" style="gap:10px">
@@ -227,6 +238,19 @@ table.rp tr.red td{background:var(--red-soft)}table.rp tr.yel td{background:var(
     <div class="al">
       <div class="box stack" style="gap:8px"><h3>📅 نهاية الجدولة لكل صفحة</h3><div id="alSched" style="overflow-x:auto"></div></div>
       <div class="box stack" style="gap:8px"><h3>📜 آخر التنبيهات المرسلة</h3><div id="alLog" style="overflow-x:auto"></div></div>
+    </div>
+  </section>
+  <section id="tab_quick" class="stack" hidden>
+    <div class="tip">تقارير جاهزة ترسلها بضغطة. اضغط <b>👁 معاينة</b> حتى تشوف شنو راح ينرسل بدون ما يروح شي، وبعدها <b>📤 أرسل هسه</b>. كلها تروح عن طريق مركز الواتساب (التاب)، وتنسجل منو أرسلها ويمته.</div>
+    <div class="qr-h">لكروب المشرفات «<span class="qrSupG">مراقبة اداء صفحات</span>»</div>
+    <div class="qr-grid">
+      <div class="qr" data-qr="sup"><h3>📋 الصفحات الخاملة والمتأخرة</h3><div class="muted" style="font-size:13px">صورة جدول بالصفحات اللي ينتظرها 10 زبائن أو أكثر: 🔴 خاملة (ما ردّت من ساعة) و🟠 متأخرة. نفس التقرير اللي يطلع وحده الساعة 9 الصبح و9 بالليل.</div><div class="to">يروح إلى: <b class="qrSupG">مراقبة اداء صفحات</b></div><div class="last"></div><div class="out"></div><div class="acts"><button class="sm line" data-qrp="sup">👁 معاينة</button><button class="sm" data-qrs="sup">📤 أرسل هسه</button></div></div>
+      <div class="qr" data-qr="reps"><h3>👥 حالة تأكيد المندوبات</h3><div class="muted" style="font-size:13px">منو من المشرفات والمندوبات الرئيسيات أرسلت تأكيدها، ومنو بدت، ومنو بعدها ما فتحت الرابط.</div><div class="to">يروح إلى: <b class="qrSupG">مراقبة اداء صفحات</b></div><div class="last"></div><div class="out"></div><div class="acts"><button class="sm line" data-qrp="reps">👁 معاينة</button><button class="sm" data-qrs="reps">📤 أرسل هسه</button></div></div>
+    </div>
+    <div class="qr-h">لكروبات ثانية</div>
+    <div class="qr-grid">
+      <div class="qr" data-qr="daily"><h3>⛔ الصفحات المتوقفة عن العمل</h3><div class="muted" style="font-size:13px">ملخص الصفحات المتوقفة (اللي ما توصلها تنبيهات فورية). نفس الرسالة اليومية اللي تطلع الساعة 4 العصر.</div><div class="to">يروح إلى: <b>صفحات متوقفة عن العمل</b></div><div class="last"></div><div class="out"></div><div class="acts"><button class="sm line" data-qrp="daily">👁 معاينة</button><button class="sm" data-qrs="daily">📤 أرسل هسه</button></div></div>
+      <div class="qr" data-qr="alerts"><h3>👁 التنبيهات التلقائية — شنو يطلع هسه؟</h3><div class="muted" style="font-size:13px">معاينة بس: الصفحات اللي عليها رسائل متأخرة، والصفحات الخاملة، اللي تنبيهاتها تطلع وحدها لكروب كل صفحة.</div><div class="to">معاينة فقط — ما ينرسل شي</div><div class="last"></div><div class="out"></div><div class="acts"><button class="sm line" data-qrp="alerts">👁 معاينة</button></div></div>
     </div>
   </section>
   <section id="tab_reps" class="stack" hidden>
@@ -342,7 +366,7 @@ async function start(){
   const{data:okMon}=await sb.rpc('am_monitor');
   if(!okMon){$('loginBox').hidden=false;$('app').hidden=true;$('loginMsg').textContent=`الحساب ${session.user.email} ما عنده صلاحية (لازم يكون بعمود «ايميل الادمن» بالشيت).`;$('swBtn').hidden=false;return;}
   // the link back to the publishing panel only for its admins
-  const{data:adm}=await sb.from('admins').select('email').limit(1);IS_ADMIN=!!(adm&&adm.length);if(STANDALONE||!IS_ADMIN)$('pubLink').hidden=true;$('alertsTabBtn').hidden=!IS_ADMIN;$('repsTabBtn').hidden=!IS_ADMIN;if((tab==='alerts'||tab==='reps')&&!IS_ADMIN)tab='reply';
+  const{data:adm}=await sb.from('admins').select('email').limit(1);IS_ADMIN=!!(adm&&adm.length);if(STANDALONE||!IS_ADMIN)$('pubLink').hidden=true;$('alertsTabBtn').hidden=!IS_ADMIN;$('repsTabBtn').hidden=!IS_ADMIN;$('quickTabBtn').hidden=!IS_ADMIN;if((tab==='alerts'||tab==='reps'||tab==='quick')&&!IS_ADMIN)tab='reply';
   $('loginBox').hidden=true;$('app').hidden=false;
   $('ymin').value=YMIN;$('rmin').value=RMIN;await load();setInterval(()=>{if(tab==='reply'&&!document.hidden)load();},60000);setTab(tab);
 }
@@ -449,7 +473,7 @@ let tab=lsGet('tab','reply'),aSel=new Set((a=>a.length>15?[]:a)(JSON.parse(lsGet
 const dISO=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const dAr=t=>new Date(t).toLocaleDateString('ar-IQ',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'});
 function setTab(t){tab=t;lsSet('tab',t);document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
-  $('tab_reply').hidden=t!=='reply';$('tab_audit').hidden=!(t==='dup'||t==='brand');$('tab_act').hidden=t!=='act';$('tab_alerts').hidden=t!=='alerts';$('tab_reps').hidden=t!=='reps';if(t==='reps')rpInit();if(t==='alerts')alInit();if(t==='dup'||t==='brand'){auditInit();loadRuns();}if(t==='act')actInit();}
+  $('tab_reply').hidden=t!=='reply';$('tab_audit').hidden=!(t==='dup'||t==='brand');$('tab_act').hidden=t!=='act';$('tab_alerts').hidden=t!=='alerts';$('tab_reps').hidden=t!=='reps';if(t==='reps')rpInit();$('tab_quick').hidden=t!=='quick';if(t==='quick')qrInit();if(t==='alerts')alInit();if(t==='dup'||t==='brand'){auditInit();loadRuns();}if(t==='act')actInit();}
 function auditInit(){
   const brand=tab==='brand';
   $('auditTip').innerHTML=brand
@@ -920,6 +944,24 @@ document.addEventListener('click',e=>{
 });
 let rpT;$('rpQ').addEventListener('input',e=>{clearTimeout(rpT);rpT=setTimeout(()=>{RPF.q=e.target.value.trim();rpSave();rpRender();},150);});
 $('rpQ').value=RPF.q||'';
+
+/* ===== ⚡ تقارير سريعة ===== */
+const QR_NAME={sup:'الصفحات الخاملة والمتأخرة',reps:'حالة تأكيد المندوبات',daily:'الصفحات المتوقفة عن العمل',alerts:'التنبيهات التلقائية'};
+async function qrCall(kind,send){const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SB_URL}/functions/v1/quick-reports`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({kind,send})});const j=await r.json();if(j.error&&j.ok!==false)throw new Error(j.error);return j;}
+async function qrInit(){try{const{data}=await sb.rpc('alerts_get');const g=data&&data.settings&&data.settings.supervisors_group;if(g)document.querySelectorAll('.qrSupG').forEach(e=>e.textContent=g);}catch(_){}
+  try{const{data}=await sb.rpc('quick_reports_last');document.querySelectorAll('[data-qr]').forEach(c=>{const l=(data||{})[c.dataset.qr];c.querySelector('.last').textContent=l?`آخر إرسال يدوي: ${new Date(l.at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'short',hour:'numeric',minute:'2-digit'})} — ${l.by||''}${l.ok?'':' ⚠️ فشل'}`:'';});}catch(_){}}
+function qrShow(kind,j){const o=document.querySelector(`[data-qr="${kind}"] .out`);let t='';
+  if(kind==='sup')t=j.rows?`${j.rows} صفحة بالتقرير:\n• `+(j.pages||[]).join('\n• '):'✅ ماكو ولا صفحة ينتظرها 10 زبائن أو أكثر — ينرسل سطر «كلشي تمام».';
+  else if(kind==='reps')t=j.preview||'';
+  else if(kind==='daily')t=j.preview||j.text||(j.pages?('الصفحات:\n• '+[].concat(j.pages).map(x=>x.page||x).join('\n• ')):JSON.stringify(j,null,1));
+  else if(kind==='alerts'){const L=[];const la=j.late||{},id=j.idle||{};L.push('🔴 رسائل متأخرة: '+(la.pages&&la.pages.length?la.pages.map(x=>`${x.page} (${x.late})`).join('، '):'ماكو'));L.push('⚠️ صفحات خاملة: '+(id.idle&&id.idle.length?id.idle.map(x=>`${x.page} (${x.waiting} ينتظر)`).join('، '):'ماكو'));if(la.preview)L.push('','مثال رسالة:',la.preview);t=L.join('\n');}
+  o.textContent=t;o.classList.add('on');}
+document.addEventListener('click',async e=>{
+  const p=e.target.closest('[data-qrp]'),s=e.target.closest('[data-qrs]');
+  if(p){const k=p.dataset.qrp;p.disabled=true;const tx=p.textContent;p.textContent='يجهّز…';try{qrShow(k,await qrCall(k,false));}catch(er){toast('خطأ: '+er.message,6000);}p.disabled=false;p.textContent=tx;return;}
+  if(s){const k=s.dataset.qrs,to=s.closest('.qr').querySelector('.to b')?.textContent||'';if(!confirm(`ترسل «${QR_NAME[k]}» هسه إلى «${to}»؟`))return;s.disabled=true;const tx=s.textContent;s.textContent='يرسل…';
+    try{const j=await qrCall(k,true);if(j.ok===false)toast('ما انرسل: '+(j.error||''),7000);else toast('✔ انرسل لمركز الواتساب — يوصل خلال دقايق');qrInit();}catch(er){toast('خطأ: '+er.message,6000);}s.disabled=false;s.textContent=tx;}
+});
 </script>
 </body>
 </html>
