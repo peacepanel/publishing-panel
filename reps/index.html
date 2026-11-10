@@ -185,16 +185,17 @@ function renderList(){
       </div>`;
     });
     if (!p.orphan && extra.length && fSt === 'الكل' && !q) {
-      h += `<div class="sub-h">حسابات داخلة على ${esc(p.name)} وما مربوطة بأي مندوبة — منو هاي؟</div>`;
+      h += `<div class="sub-h">حسابات داخلة على ${esc(p.name)} وما مربوطة بأي مندوبة — منو هاي؟</div><div class="hint" style="margin:-4px 2px 8px;font-size:13px;color:var(--muted)">إذا تعرفينها من شغلنا بس مو تبعج، اختاري «تابعة لمشرفة ثانية». «غريبة» بس للي مو من شغلنا أبداً.</div>`;
       extra.forEach(m => {
-        const k = p.id + ':' + m.id, v = A.meta[k] || '';
-        h += `<div class="meta ${v ? 'done' : ''}"><div class="mn">👤 ${esc(m.name)}</div>
+        const k = p.id + ':' + m.id, v0 = A.meta[k] || '', re = v0 === 'recheck', v = re ? '' : v0;
+        h += `<div class="meta ${v ? 'done' : ''}" ${re ? 'style="border:2px solid #e67e22"' : ''}><div class="mn">👤 ${esc(m.name)}${re ? ' <b style="color:#e67e22">🔁 راجعيها رجاءً</b>' : ''}</div>
           <div class="row"><select onchange="setExtra('${k}', this.value)">
             <option value="">— اختاري —</option>
             ${p.reps.map(r => `<option value="${esc(r.email)}" ${v === r.email ? 'selected' : ''}>هاي ${esc(r.name)} (حساب ثاني إلها)</option>`).join('')}
-            <option value="new" ${v === 'new' ? 'selected' : ''}>مندوبة جديدة مو مسجلة بالانفو</option>
+            <option value="new" ${v === 'new' ? 'selected' : ''}>مندوبة جديدة على هالصفحة (مو مسجلة بالانفو)</option>
+            <option value="other" ${v === 'other' ? 'selected' : ''}>مندوبة من شغلنا بس تابعة لمشرفة ثانية</option>
             <option value="team" ${v === 'team' ? 'selected' : ''}>مشرفة / إدارة</option>
-            <option value="stranger" ${v === 'stranger' ? 'selected' : ''}>مو مندوبتنا — تنشال من الصفحة</option>
+            <option value="stranger" ${v === 'stranger' ? 'selected' : ''}>غريبة تماماً — مو من شغلنا أبداً (تنشال)</option>
           </select></div></div>`;
       });
     }
