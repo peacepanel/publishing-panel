@@ -114,6 +114,20 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
 .xt tr.rowbad td{background:var(--red-soft)}.xt tr.rowbad td:first-child{color:var(--red);font-weight:700}.xt td.cl{color:var(--red);font-weight:800}
 .tl{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:340px;margin:auto}.tl span{border-radius:6px;padding:1px 5px;font-size:12px;background:var(--surface2);white-space:nowrap}.tl .o{background:var(--red);color:#fff;font-weight:700}.tl .c{background:var(--org);color:#fff;font-weight:700}.tl .s{opacity:.6}
 .xt small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+
+.rp-sec h3{margin:0 0 6px;font-size:15px}
+.rp-lv{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line)}
+.rp-lv:last-child{border-bottom:0}
+.rp-lv>span{min-width:74px;font-size:13px;color:var(--muted);padding-top:5px}
+.rp-act{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:6px}
+.rp-act .pill button{border:0;background:none;color:var(--red);cursor:pointer;font-size:13px;padding:0 0 0 2px}
+.kpi{cursor:pointer}.kpi.on{outline:2px solid var(--accent)}
+table.rp{width:100%;border-collapse:collapse;font-size:13.5px}
+table.rp th{position:sticky;top:0;background:var(--surface2);text-align:start;padding:8px;font-weight:600;cursor:pointer;white-space:nowrap}
+table.rp td{padding:8px;border-top:1px solid var(--line);vertical-align:top}
+table.rp tr.red td{background:var(--red-soft)}table.rp tr.yel td{background:var(--yel-soft)}
+.rp-wrap{max-height:70vh;overflow:auto}
+@media (max-width:760px){table.rp thead{display:none}table.rp,table.rp tbody,table.rp tr,table.rp td{display:block;width:100%}table.rp tr{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}table.rp td{border:0;padding:4px 10px}table.rp td::before{content:attr(data-l);display:block;font-size:11px;color:var(--muted)}}
 </style>
 </head>
 <body>
@@ -137,7 +151,7 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
 </div>
 
 <main id="app" class="wrap stack" hidden>
-  <div class="tabs" id="tabs"><button data-tab="reply" class="on">💬 الرد على الزبائن</button><button data-tab="dup">🔁 المنشورات المكررة</button><button data-tab="brand">™ العلامات التجارية</button><button data-tab="act">📊 نشاط النشر</button><button data-tab="alerts" id="alertsTabBtn" hidden>🔔 تنبيهات الواتساب</button></div>
+  <div class="tabs" id="tabs"><button data-tab="reply" class="on">💬 الرد على الزبائن</button><button data-tab="dup">🔁 المنشورات المكررة</button><button data-tab="brand">™ العلامات التجارية</button><button data-tab="act">📊 نشاط النشر</button><button data-tab="alerts" id="alertsTabBtn" hidden>🔔 تنبيهات الواتساب</button><button data-tab="reps" id="repsTabBtn" hidden>👥 المندوبات</button></div>
   <section id="tab_audit" class="stack" hidden>
     <div class="tip" id="auditTip"></div>
     <div class="box stack" style="gap:10px">
@@ -213,6 +227,21 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
     <div class="al">
       <div class="box stack" style="gap:8px"><h3>📅 نهاية الجدولة لكل صفحة</h3><div id="alSched" style="overflow-x:auto"></div></div>
       <div class="box stack" style="gap:8px"><h3>📜 آخر التنبيهات المرسلة</h3><div id="alLog" style="overflow-x:auto"></div></div>
+    </div>
+  </section>
+  <section id="tab_reps" class="stack" hidden>
+    <div class="tip">كل مندوبة بالانفو ويه حسابها بالفيسبوك، ويتحدث وحده كل 6 ساعات (الانفو وميتا). <b>تأكيد المشرفة</b> يجي من روابط التأكيد. الانفو ما ينلمس — أي تصحيح ينسوى بيد بنظام الصلاحيات. <span id="rpSync" class="muted"></span></div>
+    <div class="kpis" id="rpKpis"></div>
+    <div class="box stack" style="gap:8px">
+      <input id="rpQ" placeholder="🔎 ابحث بالاسم، الرقم، الإيميل، الصفحة، أو اسم حساب الفيسبوك" style="width:100%">
+      <div class="rp-act" id="rpActive"></div>
+      <div id="rpLevels"></div>
+    </div>
+    <div class="row"><b id="rpCount"></b><span class="sp" style="flex:1"></span><button class="sm line" id="rpReload">🔄 تحديث</button></div>
+    <div class="box rp-wrap" id="rpTable"></div>
+    <div class="al">
+      <div class="box rp-sec"><h3>🕵️ حسابات داخلة على الصفحات وما مربوطة بأي مندوبة</h3><div class="muted" style="font-size:13px;margin-bottom:6px">بدون حسابات الإدارة. أي حساب «مو مندوبتنا» لازم ينشال من الصفحة.</div><div id="rpUnl" style="max-height:420px;overflow:auto"></div></div>
+      <div class="box rp-sec"><h3>✅ روابط تأكيد المشرفات</h3><div id="rpTasks"></div><h3 style="margin-top:12px">📜 آخر التغييرات</h3><div id="rpLog" style="max-height:300px;overflow:auto"></div></div>
     </div>
   </section>
   <section id="tab_reply" class="stack">
@@ -313,7 +342,7 @@ async function start(){
   const{data:okMon}=await sb.rpc('am_monitor');
   if(!okMon){$('loginBox').hidden=false;$('app').hidden=true;$('loginMsg').textContent=`الحساب ${session.user.email} ما عنده صلاحية (لازم يكون بعمود «ايميل الادمن» بالشيت).`;$('swBtn').hidden=false;return;}
   // the link back to the publishing panel only for its admins
-  const{data:adm}=await sb.from('admins').select('email').limit(1);IS_ADMIN=!!(adm&&adm.length);if(STANDALONE||!IS_ADMIN)$('pubLink').hidden=true;$('alertsTabBtn').hidden=!IS_ADMIN;if(tab==='alerts'&&!IS_ADMIN)tab='reply';
+  const{data:adm}=await sb.from('admins').select('email').limit(1);IS_ADMIN=!!(adm&&adm.length);if(STANDALONE||!IS_ADMIN)$('pubLink').hidden=true;$('alertsTabBtn').hidden=!IS_ADMIN;$('repsTabBtn').hidden=!IS_ADMIN;if((tab==='alerts'||tab==='reps')&&!IS_ADMIN)tab='reply';
   $('loginBox').hidden=true;$('app').hidden=false;
   $('ymin').value=YMIN;$('rmin').value=RMIN;await load();setInterval(()=>{if(tab==='reply'&&!document.hidden)load();},60000);setTab(tab);
 }
@@ -420,7 +449,7 @@ let tab=lsGet('tab','reply'),aSel=new Set((a=>a.length>15?[]:a)(JSON.parse(lsGet
 const dISO=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const dAr=t=>new Date(t).toLocaleDateString('ar-IQ',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'});
 function setTab(t){tab=t;lsSet('tab',t);document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
-  $('tab_reply').hidden=t!=='reply';$('tab_audit').hidden=!(t==='dup'||t==='brand');$('tab_act').hidden=t!=='act';$('tab_alerts').hidden=t!=='alerts';if(t==='alerts')alInit();if(t==='dup'||t==='brand'){auditInit();loadRuns();}if(t==='act')actInit();}
+  $('tab_reply').hidden=t!=='reply';$('tab_audit').hidden=!(t==='dup'||t==='brand');$('tab_act').hidden=t!=='act';$('tab_alerts').hidden=t!=='alerts';$('tab_reps').hidden=t!=='reps';if(t==='reps')rpInit();if(t==='alerts')alInit();if(t==='dup'||t==='brand'){auditInit();loadRuns();}if(t==='act')actInit();}
 function auditInit(){
   const brand=tab==='brand';
   $('auditTip').innerHTML=brand
@@ -828,6 +857,69 @@ document.addEventListener('change',async e=>{
   const{error}=await sb.from('activity_targets').upsert({page_id:id,daily_target:v,updated_at:new Date().toISOString()});
   if(error)return toast('ما انحفظ: '+error.message,5000);TGT.set(id,v);toast(`المطلوب لـ${pname(id)}: ${v} باليوم`);renderAct();
 });
+
+/* ===== 👥 المندوبات (معيار الفلاتر متعدد المستويات) ===== */
+let RP=null,RPF={team:[],page:[],role:[],st:[],q:''},RPS={k:'',d:1},rpLoaded=false;
+try{const v=JSON.parse(lsGet('rpf','null'));if(v)RPF=Object.assign(RPF,v);}catch(_){}
+const rpSave=()=>lsSet('rpf',JSON.stringify(RPF));
+const nkA=s=>String(s||'').toLowerCase().replace(/[ً-ٟـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ء/g,'').replace(/\s+/g,' ').trim();
+const UNC='غير مصنّف';
+const RP_ST={ok:['✅ داخلة على صفحتها','grn'],off:['⚠️ حسابها مو على صفحتها','red'],nometa:['❔ بدون حساب مربوط','yel'],nopage:['❓ صفحتها مو معروفة','red'],gone:['🚫 ما تشتغل (حسب المشرفة)','red']};
+function rpStatus(r){const a=r.ans||{};if(a.st==='gone')return'gone';if(!r.page_id)return'nopage';if(!r.links.length)return'nometa';return r.links.some(l=>l.on_page)?'ok':'off';}
+function rpConf(r){const a=r.ans||{};return a.st==='ok'?'✅ أكدت':a.st==='edit'?'✏️ عدّلت':a.st==='gone'?'🚫 ما تشتغل':'⏳ بانتظار';}
+const rpRole=r=>r.role==='lead'?'⭐ رئيسية':r.role==='assistant'?'مساعدة':UNC;
+const rpVal={team:r=>r.team||UNC,page:r=>r.page||UNC,role:rpRole,st:rpStatus};
+function rpMatch(r,skip){for(const k of['team','page','role','st'])if(k!==skip&&RPF[k].length&&!RPF[k].includes(rpVal[k](r)))return false;
+  if(RPF.q){const h=nkA([r.name,r.phone,r.email,r.page,r.page_text,r.supervisor_text,...r.links.map(l=>l.name)].join(' '));if(!nkA(RPF.q).split(' ').every(w=>h.includes(w)))return false;}return true;}
+async function rpInit(){if(!rpLoaded)await rpLoad();else rpRender();}
+async function rpLoad(){$('rpTable').innerHTML='<div class="muted">يحمّل…</div>';const{data,error}=await sb.rpc('reps_overview');if(error){$('rpTable').innerHTML=`<div style="color:var(--red)">خطأ: ${esc(error.message)}</div>`;return;}RP=data;rpLoaded=true;rpRender();}
+function rpChips(k,opts){const sel=RPF[k];let h=`<button class="chip ${sel.length?'':'on'}" data-rpk="${k}" data-rpv="">الكل</button>`;
+  opts.forEach(([v,l,n])=>{if(!n&&!sel.includes(v))return;h+=`<button class="chip ${sel.includes(v)?'on':''}" data-rpk="${k}" data-rpv="${esc(v)}">${esc(l)}<small>${n}</small></button>`;});return h;}
+function rpCount(k){const m={};RP.reps.forEach(r=>{if(rpMatch(r,k)){const v=rpVal[k](r);m[v]=(m[v]||0)+1;}});return m;}
+function rpRender(){if(!RP)return;
+  const all=RP.reps,c={};all.forEach(r=>{const s=rpStatus(r);c[s]=(c[s]||0)+1;});
+  const conf=all.filter(r=>r.ans&&r.ans.st).length;
+  const k=(st,l,cls)=>`<div class="kpi ${cls} ${RPF.st.length===1&&RPF.st[0]===st?'on':''}" data-rpkpi="${st}"><b>${st?(c[st]||0):all.length}</b>${l}</div>`;
+  $('rpKpis').innerHTML=k('','كل المندوبات','')+k('ok','داخلة على صفحتها','grn')+k('off','حسابها مو على صفحتها','red')+k('nometa','بدون حساب مربوط','yel')+k('gone','ما تشتغل (حسب المشرفة)','red')+`<div class="kpi"><b>${conf}</b>أكدتها المشرفة</div>`;
+  const tm=rpCount('team'),pm=rpCount('page'),rm=rpCount('role'),sm=rpCount('st');
+  const tOrd=['أسماء','لانا','ضحى كريم','حيدر'];const ord=(m,o)=>Object.keys(m).sort((a,b)=>a===UNC?1:b===UNC?-1:((o.indexOf(a)+1||99)-(o.indexOf(b)+1||99))||a.localeCompare(b,'ar'));
+  $('rpLevels').innerHTML=
+    `<div class="rp-lv"><span>الحالة</span><div class="chips">${rpChips('st',Object.keys(RP_ST).map(s=>[s,RP_ST[s][0],sm[s]||0]))}</div></div>`+
+    `<div class="rp-lv"><span>الفريق</span><div class="chips">${rpChips('team',ord(tm,tOrd).map(t=>[t,t===UNC?t:'فريق '+t,tm[t]]))}</div></div>`+
+    `<div class="rp-lv"><span>الصفحة</span><div class="chips">${rpChips('page',ord(pm,[]).map(t=>[t,t,pm[t]]))}</div></div>`+
+    `<div class="rp-lv"><span>الدور</span><div class="chips">${rpChips('role',['⭐ رئيسية','مساعدة',UNC].map(t=>[t,t,rm[t]||0]))}</div></div>`;
+  const names={team:'الفريق',page:'الصفحة',role:'الدور',st:'الحالة'};let a='';
+  for(const k2 in names)RPF[k2].forEach(v=>a+=`<span class="pill">${names[k2]}: ${esc(k2==='st'?RP_ST[v][0]:v)} <button data-rpk="${k2}" data-rpv="${esc(v)}" data-rpx="1">×</button></span>`);
+  if(RPF.q)a+=`<span class="pill">بحث: ${esc(RPF.q)} <button data-rpq="1">×</button></span>`;
+  if(a)a+=`<button class="sm line" id="rpClear">مسح الكل</button>`;$('rpActive').innerHTML=a;
+  let list=all.filter(r=>rpMatch(r,null));
+  if(RPS.k){const f={name:r=>r.name,page:r=>r.page||'',team:r=>r.team||'',st:r=>rpStatus(r),conf:r=>rpConf(r)}[RPS.k];list=list.slice().sort((x,y)=>String(f(x)).localeCompare(String(f(y)),'ar')*RPS.d);}
+  $('rpCount').textContent=`عرض ${list.length} من ${all.length}`;
+  const th=(k2,l)=>`<th data-rps="${k2}">${l}${RPS.k===k2?(RPS.d>0?' ▲':' ▼'):''}</th>`;
+  if(!list.length){$('rpTable').innerHTML=`<div class="muted" style="padding:20px;text-align:center">ماكو نتائج بهالفلاتر <button class="sm line" id="rpClear2">مسح الفلاتر</button></div>`;}
+  else $('rpTable').innerHTML=`<table class="rp"><thead><tr>${th('name','المندوبة')}${th('page','الصفحة')}${th('team','الفريق')}<th>الدور</th><th>حساب الفيسبوك</th>${th('st','الحالة')}${th('conf','تأكيد المشرفة')}</tr></thead><tbody>${list.map(r=>{const st=rpStatus(r),a=r.ans||{};
+    const acc=r.links.length?r.links.map(l=>`<div>${l.on_page?'🟢':'🔴'} ${esc(l.name)}${!l.on_page&&l.pages.length?`<div class="muted" style="font-size:12px">داخلة على: ${esc(l.pages.join('، '))}</div>`:''}</div>`).join(''):'<span class="muted">—</span>';
+    const fix=a.st==='edit'?`<div class="muted" style="font-size:12px">${['name','phone','page','email'].filter(f=>a[f]!=null&&a[f]!=={name:r.name,phone:r.phone,page:r.page,email:r.email}[f]).map(f=>`${{name:'الاسم',phone:'الرقم',page:'الصفحة',email:'الإيميل'}[f]}: ${esc(a[f])}`).join(' • ')}</div>`:'';
+    return `<tr class="${RP_ST[st][1]==='red'?'red':RP_ST[st][1]==='yel'?'yel':''}"><td data-l="المندوبة"><b>${esc(r.name||'—')}</b><div class="muted" style="font-size:12px">${esc(r.phone||'')} ${esc(r.email)}</div></td><td data-l="الصفحة">${esc(r.page||r.page_text||'—')}</td><td data-l="الفريق">${esc(r.team||'—')}</td><td data-l="الدور">${rpRole(r)===UNC?'<span class="muted">—</span>':rpRole(r)}</td><td data-l="حساب الفيسبوك">${acc}</td><td data-l="الحالة"><span class="pill ${RP_ST[st][1]}">${RP_ST[st][0]}</span></td><td data-l="تأكيد المشرفة">${rpConf(r)}${r.by_person?`<div class="muted" style="font-size:12px">${esc(r.by_person)}</div>`:''}${fix}</td></tr>`;}).join('')}</tbody></table>`;
+  const ul=RP.unlinked.filter(u=>(!RPF.page.length||RPF.page.includes(u.page))&&(!RPF.team.length||RPF.team.includes(u.team||UNC))&&(!RPF.q||nkA(u.name+' '+u.page).includes(nkA(RPF.q))));
+  const cl={stranger:['مو مندوبتنا — تنشال','red'],new:['مندوبة جديدة','yel'],team:['إدارة','grn']};
+  $('rpUnl').innerHTML=ul.length?`<table class="rp"><tbody>${ul.map(u=>`<tr><td data-l="الحساب">👤 ${esc(u.name)}</td><td data-l="الصفحة">${esc(u.page)}</td><td data-l="التصنيف">${u.class?`<span class="pill ${cl[u.class][1]}">${cl[u.class][0]}</span>`:'<span class="muted">بانتظار المشرفة</span>'}</td></tr>`).join('')}</tbody></table><div class="muted" style="font-size:12px;margin-top:6px">${ul.length} حساب</div>`:'<div class="muted">ماكو</div>';
+  const fmt=t=>t?new Date(t).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'}):'';
+  $('rpTasks').innerHTML=RP.tasks.map(t=>`<div class="row" style="justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)"><b>${esc(t.person)}</b><span>${t.final?'<span class="pill grn">✅ أرسلت</span>':t.done?`<span class="pill yel">✏️ ${t.done} مؤكدة</span>`:t.opened?'<span class="pill">👀 فتحت الرابط</span>':'<span class="pill red">⏳ ما فتحت</span>'}</span><span class="muted" style="font-size:12px">${t.answered?fmt(t.answered):''}</span></div>`).join('')||'<div class="muted">ماكو</div>';
+  const chg={added:'🆕 انضافت',removed:'🗑 انحذفت',changed:'✏️ تغيّر',joined:'➕ دخل على',left:'➖ طلع من'};
+  $('rpLog').innerHTML=RP.log.length?RP.log.slice(0,60).map(l=>`<div style="font-size:13px;padding:3px 0;border-bottom:1px dashed var(--line)"><span class="muted" style="font-size:12px">${fmt(l.at)} • ${l.src==='info'?'الانفو':'الفيسبوك'}</span><br>${chg[l.change]||l.change} <b>${esc(l.name||'')}</b>${l.src==='meta'?` ${esc(l.old_value||'')}`:l.field?` (${esc(l.field)}: ${esc(l.old_value||'—')} ← ${esc(l.new_value||'—')})`:''}</div>`).join(''):'<div class="muted">ماكو تغييرات بعد (السجل بدأ اليوم)</div>';
+  $('rpSync').textContent=`آخر تحديث: الانفو ${fmt(RP.synced.info)} • الفيسبوك ${fmt(RP.synced.meta)}`;
+}
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-rpk]');if(c){const k=c.dataset.rpk,v=c.dataset.rpv;if(!v)RPF[k]=[];else{const i=RPF[k].indexOf(v);i>-1?RPF[k].splice(i,1):RPF[k].push(v);}rpSave();rpRender();return;}
+  const kp=e.target.closest('[data-rpkpi]');if(kp){const v=kp.dataset.rpkpi;RPF.st=v?[v]:[];rpSave();rpRender();return;}
+  const so=e.target.closest('[data-rps]');if(so){const k=so.dataset.rps;RPS={k,d:RPS.k===k?-RPS.d:1};rpRender();return;}
+  if(e.target.closest('[data-rpq]')){RPF.q='';$('rpQ').value='';rpSave();rpRender();return;}
+  if(e.target.id==='rpClear'||e.target.id==='rpClear2'){RPF={team:[],page:[],role:[],st:[],q:''};$('rpQ').value='';rpSave();rpRender();return;}
+  if(e.target.id==='rpReload'){rpLoad();}
+});
+let rpT;$('rpQ').addEventListener('input',e=>{clearTimeout(rpT);rpT=setTimeout(()=>{RPF.q=e.target.value.trim();rpSave();rpRender();},150);});
+$('rpQ').value=RPF.q||'';
 </script>
 </body>
 </html>
