@@ -1058,7 +1058,7 @@ $('aServerNow').onclick=async()=>{$('aServerNow').disabled=true;$('aServerStatus
 // ── توزيع خامل/حديث: إعداد عام (app_settings) + خاص لكل صفحة (settings.auto.mix) ──
 let GMIX={stale:5,fresh:5,fresh_days:7,late_pick:true};
 async function loadGMix(){try{const{data}=await sb.from('app_settings').select('value').eq('key','mix').maybeSingle();if(data&&data.value)GMIX=Object.assign({},GMIX,data.value);}catch(e){}}
-function fillMix(){const own=(page&&page.settings[AK()]||{}).mix;const m=own&&own.custom?Object.assign({},GMIX,own):GMIX;$('aStale').value=m.stale;$('aFresh').value=m.fresh;$('aFreshDays').value=m.fresh_days;$('aMixCustom').checked=!!(own&&own.custom);$('aLatePick').checked=GMIX.late_pick!==false;$('aMixMsg').textContent=own&&own.custom?'هذه الصفحة على إعداد خاص':'هذه الصفحة على الإعداد العام';}
+function fillMix(){const own=(page&&page.settings[AK()]||{}).mix;const m=own&&own.custom?Object.assign({},GMIX,own):GMIX;$('aStale').value=m.stale;$('aFresh').value=m.fresh;$('aFreshDays').value=m.fresh_days;$('aMixCustom').checked=!!(own&&own.custom);$('aLatePick').checked=GMIX.late_pick!==false;$('aMixMsg').textContent=own&&own.custom?'هذه الصفحة على إعداد خاص':'هذه الصفحة على الإعداد العام';syncMix();}
 function syncMix(src){const n=Math.min(10,Math.max(1,+$('aImgs').value||10));let s=Math.max(0,Math.min(n,+$('aStale').value||0)),f=Math.max(0,Math.min(n,+$('aFresh').value||0));
   if(src==='s')f=n-s;else if(src==='f')s=n-f;else{const t=s+f||1;s=Math.round(n*s/t);f=n-s;}$('aStale').value=s;$('aFresh').value=f;}
 const readMix=()=>({stale:Math.max(0,+$('aStale').value||0),fresh:Math.max(0,+$('aFresh').value||0),fresh_days:Math.max(1,+$('aFreshDays').value||7)});
