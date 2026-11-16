@@ -22,21 +22,27 @@ a.alt{background:transparent;color:var(--fg);border:1px solid var(--line)}
   <div id="msg" class="muted">جارٍ فتح تطبيق Meta Business Suite…</div>
   <a id="app" class="btn" href="#">افتح بتطبيق Business Suite</a>
   <a id="web" class="btn alt" href="#">افتح بالمتصفح (الحاسبة)</a>
-  <div class="muted">يفتح صندوق رسائل الصفحة: ابحث باسم الزبون اللي بالتنبيه. لازم تكون داخل بحساب عنده صلاحية على الصفحة.</div>
+  <a id="orig" class="btn alt" href="#" style="display:none">افتح التعليق نفسه (للبوستات العادية)</a>
+  <div id="hint" class="muted">يفتح صندوق رسائل الصفحة: ابحث باسم الزبون اللي بالتنبيه. لازم تكون داخل بحساب عنده صلاحية على الصفحة.</div>
 </div>
 <script>
 // Opens a page's inbox in the Meta Business Suite app instead of the Facebook app (which shows "content not available").
 // Android: an intent aimed at the Business Suite app (falls back to the web inbox). iPhone: the business.facebook.com link,
 // which the Business Suite app opens when installed. Only ids travel in the link (no customer data).
 const q=new URLSearchParams(location.search);
-const page=(q.get('p')||'').replace(/\D/g,''), cust=(q.get('u')||'').replace(/\D/g,''), ig=q.get('t')==='ig';
+const page=(q.get('p')||'').replace(/\D/g,''), cust=(q.get('u')||'').replace(/\D/g,''), t=q.get('t')||'', ig=t==='ig'||t==='igc', cm=t==='fbc'||t==='igc';
+// l = the comment's own link (fb.com/<page>/posts/<post>?comment_id=…): opens fine for normal posts, but an ad's post shows
+// "هذا المحتوى غير متوفر" — so comments open the page's comments inbox in Business Suite (ads included), the link stays as a 2nd button.
+const orig=(q.get('l')||'');const okOrig=/^https:\/\/(www\.|m\.)?(facebook|instagram)\.com\//.test(orig);
 // Meta gives apps no id that Business Suite accepts for one thread (tested: conversation id, customer id and thread number
 // all open the wrong or an empty chat), so the link opens the page's Messenger / Instagram inbox and the rep searches by name.
-const path=`business.facebook.com/latest/inbox/${ig?'instagram_direct':'messenger'}?asset_id=${page}`;
+const path=`business.facebook.com/latest/inbox/${cm?(ig?'instagram':'facebook'):(ig?'instagram_direct':'messenger')}?asset_id=${page}`;
 const web='https://'+path;
 const ua=navigator.userAgent||'';const android=/Android/i.test(ua), ios=/iPhone|iPad|iPod/i.test(ua);
 const intent=`intent://${path}#Intent;scheme=https;package=com.facebook.pages.app;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.facebook.pages.app')};end`;
 document.getElementById('web').href=web;
+if(cm){document.querySelector('h1').textContent='💬 فتح تعليقات الصفحة';document.getElementById('hint').textContent='يفتح تبويب التعليقات بصندوق الصفحة (يشمل تعليقات الإعلانات): دوري على التعليق باسم الزبون أو كلامه.';
+  if(okOrig){const a=document.getElementById('orig');a.href=orig;a.style.display='block';}}
 document.getElementById('app').href=android?intent:web;
 if(!page){document.getElementById('msg').textContent='الرابط ناقص.';}
 else if(android){location.href=intent;}
