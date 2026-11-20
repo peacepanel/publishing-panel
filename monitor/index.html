@@ -112,7 +112,7 @@ button.rm{background:var(--red-soft);color:var(--red);border:1px solid var(--red
 .xt th:first-child,.xt td:first-child{text-align:start;position:sticky;inset-inline-start:0;background:var(--surface)}
 .xt td.r{background:var(--red-soft);color:var(--red);font-weight:700}.xt td.o{background:var(--org-soft);color:var(--org);font-weight:700}.xt td.g{color:var(--grn);font-weight:700}
 .xt tr.rowbad td{background:var(--red-soft)}.xt tr.rowbad td:first-child{color:var(--red);font-weight:700}.xt td.cl{color:var(--red);font-weight:800}
-.tl{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:340px;margin:auto}.tl span{border-radius:6px;padding:1px 5px;font-size:12px;background:var(--surface2);white-space:nowrap}.tl .o{background:var(--red);color:#fff;font-weight:700}.tl .c{background:var(--org);color:#fff;font-weight:700}.tl .s{opacity:.6}
+.tl{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:340px;margin:auto}.tl span{border-radius:6px;padding:1px 5px;font-size:12px;background:var(--surface2);white-space:nowrap}.tl a{border-radius:6px;padding:1px 5px;font-size:12px;background:var(--surface2);white-space:nowrap;color:inherit;text-decoration:none;cursor:pointer}.tl a:hover{outline:1px solid var(--accent)}.tl .o{background:var(--red);color:#fff;font-weight:700}.tl .c{background:var(--org);color:#fff;font-weight:700}.tl .s{opacity:.6}
 .xt small{display:block;color:var(--muted);font-weight:400;font-size:11px}
 
 .rp-sec h3{margin:0 0 6px;font-size:15px}
@@ -827,7 +827,7 @@ const pairAr=pr=>`${tAr(pr[0])} و ${tAr(pr[1])}`;
 // every post of the day as a small chip: red = outside business hours, orange = went up right after another hand-made post, faded 🤖 = the publishing system
 function timeLine(fb){const L=fb.list||[];if(!L.length)return'—';const lim=xGapM()*6e4,man=L.filter(x=>!x.s&&!x.o).map(x=>x.t),close=new Set();
   for(let i=1;i<man.length;i++)if(lim&&man[i]-man[i-1]<=lim){close.add(man[i-1]);close.add(man[i]);}
-  return`<div class="tl">${L.map(x=>`<span class="${x.o&&!x.s?'o':close.has(x.t)?'c':x.s?'s':''}" title="${x.s?'منظومة النشر':'يدوي'}${x.o?' • خارج الدوام':''}">${x.s?'🤖':''}${tAr(x.t)}</span>`).join('')}</div>`;}
+  return`<div class="tl">${L.map(x=>{const tg=x.id?'a':'span';return`<${tg}${x.id?` href="https://www.facebook.com/${esc(x.id)}" target="_blank" rel="noopener"`:''} class="${x.o&&!x.s?'o':close.has(x.t)?'c':x.s?'s':''}" title="${x.s?'منظومة النشر':'يدوي'}${x.o?' • خارج الدوام':''}${x.id?' • اضغط حتى يفتح المنشور':''}">${x.s?'🤖':''}${tAr(x.t)}</${tg}>`;}).join('')}</div>`;}
 // runs of posts that went up one after another: «من ٢:٠٠ لـ ٤:٠٠ نزلت 9 منشورات»
 function bursts(times){const lim=xGapM()*6e4,out=[];let cur=null;
   for(let i=1;i<(times||[]).length;i++){if(times[i]-times[i-1]<=lim){if(!cur){cur=[times[i-1]];out.push(cur);}cur.push(times[i]);}else cur=null;}
