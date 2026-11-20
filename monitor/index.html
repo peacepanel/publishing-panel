@@ -75,7 +75,7 @@ input,select{background:var(--surface);border:1px solid var(--line);border-radiu
 .prev{white-space:pre-wrap;background:var(--surface2);border-radius:10px;padding:10px;font-size:13px;max-height:320px;overflow:auto}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tabs button{background:var(--surface);color:var(--fg);border:1px solid var(--line)}
-.tabs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tabs button.on,#xRanges button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .bar{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
 .thumbs{display:flex;gap:6px;flex-wrap:wrap}
 .thumbs a{display:flex;flex-direction:column;gap:2px;width:92px;font-size:11px;color:var(--muted);text-decoration:none}
@@ -191,7 +191,7 @@ table.rp tr.red td{background:var(--red-soft)}table.rp tr.yel td{background:var(
       <div class="row">
         <span class="muted" style="font-size:13px">من</span><input type="date" id="xFrom">
         <span class="muted" style="font-size:13px">إلى</span><input type="date" id="xTo">
-        <button class="sm line" id="xYest">أمس</button>
+        <span class="row" id="xRanges" style="gap:4px"><button class="sm line" data-xr="0" title="اليوم لحد هسه (الدوام بعده ما خلص)">اليوم</button><button class="sm line" data-xr="1">أمس</button><button class="sm line" data-xr="3" title="آخر 3 أيام كاملة (لحد أمس)">آخر 3 أيام</button><button class="sm line" data-xr="7" title="آخر 7 أيام كاملة (لحد أمس)">آخر أسبوع</button><button class="sm line" data-xr="15" title="آخر 15 يوم كاملة (لحد أمس)">آخر 15 يوم</button></span>
         <span class="row muted" style="font-size:13px;gap:4px">المطلوب الافتراضي <input id="xMin" type="number" min="0" max="50" style="width:60px"> منشور</span>
         <span class="row muted" style="font-size:13px;gap:4px">أقل فرق بين منشورين <input id="xGapM" type="number" min="0" max="240" style="width:60px"> دقيقة</span>
         <span class="sp" style="flex:1"></span>
@@ -203,7 +203,7 @@ table.rp tr.red td{background:var(--red-soft)}table.rp tr.yel td{background:var(
         <input id="xQ" placeholder="🔎 اسم الصفحة" style="width:150px">
         <select id="xSort"><option value="bad">الأسوأ أول</option><option value="name">الاسم</option><option value="most">الأكثر نشر</option><option value="manual">الأقل يدوي</option></select>
       </div>
-      <div class="row" style="gap:6px;align-items:center"><b style="font-size:13px">📤 إرسال للكروب:</b><span id="xSend" class="row" style="gap:6px"></span><span id="xSend2" class="row" style="gap:6px"></span><span class="sp" style="flex:1"></span><button class="sm line" id="xCopy">📋 نسخ</button></div>
+      <div class="row" style="gap:6px;align-items:center"><b style="font-size:13px">📤 إرسال للكروب:</b><span id="xSend" class="row" style="gap:6px"></span><span id="xSend2" class="row" style="gap:6px"></span><span class="sp" style="flex:1"></span><span class="row muted" style="font-size:12px;gap:4px" title="الإرسال يدوي من واتساب هالحاسبة، مو من مركز الواتساب: يفتح الرسالة جاهزة وإنت تختار الكروب وتضغط إرسال">يفتح بـ <select class="waVia" style="font-size:12px;padding:2px 4px"><option value="web">واتساب ويب</option><option value="app">تطبيق واتساب الحاسبة</option></select></span><button class="sm line" id="xCopy">📋 نسخ</button></div>
     </div>
     <div id="xOut" class="box" style="overflow-x:auto"><div class="muted">اختار الفترة واضغط «عرض».</div></div>
   </section>
@@ -469,7 +469,8 @@ function waText(rows){
   return out.join('\n');
 }
 // wa.me's redirect breaks emojis (shows �) on some devices; go straight to WhatsApp Web on a computer and to api.whatsapp.com on phones
-const openWa=t=>{const mob=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');window.open((mob?'https://api.whatsapp.com/send?text=':'https://web.whatsapp.com/send?text=')+encodeURIComponent(t),'_blank');};
+const openWa=t=>{const mob=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');if(!mob&&lsGet('waVia','web')==='app'){location.href='whatsapp://send?text='+encodeURIComponent(t);return;}window.open((mob?'https://api.whatsapp.com/send?text=':'https://web.whatsapp.com/send?text=')+encodeURIComponent(t),'_blank');};
+document.querySelectorAll('.waVia').forEach(x=>{x.value=lsGet('waVia','web');x.onchange=()=>{lsSet('waVia',x.value);document.querySelectorAll('.waVia').forEach(y=>y.value=x.value);toast(x.value==='app'?'الرسائل راح تفتح بتطبيق واتساب الحاسبة':'الرسائل راح تفتح بواتساب ويب');};});
 document.addEventListener('click',async e=>{
   const g=e.target.closest('[data-g]'),k=e.target.closest('[data-k]'),ck=e.target.closest('[data-chk]'),wa=e.target.closest('[data-wa]');
   if(g){grp=g.dataset.g;lsSet('grp',grp);render();}
@@ -762,7 +763,7 @@ function actInit(){
   const groups=[...new Set(pages.map(p=>p.wa_group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
   const cur=$('xGrp').value||lsGet('actGrp','__all');
   $('xGrp').innerHTML=`<option value="__all">كل الكروبات</option>${groups.map(g=>`<option ${g===cur?'selected':''}>${esc(g)}</option>`).join('')}`;
-  if(!ACT)loadAct();else renderAct();
+  xMark();if(!ACT)loadAct();else renderAct();
 }
 async function loadAct(){
   $('xOut').innerHTML='<div class="muted">يجيب أوقات المنشورات من كل الصفحات... (نص دقيقة تقريباً)</div>';$('xGo').disabled=true;
@@ -879,7 +880,10 @@ function actText(group){
   return L.join('\n');
 }
 $('xGo').onclick=loadAct;
-$('xYest').onclick=()=>{$('xFrom').value=bizDay(1);$('xTo').value=bizDay(1);loadAct();};
+// ready periods: today (so far) / yesterday / last 3, 7, 15 full days ending yesterday
+const xMark=()=>{document.querySelectorAll('[data-xr]').forEach(b=>{const n=+b.dataset.xr,f=bizDay(n),t=n===0?bizDay(0):bizDay(1);b.classList.toggle('on',$('xFrom').value===f&&$('xTo').value===t);});};
+document.querySelectorAll('[data-xr]').forEach(b=>b.onclick=()=>{const n=+b.dataset.xr;$('xFrom').value=bizDay(n);$('xTo').value=n===0?bizDay(0):bizDay(1);xMark();loadAct();});
+['xFrom','xTo'].forEach(id=>$(id).addEventListener('change',xMark));
 $('xGrp').onchange=()=>{lsSet('actGrp',$('xGrp').value);renderAct();};
 $('xSort').onchange=renderAct;$('xQ').oninput=renderAct;
 $('xMin').onchange=()=>{lsSet('actMin',String(xMin()));renderAct();};
