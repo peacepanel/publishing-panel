@@ -740,7 +740,7 @@ function renderTextOnCanvas(ctx,image,product,C){
   const text=product.text||'',sizeRaw=product.size||'';
   ctx.direction='ltr';ctx.textAlign='left';
   const box=(x,y,w,h)=>{ctx.fillStyle=C.bg;ctx.fillRect(x,y,w,h);ctx.fillStyle=C.text;};
-  const sizesBox=(list,y0)=>{ctx.font='bold 28px Arial';let mw=0;list.forEach(z=>{const w=ctx.measureText(z).width;if(w>mw)mw=w;});const px=18,py=14,lh=34;box(10,y0,Math.ceil(mw+px*2),Math.ceil(list.length*lh+py*2));let y=y0+py+26;list.forEach(z=>{ctx.fillText(z,10+px,y);y+=lh;});};
+  const sizesBox=(list,y0,x0=10,rx=0)=>{ctx.font='bold 28px Arial';let mw=0;list.forEach(z=>{const w=ctx.measureText(z).width;if(w>mw)mw=w;});const px=18,py=14,lh=34,bw=Math.ceil(mw+px*2),bh2=Math.ceil(list.length*lh+py*2),r=Math.min(rx,bw/2,bh2/2);if(r){ctx.fillStyle=C.bg;ctx.beginPath();ctx.moveTo(x0+r,y0);ctx.lineTo(x0+bw-r,y0);ctx.quadraticCurveTo(x0+bw,y0,x0+bw,y0+r);ctx.lineTo(x0+bw,y0+bh2-r);ctx.quadraticCurveTo(x0+bw,y0+bh2,x0+bw-r,y0+bh2);ctx.lineTo(x0+r,y0+bh2);ctx.quadraticCurveTo(x0,y0+bh2,x0,y0+bh2-r);ctx.lineTo(x0,y0+r);ctx.quadraticCurveTo(x0,y0,x0+r,y0);ctx.closePath();ctx.fill();ctx.fillStyle=C.text;}else box(x0,y0,bw,bh2);let y=y0+py+26;list.forEach(z=>{ctx.fillText(z,x0+px,y);y+=lh;});};
   if(product.noDiscount){
     const t=(text||'').trim();
     if(t){ctx.font='bold 36px Arial';const tw=ctx.measureText(t).width;box(10,10,tw+30,50);ctx.fillText(t,25,48);}
@@ -750,7 +750,7 @@ function renderTextOnCanvas(ctx,image,product,C){
     ctx.font='bold '+fs+'px Arial';const tw=Math.max(ctx.measureText(b).width,ctx.measureText(a).width,ctx.measureText(x).width)+40;const bh=lh*3+pad*2,r=20;
     ctx.fillStyle=C.bg;ctx.beginPath();ctx.moveTo(pad+r,pad);ctx.lineTo(pad+tw-r,pad);ctx.quadraticCurveTo(pad+tw,pad,pad+tw,pad+r);ctx.lineTo(pad+tw,pad+bh-r);ctx.quadraticCurveTo(pad+tw,pad+bh,pad+tw-r,pad+bh);ctx.lineTo(pad+r,pad+bh);ctx.quadraticCurveTo(pad,pad+bh,pad,pad+bh-r);ctx.lineTo(pad,pad+r);ctx.quadraticCurveTo(pad,pad,pad+r,pad);ctx.closePath();ctx.fill();
     ctx.fillStyle=C.text;ctx.fillText(b,pad+15,pad+lh);ctx.fillText(a,pad+15,pad+lh*2);ctx.fillText(x,pad+15,pad+lh*3);
-    const sl=sortSizesList(extractSizesList(sizeRaw));if(sl.length>1)sizesBox(sl,bh+pad+10);
+    const sl=sortSizesList(extractSizesList(sizeRaw));if(sl.length>1)sizesBox(sl,bh+pad+10,pad,20);
   }
 }
 // «قياس انستكرام» الموحّد (نفسه في تطبيق فاحص السلة): مقاس ثابت 1440×1800 (4:5) لكل الصور،
@@ -760,12 +760,17 @@ function buildInstagramCanvas(src){const w=src.width,h=src.height;if(!w||!h)retu
   const outW=IG_SIZE.w,outH=IG_SIZE.h;
   const out=document.createElement('canvas');out.width=outW;out.height=outH;const ctx=out.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,outW,outH);
   try{const cs=Math.max(outW/w,outH/h);const cw=w*cs,ch=h*cs;ctx.save();ctx.filter='blur(40px) brightness(0.9)';ctx.drawImage(src,(outW-cw)/2,(outH-ch)/2,cw,ch);ctx.restore();ctx.filter='none';}catch(e){ctx.filter='none';}
-  const fs=Math.min(outW/w,outH/h);const dw=w*fs,dh=h*fs;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(src,(outW-dw)/2,(outH-dh)/2,dw,dh);return out;}
+  const fs=Math.min(outW/w,outH/h);const dw=w*fs,dh=h*fs;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(src,(outW-dw)/2,(outH-dh)/2,dw,dh);out._ai=!!src._ai;return out;}
 function zoomUrl(u){u=String(u||'').replace(/^http:\/\//,'https://');if(u.includes('/thumbnail/'))return u.replace('/thumbnail/','/zoom/');if(u.includes('_thumbnail_'))return u.replace(/_thumbnail_(\d+)x(\d+)\.webp/,(m,w,h)=>(+w<1000||+h<1300)?'_thumbnail_1000x1300.webp':m);if(u.includes('lh3.googleusercontent.com'))return u+'=w1000-h1300';return u;}
 const imgCache=new Map();
 async function proxyImg(ph){const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SB_URL}/functions/v1/page-posts`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify({mode:'img',photo:ph.id,fb_page:ph.fb})});if(!r.ok)throw new Error('تعذر جلب صورة المنشور الأصلية');return await r.blob();}
-function loadImg(u){if(imgCache.has(u))return imgCache.get(u);const p=(async()=>{const blob=PHOTO[u]?await proxyImg(PHOTO[u]):await(await fetch(zoomUrl(u))).blob();return await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(blob);});})();imgCache.set(u,p);p.catch(()=>imgCache.delete(u));return p;}
-async function renderEncoded(url,product,pg){const img=await loadImg(url);const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);if(!product.raw)renderTextOnCanvas(ctx,img,product,colorsOf(pg));return c;}
+// ── علامة الذكاء الاصطناعي (26-11-2026): صورة المنتج المولّدة بالذكاء الاصطناعي (فيها DigitalSourceType = trainedAlgorithmicMedia)
+// تبقى عليها العلامة بعد رسم السعر، حتى تقرأها ميتا وتظهر "AI info". الصور العادية ما يتغير بيها شي.
+const AI_XMP='<?xpacket begin="'+String.fromCharCode(65279)+'" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/" Iptc4xmpExt:DigitalSourceType="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia" photoshop:Credit="Made with Google AI (Gemini)"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>';
+async function aiBlobHas(blob){try{return new TextDecoder('latin1').decode(new Uint8Array(await blob.arrayBuffer())).indexOf('trainedAlgorithmicMedia')>=0;}catch(e){return false;}}
+async function aiBlobLabel(blob){try{const b=new Uint8Array(await blob.arrayBuffer());if(b[0]!==0xFF||b[1]!==0xD8)return blob;const enc=new TextEncoder();const pl=enc.encode('http://ns.adobe.com/xap/1.0/'+String.fromCharCode(0)+AI_XMP);const len=pl.length+2;const seg=new Uint8Array(4+pl.length);seg[0]=0xFF;seg[1]=0xE1;seg[2]=(len>>8)&255;seg[3]=len&255;seg.set(pl,4);let pos=2;if(b[2]===0xFF&&b[3]===0xE0)pos=4+((b[4]<<8)|b[5]);return new Blob([b.subarray(0,pos),seg,b.subarray(pos)],{type:'image/jpeg'});}catch(e){return blob;}}
+function loadImg(u){if(imgCache.has(u))return imgCache.get(u);const p=(async()=>{const blob=PHOTO[u]?await proxyImg(PHOTO[u]):await(await fetch(zoomUrl(u))).blob();const ai=await aiBlobHas(blob);return await new Promise((res,rej)=>{const im=new Image();im._ai=ai;im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(blob);});})();imgCache.set(u,p);p.catch(()=>imgCache.delete(u));return p;}
+async function renderEncoded(url,product,pg){const img=await loadImg(url);const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);c._ai=!!img._ai;if(!product.raw)renderTextOnCanvas(ctx,img,product,colorsOf(pg));return c;}
 
 // ───────── المحرر ─────────
 let comp=null; // {items:[product], sel:[{u,pi}], targets:[{page, when, capId, caption}], active:0}
@@ -1280,7 +1285,7 @@ $('publishBtn').onclick=()=>{const later=segVal('when')!=='now';
   $('confirmText').innerHTML=`سيُنشر منشور فيه <b>${comp.sel.length}</b> صورة الآن على: <b>${comp.targets.map(t=>esc(t.page.name)+' ('+chanLabel(t.page)+')').join('، ')}</b>.`;$('confirmBox').hidden=false;$('publishBtn').disabled=true;};
 $('confirmNo').onclick=()=>{$('confirmBox').hidden=true;$('publishBtn').disabled=false;};
 $('confirmYes').onclick=()=>doSave(false);
-async function upload(canvas,path){const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.92));const up=await sb.storage.from('post-images').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw new Error('رفع الصورة: '+up.error.message);return sb.storage.from('post-images').getPublicUrl(path).data.publicUrl;}
+async function upload(canvas,path){let blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.92));if(canvas._ai)blob=await aiBlobLabel(blob);const up=await sb.storage.from('post-images').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw new Error('رفع الصورة: '+up.error.message);return sb.storage.from('post-images').getPublicUrl(path).data.publicUrl;}
 // نص إعادة النشر: نص المنشور الأصلي، وأسماء الصفحات الأصلية تتبدل باسم الصفحة الجديدة
 function repostCaption(pg){const it=comp.items[0];let t=String(it.origin?.message||'');for(const o of (it.origin?.pages||[]))if(o.name&&o.name.trim().length>2)t=t.split(o.name.trim()).join(pg.name);return t;}
 async function doSave(later){
