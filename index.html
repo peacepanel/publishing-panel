@@ -1363,13 +1363,15 @@ const fmtHM=t=>{const[h,m]=t.split(':').map(Number);return`${((h+11)%12)+1}:${St
 // تحميل التقرير: الجدولة + بيانات الصفحات (محفظة، كروب، مشرفة، فئات) + حالة اليوم لكل وقت
 let repMeta=new Map(),repAll=[];
 const RF_KEY='repFilt';
-let RF=(()=>{try{return Object.assign({pf:[],wa:[],sup:[],cat:[],st:[],q:''},JSON.parse(lsGet(RF_KEY,'{}')));}catch(e){return{pf:[],wa:[],sup:[],cat:[],st:[],q:''};}})();
+let RF=(()=>{try{return Object.assign({pf:[],wa:[],sup:[],cat:[],ps:[],st:[],q:''},JSON.parse(lsGet(RF_KEY,'{}')));}catch(e){return{pf:[],wa:[],sup:[],cat:[],ps:[],st:[],q:''};}})();
 const rfSave=()=>lsSet(RF_KEY,JSON.stringify(RF));
 const normAr=s=>String(s||'').toLowerCase().replace(/[ً-ٰٟـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').trim();
 async function loadReport(){$('repList').innerHTML='<div class="box muted">جارٍ التحميل...</div>';
-  const[a,b]=await Promise.all([sb.rpc('schedule_report'),sb.rpc('schedule_report_meta')]);
+  const[a,b,c]=await Promise.all([sb.rpc('schedule_report'),sb.rpc('schedule_report_meta'),sb.from('pages').select('id,active,categories,sheet_stopped')]);
+  // حالة الصفحة: متوقفة = معلّمة بشيت راك وعليها فئة • متروكة = بلا فئة أو معزولة • شغالة = الباقي
+  const PS=new Map(((c&&!c.error&&c.data)||[]).map(p=>[p.id,!p.active||!(p.categories||[]).length?'متروكة':p.sheet_stopped?'متوقفة':'شغالة']));
   if(a.error){$('repList').innerHTML=`<div class="box">خطأ: ${esc(a.error.message)}</div>`;return;}
-  repMeta=new Map(((b.error?[]:b.data)||[]).map(m=>[m.page_id,m]));
+  repMeta=new Map(((b.error?[]:b.data)||[]).map(m=>[m.page_id,{...m,pstate:PS.get(m.page_id)||'شغالة'}]));
   repRows=a.data||[];
   const has=new Set(repRows.map(r=>r.page_id));
   // الصفحات بدون جدولة تظهر أيضاً (حتى تعرف وين ماكو نشر)
@@ -1391,7 +1393,7 @@ function repStates(r){const s=[];const d=r._d;
   if(r.source!=='none'&&r.times&&r.times.length&&d.tot<r.times.length&&r.remaining)s.push('short');
   if(r.ig_fail)s.push('igbad');return s;}
 const RST=[['running','▶ الجدولة تعمل','ok'],['paused','⏸ موقوفة','warn'],['none','بدون جدولة',''],['ended','انتهت الجدولة',''],['full','✓ اليوم مكتمل','ok'],['late','⏰ متأخر اليوم','bad'],['bad','✗ فشل اليوم','bad'],['short','اليوم أقل من الأوقات','warn'],['igbad','فشل انستكرام','bad']];
-const RLV=[['pf','المحفظة',r=>r._m?.portfolio||'غير مصنّف'],['wa','الكروب',r=>r._m?.wa_group||'غير مصنّف'],['sup','المشرفة',r=>r._m?.supervisor||'غير مصنّف'],['cat','الفئة',r=>(r._m?.categories||[]).length?r._m.categories:['غير مصنّف']]];
+const RLV=[['pf','المحفظة',r=>r._m?.portfolio||'غير مصنّف'],['wa','الكروب',r=>r._m?.wa_group||'غير مصنّف'],['sup','المشرفة',r=>r._m?.supervisor||'غير مصنّف'],['cat','الفئة',r=>(r._m?.categories||[]).length?r._m.categories:['غير مصنّف']],['ps','حالة الصفحة',r=>r._m?.pstate||'شغالة']];
 const rfVals=(r,key)=>{const f=RLV.find(x=>x[0]===key)[2](r);return Array.isArray(f)?f:[f];};
 function rfPass(r,skip){for(const[k]of RLV){if(k===skip||!RF[k].length)continue;if(!rfVals(r,k).some(v=>RF[k].includes(v)))return false;}
   if(skip!=='st'&&RF.st.length){const s=repStates(r);if(!RF.st.some(x=>s.includes(x)))return false;}
@@ -1440,7 +1442,7 @@ function repRowHtml(r){const m=r._m||{},d=r._d,i=r._i;
     <tr class="det" id="repDet${i}" hidden><td colspan="11"></td></tr>`;}
 $('repFilt').addEventListener('click',e=>{const b=e.target.closest('[data-rf]'),x=e.target.closest('[data-rfx]');
   if(e.target.id==='repFT'){const o=$('repFilt').dataset.open==='0'?'1':'0';$('repFilt').dataset.open=o;lsSet('repFiltOpen',o);renderReport();return;}
-  if(e.target.id==='repFC'){RF={pf:[],wa:[],sup:[],cat:[],st:[],q:''};rfSave();renderReport();return;}
+  if(e.target.id==='repFC'){RF={pf:[],wa:[],sup:[],cat:[],ps:[],st:[],q:''};rfSave();renderReport();return;}
   const t=b||x;if(!t)return;const k=t.dataset.rf||t.dataset.rfx,v=t.dataset.v;const a=RF[k];const j=a.indexOf(v);if(j>=0)a.splice(j,1);else if(b)a.push(v);rfSave();renderReport();});
 $('repFilt').dataset.open=lsGet('repFiltOpen','1');
 
@@ -1522,7 +1524,7 @@ async function repCatsUI(r,td){td.innerHTML='<span class="muted">جارٍ الت
     catch(er){toast('خطأ: '+er.message,6000);out.textContent='';e.target.disabled=false;}};
   td.querySelector('.cadd').onclick=e=>{const c=td.querySelector('.caddc').value;if(!c)return toast('الصفحة ما عندها فئات');repAddTime(r,e.target,[c]);};}
 $('repBtn').onclick=loadReport;
-$('repList').addEventListener('click',async e=>{if(e.target.id==='repFC2'){RF={pf:[],wa:[],sup:[],cat:[],st:[],q:''};rfSave();renderReport();return;}
+$('repList').addEventListener('click',async e=>{if(e.target.id==='repFC2'){RF={pf:[],wa:[],sup:[],cat:[],ps:[],st:[],q:''};rfSave();renderReport();return;}
   const ob=e.target.closest('[data-ropen]');if(ob){const id=ob.dataset.ropen;$('pageSel').value=id;if($('pageSel').value!==id){$('pageSearch').value='';fillPageSelect();$('pageSel').value=id;}onPageChange();showTab('cand');return;}
   const tb=e.target.closest('[data-rt]');const ab=e.target.closest('[data-ra]');
   const xb=e.target.closest('[data-rx]'),addb=e.target.closest('[data-radd]'),aub=e.target.closest('[data-rauto]');
