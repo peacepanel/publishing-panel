@@ -1392,7 +1392,7 @@ function repStates(r){const s=[];const d=r._d;
   if(d.bad)s.push('bad');if(d.late)s.push('late');if(d.tot&&d.ok===d.tot)s.push('full');
   if(r.source!=='none'&&r.times&&r.times.length&&d.tot<r.times.length&&r.remaining)s.push('short');
   if(r.ig_fail)s.push('igbad');return s;}
-const RST=[['running','▶ الجدولة تعمل','ok'],['paused','⏸ موقوفة','warn'],['none','بدون جدولة',''],['ended','انتهت الجدولة',''],['full','✓ اليوم مكتمل','ok'],['late','⏰ متأخر اليوم','bad'],['bad','✗ فشل اليوم','bad'],['short','اليوم أقل من الأوقات','warn'],['igbad','فشل انستكرام','bad']];
+const RST=[['running','▶ الجدولة تعمل','ok'],['paused','⏸ الجدولة موقوفة مؤقتاً','warn'],['none','بدون جدولة',''],['ended','انتهت الجدولة',''],['full','✓ اليوم مكتمل','ok'],['late','⏰ متأخر اليوم','bad'],['bad','✗ فشل اليوم','bad'],['short','اليوم أقل من الأوقات','warn'],['igbad','فشل انستكرام','bad']];
 const RLV=[['pf','المحفظة',r=>r._m?.portfolio||'غير مصنّف'],['wa','الكروب',r=>r._m?.wa_group||'غير مصنّف'],['sup','المشرفة',r=>r._m?.supervisor||'غير مصنّف'],['cat','الفئة',r=>(r._m?.categories||[]).length?r._m.categories:['غير مصنّف']],['ps','حالة الصفحة',r=>r._m?.pstate||'شغالة']];
 const rfVals=(r,key)=>{const f=RLV.find(x=>x[0]===key)[2](r);return Array.isArray(f)?f:[f];};
 function rfPass(r,skip){for(const[k]of RLV){if(k===skip||!RF[k].length)continue;if(!rfVals(r,k).some(v=>RF[k].includes(v)))return false;}
