@@ -417,7 +417,8 @@ body.posts #srcSeg button.on{background:#6a1b9a;color:#fff}body.posts header{box
     </div>
 
     <div id="tab-map" class="stack" hidden>
-      <div class="tip">فئات كل صفحة وانستكرام والمجموعات هنا. «📦 الصفحات المتروكة» = صفحات معزولة ما تنشر وما تنسحب وما تدخل المراقبة؛ زر «📦 نقل» بالجدول يعزلها (ويلغي جدولتها)، و«↩ إرجاع للشغل» يرجعها. الشارة الخضرة 💬 = كروب الواتساب للصفحة (من شيت راك). الصفحات بدون انستكرام مربوط تنشر فيسبوك بس لحد ما تربطها وتسوي «تحديث من ميتا». الصفحات الجديدة بفيسبوك تنضاف تلقائياً عند «تحديث من ميتا». بطاقة «انستكرام» تبيّن الصفحات المربوطة وغير المربوطة، وعمود انستكرام في الجدول يشغّل أو يوقف النشر عليه لكل صفحة. «المجموعات»: فلتر الصفحات ثم اكتب اسم مجموعة و«أضفها للظاهر» لتختار الصفحات لاحقاً بضغطة («محفظة …» تُحدَّث من ميتا). بطاقة «تصنيف المنتجات» تعرض تقدّم الذكاء الاصطناعي وتعديل قوائم الأنواع. الصفحات المعلّمة «راجع» فئاتها غير مؤكدة.<button class="tx">✕</button></div>
+      <div class="tip">فئات كل صفحة وانستكرام والمجموعات هنا. «⏸ الصفحات المتوقفة» = المعلّمة «متوقفة» بشيت راك وعليها فئة: النشر بيها ما يوقف (منشور يومي على الأقل) حتى ما تخمل. «📦 الصفحات المتروكة» = صفحات ما عليها فئة، معزولة ما تنشر وما تنسحب وما تدخل المراقبة؛ زر «📦 نقل» بالجدول يعزلها (ويلغي جدولتها)، و«↩ إرجاع للشغل» يرجعها. الشارة الخضرة 💬 = كروب الواتساب للصفحة (من شيت راك). الصفحات بدون انستكرام مربوط تنشر فيسبوك بس لحد ما تربطها وتسوي «تحديث من ميتا». الصفحات الجديدة بفيسبوك تنضاف تلقائياً عند «تحديث من ميتا». بطاقة «انستكرام» تبيّن الصفحات المربوطة وغير المربوطة، وعمود انستكرام في الجدول يشغّل أو يوقف النشر عليه لكل صفحة. «المجموعات»: فلتر الصفحات ثم اكتب اسم مجموعة و«أضفها للظاهر» لتختار الصفحات لاحقاً بضغطة («محفظة …» تُحدَّث من ميتا). بطاقة «تصنيف المنتجات» تعرض تقدّم الذكاء الاصطناعي وتعديل قوائم الأنواع. الصفحات المعلّمة «راجع» فئاتها غير مؤكدة.<button class="tx">✕</button></div>
+      <div class="box stack" id="stopCard" style="gap:8px"></div>
       <div class="box stack" id="parkCard" style="gap:8px"></div>
       <div class="box stack" id="igCard" style="gap:8px"></div>
       <div class="box stack" style="gap:8px"><div class="row" style="justify-content:space-between"><h3 style="margin:0">تصنيف المنتجات (الأنواع)</h3>
@@ -1215,11 +1216,26 @@ $('aNow').onclick=async()=>{$('aNow').disabled=true;try{await ensureCandidates()
 // ───────── الصفحات والفئات ─────────
 let mapRows=[],allMapRows=[],mapDirty=new Map();
 async function loadMap(){await loadCats();const{data,error}=await sb.from('pages').select('id,name,categories,active,review_note,groups,ig_user_id,ig_username,settings,wa_group').order('name');if(error)return toast(error.message);
-  allMapRows=data||[];mapRows=allMapRows.filter(r=>r.active);mapDirty.clear();renderPark();$('mapCat').innerHTML='<option value="">كل الفئات</option>'+ALL_CATS.map(c=>`<option>${esc(c)}</option>`).join('');fillGrpOpts();renderIgCard();renderMap();}
+  allMapRows=data||[];mapRows=allMapRows.filter(r=>r.active);mapDirty.clear();renderPark();renderStop();$('mapCat').innerHTML='<option value="">كل الفئات</option>'+ALL_CATS.map(c=>`<option>${esc(c)}</option>`).join('');fillGrpOpts();renderIgCard();renderMap();}
 
+// ── الصفحات المتوقفة: من شيت راك (info: اسم البيج + «حالة الصفحة متوقفة ام لا») — قراءة فقط. عدها فئة = لازم تنشر يومياً حتى ما تخمل ──
+let stopData=null;
+async function renderStop(force){const box=$('stopCard');if(!box)return;
+  if(force||!stopData){box.innerHTML='<span class="muted">⏸ الصفحات المتوقفة… جاري التحميل</span>';try{stopData=await callFn('page-status-sync',{action:'status'});}catch(e){box.innerHTML='<span class="muted">⏸ الصفحات المتوقفة: '+esc(e.message)+'</span>';return;}}
+  const now=Date.now(),H=3600e3,fmt=t=>t?new Date(t).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad',day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+  const live=(stopData.pages||[]).filter(p=>p.active&&p.cats>0),left=(stopData.pages||[]).filter(p=>!(p.active&&p.cats>0));
+  const ok=p=>p.last_pub&&now-new Date(p.last_pub).getTime()<26*H;
+  const bad=live.filter(p=>!ok(p)),r=stopData.last_run?.result||{};
+  box.innerHTML=`<div class="row" style="justify-content:space-between"><h3 style="margin:0">⏸ الصفحات المتوقفة <span class="pill">${live.length}</span> ${bad.length?`<span class="pill warn">${bad.length} ما نشرت آخر يوم</span>`:live.length?'<span class="pill ok">كلها نشرت آخر يوم</span>':''}</h3>
+   <div class="row"><span class="muted" style="font-size:12px">آخر قراءة للشيت: ${fmt(stopData.last_run?.at)}</span><button id="stopSync" class="line sm">تحديث من الشيت</button></div></div>
+   <span class="muted">من شيت راك (تبويب info، عمود «حالة الصفحة متوقفة ام لا»). الصفحة المتوقفة اللي عليها فئة ما يوقف النشر بيها: منشور يومي على الأقل حتى تبقى جاهزة لما ترجع للشغل. الأخضر = نشرت خلال آخر 24 ساعة.</span>
+   ${live.length?`<div class="chips">${live.map(p=>`<span class="pill ${ok(p)?'ok':'warn'}" title="آخر منشور: ${fmt(p.last_pub)} • الجاي: ${fmt(p.next)}"><bdi>${esc(p.name)}</bdi> · آخر ${fmt(p.last_pub)} · الجاي ${fmt(p.next)}${p.rolling?'':' · ⚠ النشر اليومي طافي'}</span>`).join('')}</div>`:'<span class="muted">ماكو صفحات متوقفة بالشيت.</span>'}
+   ${left.length?`<div class="muted" style="font-size:12px">متوقفة بالشيت بس ما عليها فئة (تنحسب متروكة وما تنشر): ${left.map(p=>esc(p.name)).join('، ')}</div>`:''}
+   ${(r.not_in_system||[]).length?`<div class="muted" style="font-size:12px">متوقفة بالشيت وما موجودة بالمنظومة (الاسم يختلف أو ما مضافة): ${r.not_in_system.map(esc).join('، ')}</div>`:''}`;
+  $('stopSync').onclick=async()=>{$('stopSync').disabled=true;try{const j=await callFn('page-status-sync',{});toast(`انقرأ الشيت • ${(j.stopped||[]).length} صفحة متوقفة تنشر${(j.keepalive_on||[]).length?` • انشغل النشر اليومي: ${j.keepalive_on.join('، ')}`:''}`,8000);await renderStop(true);}catch(e){toast('خطأ: '+e.message);$('stopSync').disabled=false;}};}
 // ── الصفحات المتروكة: معزولة (لا نشر ولا سحب ولا مراقبة) لحد ما ترجعها للشغل ──
 function renderPark(){const off=allMapRows.filter(r=>!r.active);
-  $('parkCard').innerHTML=`<div class="row" style="justify-content:space-between"><h3 style="margin:0">📦 الصفحات المتروكة <span class="pill">${off.length}</span></h3><span class="muted">معزولة: ما تنشر وما تنسحب منشوراتها وما تدخل المراقبة. «إرجاع للشغل» يرجعها مثل باقي الصفحات.</span></div>
+  $('parkCard').innerHTML=`<div class="row" style="justify-content:space-between"><h3 style="margin:0">📦 الصفحات المتروكة <span class="pill">${off.length}</span></h3><span class="muted">صفحات ما عليها فئة ومتروكة فعلاً: ما تنشر وما تنسحب منشوراتها وما تدخل المراقبة. «إرجاع للشغل» يرجعها مثل باقي الصفحات.</span></div>
    ${off.length?`<div class="chips">${off.map(r=>`<span class="gchip"><bdi>${esc(r.name)}</bdi>${r.wa_group?` <small>💬 ${esc(r.wa_group)}</small>`:''} <button type="button" class="sm ok" data-unpark="${r.id}">↩ إرجاع للشغل</button></span>`).join('')}</div>`:'<span class="muted">ماكو صفحات متروكة.</span>'}`;}
 document.addEventListener('click',async e=>{const pb=e.target.closest('[data-park]'),ub=e.target.closest('[data-unpark]');if(!pb&&!ub)return;
   const id=(pb||ub).dataset.park||(pb||ub).dataset.unpark;const r=allMapRows.find(x=>x.id===id);if(!r)return;
